@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { supabase } from "../lib/supabase";
-import { getMe } from "../lib/api";
+import { getMe, login } from "../lib/api";
 
 export interface UserProfile {
   id: string;
@@ -58,70 +57,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.log("Failed to load profile:", err);
       setUser(null);
+      setAccessToken(null);
+      localStorage.removeItem("custom_auth_token");
     }
   };
 
   useEffect(() => {
-    // Check existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.access_token) {
-        loadProfile(session.access_token).finally(() => setLoading(false));
-      } else {
-        setLoading(false);
-      }
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_IN" && session?.access_token) {
-        await loadProfile(session.access_token);
-      } else if (event === "SIGNED_OUT") {
-        setUser(null);
-        setAccessToken(null);
-      }
+    const token = localStorage.getItem("custom_auth_token");
+    if (token) {
+      loadProfile(token).finally(() => setLoading(false));
+    } else {
       setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    }
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw new Error(error.message);
-    if (data.session?.access_token) {
-      await loadProfile(data.session.access_token);
+    try {
+      const data = await login({ email, password });
+      if (data.token) {
+        localStorage.setItem("custom_auth_token", data.token);
+        await loadProfile(data.token);
+      } else {
+        throw new Error("Invalid response from server");
+      }
+    } catch (err: any) {
+      throw new Error(err.message || "Login failed");
     }
   };
 
   const signOut = async () => {
-    // Clear React state immediately so the UI reflects signed-out status
-    // before any async work, preventing ProtectedRoute from redirecting back.
     setUser(null);
     setAccessToken(null);
-
-    try {
-      // Attempt a full global signout (invalidates the token server-side).
-      await supabase.auth.signOut();
-    } catch (_err) {
-      // If the server call fails (network error, 403, etc.) the local
-      // localStorage token would NOT have been cleared by the global call.
-      // Force-clear it with scope:'local' so getSession() returns null on
-      // the next page load and the user cannot be bounced back to the dashboard.
-      try {
-        await supabase.auth.signOut({ scope: "local" });
-      } catch {
-        // Last resort: manually evict every supabase auth key from storage.
-        Object.keys(localStorage)
-          .filter((k) => k.startsWith("sb-"))
-          .forEach((k) => localStorage.removeItem(k));
-      }
-    }
+    localStorage.removeItem("custom_auth_token");
   };
 
   const refreshProfile = async () => {
-    const { data } = await supabase.auth.getSession();
-    if (data.session?.access_token) {
-      await loadProfile(data.session.access_token);
+    const token = localStorage.getItem("custom_auth_token");
+    if (token) {
+      await loadProfile(token);
     }
   };
 

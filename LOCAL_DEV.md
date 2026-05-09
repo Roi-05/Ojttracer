@@ -8,122 +8,109 @@ Install these tools on your machine before starting:
 |---|---|
 | **Node.js 20+** | https://nodejs.org |
 | **pnpm** | `npm install -g pnpm` |
-| **Supabase CLI** | `npm install -g supabase` |
+| **Docker** | https://www.docker.com |
 
 ---
 
 ## 1. Clone & Install
 
 ```bash
+# Clone the repository
 git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git
 cd YOUR_REPO
 
+# Install frontend dependencies
 pnpm install
+
+# Install backend dependencies
+cd server
+npm install
+cd ..
 ```
 
 ---
 
-## 2. Environment Variables
+## 2. Database Setup (Docker)
+
+This project uses a local PostgreSQL database and pgAdmin for visualization.
 
 ```bash
-cp .env.example .env.local
+# Start the PostgreSQL database
+docker run -d --name ojttracer-postgres \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgrespassword \
+  -e POSTGRES_DB=ojttracer \
+  -p 5432:5432 \
+  -v pgdata:/var/lib/postgresql/data \
+  postgres:15
+
+# Start pgAdmin (Database UI)
+docker run -d --name ojttracer-pgadmin \
+  --link ojttracer-postgres:db \
+  -e PGADMIN_DEFAULT_EMAIL=admin@admin.com \
+  -e PGADMIN_DEFAULT_PASSWORD=admin \
+  -p 5050:80 \
+  dpage/pgadmin4
 ```
 
-Open `.env.local` — the frontend values are already filled in via
-`utils/supabase/info.tsx` so **no changes needed** for the React app.
-
-If you want to run edge functions locally (Step 4), fill in
-`SUPABASE_SERVICE_ROLE_KEY` from:
-> Supabase Dashboard → Project Settings → API → service_role key
+### Initializing the Schema
+Run the following command to apply the database schema to your local Postgres:
+```bash
+docker exec -i ojttracer-postgres psql -U postgres -d ojttracer < schema.sql
+```
 
 ---
 
-## 3. Run the React Frontend
+## 3. Run the Backend
+
+```bash
+cd server
+node index.js
+```
+The backend will run on **http://localhost:3000**.
+
+---
+
+## 4. Run the Frontend
 
 ```bash
 pnpm dev
 ```
-
-This opens **http://localhost:5173** automatically.
-
-> **Note:** `figma:asset/` image imports will silently resolve to empty
-> strings locally — everything else works normally.
+The frontend will run on **http://localhost:5173**.
 
 ---
 
-## 4. Run Edge Functions Locally (Optional)
+## 5. Database Visualization (pgAdmin)
 
-The backend API lives in `supabase/functions/server/index.tsx`.
-To run it locally:
-
-```bash
-# One-time: log in and link your project
-supabase login
-supabase link --project-ref fryvxhnmjietoyfzfblq
-
-# Serve functions locally (needs SUPABASE_SERVICE_ROLE_KEY in .env.local)
-supabase functions serve --env-file .env.local
-```
-
-The function will be available at:
-`http://localhost:54321/functions/v1/make-server-09490c03`
-
-To point the frontend at your local function instead of production,
-temporarily change `BASE` in `src/app/lib/api.ts`:
-```ts
-const BASE = `http://localhost:54321/functions/v1/make-server-09490c03`;
-```
-
----
-
-## 5. Run the SQL Migration (First time only)
-
-If starting with a fresh Supabase project, run the migration in
-**Supabase Dashboard → SQL Editor**:
-
-```
-supabase/migrations/20260430000000_init_schema.sql
-```
-
-Then run the trigger/index block from your chat history.
+1. Open **http://localhost:5050** in your browser.
+2. Login with `admin@admin.com` / `admin`.
+3. Add a new server:
+   - **Name:** LocalDB
+   - **Host:** `ojttracer-postgres` (or `localhost`)
+   - **Username:** `postgres`
+   - **Password:** `postgrespassword`
+   - **Maintenance DB:** `ojttracer`
 
 ---
 
 ## Project Structure
 
 ```
-├── index.html                   # Vite HTML entry point
-├── src/
-│   ├── main.tsx                 # React DOM render entry
+├── server/                      # Node.js Express Backend
+│   ├── index.js                 # API Routes & Express Logic
+│   ├── db.js                    # Database connection
+│   ├── auth.js                  # JWT & Bcrypt Auth logic
+│   └── uploads/                 # Local file storage (DTR photos, etc.)
+├── src/                         # React Frontend
 │   ├── app/
-│   │   ├── App.tsx              # Root component
-│   │   ├── routes.tsx           # React Router routes
 │   │   ├── contexts/
-│   │   │   └── AuthContext.tsx  # Supabase auth state
+│   │   │   └── AuthContext.tsx  # Custom JWT auth state
 │   │   ├── lib/
-│   │   │   ├── api.ts           # All API calls to edge function
-│   │   │   └── supabase.ts      # Supabase client singleton
-│   │   ├── pages/               # Dashboard pages per role
+│   │   │   └── api.ts           # All API calls to Node.js server
+│   │   ├── pages/               # Dashboard pages
 │   │   └── components/          # Shared UI components
-│   └── styles/                  # Tailwind + theme CSS
-├── supabase/
-│   ├── config.toml              # Supabase CLI config
-│   ├── functions/server/        # Edge function (Deno)
-│   └── migrations/              # PostgreSQL schema
-├── utils/supabase/info.tsx      # Project ID + anon key
-├── vite.config.ts               # Vite config (figma:asset plugin included)
-├── tsconfig.json
-└── .env.example                 # Copy to .env.local
+│   └── styles/                  # Tailwind CSS
+├── docker-compose.yml           # Database configuration
+├── schema.sql                   # PostgreSQL schema
+└── vite.config.ts               # Vite configuration
 ```
-
----
-
-## Common Issues
-
-| Problem | Fix |
-|---|---|
-| `Cannot find module 'react'` | Run `pnpm install` — react is now in dependencies |
-| `figma:asset/... not resolved` | Already handled by the `figmaAssetFallback` plugin in vite.config.ts |
-| Edge function returns 403 | Make sure the function is deployed in Supabase Dashboard → Edge Functions |
-| `pnpm: command not found` | Run `npm install -g pnpm` first |
-| TypeScript errors on `import.meta` | Make sure `tsconfig.json` exists (it's included in this repo) |

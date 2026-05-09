@@ -84,7 +84,10 @@ export function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value={selectedRole} onValueChange={setSelectedRole} className="w-full">
+            <Tabs value={selectedRole} onValueChange={(val) => {
+              setSelectedRole(val);
+              if (val === 'admin') setIsRegistering(false);
+            }} className="w-full">
               <TabsList className="grid w-full grid-cols-3 mb-8">
                 <TabsTrigger value="student" className="flex items-center gap-2">
                   <GraduationCap className="h-4 w-4" />
@@ -342,7 +345,7 @@ function LoginForm({
               Login here
             </button>
           </>
-        ) : (
+        ) : role !== "admin" && (
           <>
             Don't have an account?{" "}
             <button

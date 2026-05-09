@@ -1,36 +1,27 @@
-import { projectId, publicAnonKey } from "/utils/supabase/info";
-import { supabase } from "./supabase";
+const BASE = `http://localhost:3000`;
 
-const BASE = `https://${projectId}.supabase.co/functions/v1/make-server-09490c03`;
-
-async function getToken(): Promise<string> {
-  const { data } = await supabase.auth.getSession();
-  return data.session?.access_token || publicAnonKey;
+function getToken(): string {
+  return localStorage.getItem("custom_auth_token") || "";
 }
 
 async function apiFetch(path: string, options: RequestInit = {}, timeoutMs = 15_000) {
-  const token = await getToken();
+  const token = getToken();
 
-  // Abort the fetch if the server doesn't respond within timeoutMs.
-  // Without this, a cold-start / unreachable edge function hangs the UI forever.
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  // Don't set Content-Type for FormData — browser sets it with boundary
+  const isFormData = options.body instanceof FormData;
 
   try {
     const res = await fetch(`${BASE}${path}`, {
       ...options,
       signal: controller.signal,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        ...(options.headers || {}),
-      },
+      headers: isFormData
+        ? { Authorization: `Bearer ${token}`, ...(options.headers || {}) }
+        : { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...(options.headers || {}) },
     });
 
-    // Guard against non-JSON responses (e.g. an HTML 403 gateway page from
-    // Supabase when the edge function isn't deployed).  Calling res.json()
-    // unconditionally on such a response throws a SyntaxError that swallows
-    // the real HTTP status code.
     let json: any;
     const ct = res.headers.get("content-type") ?? "";
     if (ct.includes("application/json")) {
@@ -44,10 +35,7 @@ async function apiFetch(path: string, options: RequestInit = {}, timeoutMs = 15_
     return json;
   } catch (err: any) {
     if (err.name === "AbortError") {
-      throw new Error(
-        "Request timed out — the server is taking too long to respond. " +
-        "Check that the Supabase edge function is deployed and try again."
-      );
+      throw new Error("Request timed out — the server is taking too long to respond.");
     }
     throw err;
   } finally {
@@ -56,6 +44,10 @@ async function apiFetch(path: string, options: RequestInit = {}, timeoutMs = 15_
 }
 
 // ─── Auth ──────────────────────────────────────────────────────────────────
+export async function login(payload: { email: string; password: string }) {
+  return apiFetch("/auth/login", { method: "POST", body: JSON.stringify(payload) });
+}
+
 export async function signUp(payload: {
   email: string; password: string; name: string; role: string;
   studentId?: string; section?: string; companyName?: string; industry?: string;
@@ -108,8 +100,16 @@ export async function getDocuments(studentId?: string) {
   return apiFetch(`/documents${q}`);
 }
 
-export async function submitDocument(docName: string, fileData: string, fileName?: string) {
-  return apiFetch("/documents/submit", { method: "POST", body: JSON.stringify({ docName, fileData, fileName }) });
+export async function submitDocument(docName: string, file: File): Promise<any>;
+export async function submitDocument(docName: string, fileData: string, fileName?: string): Promise<any>;
+export async function submitDocument(docName: string, fileOrData: File | string, fileName?: string) {
+  if (fileOrData instanceof File) {
+    const fd = new FormData();
+    fd.append("docName", docName);
+    fd.append("file", fileOrData, fileOrData.name);
+    return apiFetch("/documents/submit", { method: "POST", body: fd });
+  }
+  return apiFetch("/documents/submit", { method: "POST", body: JSON.stringify({ docName, fileData: fileOrData, fileName }) });
 }
 
 export async function reviewDocument(studentId: string, docName: string, status: string, note?: string) {
@@ -121,8 +121,20 @@ export async function getTemplates() {
   return apiFetch("/templates");
 }
 
-export async function uploadTemplate(docName: string, fileData: string, fileName?: string, fileSize?: string) {
-  return apiFetch("/templates", { method: "POST", body: JSON.stringify({ docName, fileData, fileName, fileSize }) });
+export async function uploadTemplate(docName: string, file: File): Promise<any>;
+export async function uploadTemplate(docName: string, fileData: string, fileName?: string, fileSize?: string): Promise<any>;
+export async function uploadTemplate(docName: string, fileOrData: File | string, fileName?: string, _fileSize?: string) {
+  if (fileOrData instanceof File) {
+    const fd = new FormData();
+    fd.append("docName", docName);
+    fd.append("file", fileOrData, fileOrData.name);
+    return apiFetch("/templates", { method: "POST", body: fd });
+  }
+  return apiFetch("/templates", { method: "POST", body: JSON.stringify({ docName, fileData: fileOrData, fileName }) });
+}
+
+export async function deleteTemplate(slug: string) {
+  return apiFetch(`/templates/${slug}`, { method: "DELETE" });
 }
 
 // ─── Announcements ─────────────────────────────────────────────────────
@@ -145,7 +157,7 @@ export async function getDeployment() {
 
 export async function deployStudent(studentId: string, payload: {
   companyId: string; companyName: string; position: string; startDate: string; endDate: string;
-  requiredHours: number; supervisorName?: string; supervisorEmail?: string; address?: string;
+  requiredHours: number; supervisor?: string; supervisorEmail?: string; address?: string;
 }) {
   return apiFetch(`/students/${studentId}/deploy`, { method: "PUT", body: JSON.stringify(payload) });
 }
@@ -157,6 +169,10 @@ export async function getStudents() {
 
 export async function getCompanies() {
   return apiFetch("/companies");
+}
+
+export async function verifyCompany(id: string | number, status: string = "active") {
+  return apiFetch(`/companies/${id}/verify`, { method: "PUT", body: JSON.stringify({ status }) });
 }
 
 export async function getInterns() {

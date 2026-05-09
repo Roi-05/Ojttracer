@@ -332,30 +332,33 @@ export function StudentDashboard() {
   // Student document submissions state
   const [studentDocs, setStudentDocs] = useState(initialStudentDocs);
   const [showDocUpload, setShowDocUpload] = useState(false);
-  const [docUploadForm, setDocUploadForm] = useState({ name: REQUIRED_DOC_NAMES[0], file: "", fileData: "" as string });
+  const [docUploadForm, setDocUploadForm] = useState<{ name: string; file: File | null }>({ name: REQUIRED_DOC_NAMES[0], file: null });
 
   const openDocUpload = (docName: string) => {
-    setDocUploadForm({ name: docName, file: "", fileData: "" });
+    setDocUploadForm({ name: docName, file: null });
     setShowDocUpload(true);
   };
 
   const handleDocFileChange = (file: File | undefined) => {
-    if (!file) { setDocUploadForm(f => ({ ...f, file: "", fileData: "" })); return; }
-    const reader = new FileReader();
-    reader.onload = () => setDocUploadForm(f => ({ ...f, file: file.name, fileData: reader.result as string }));
-    reader.readAsDataURL(file);
+    setDocUploadForm(f => ({ ...f, file: file ?? null }));
   };
 
   const handleSubmitDoc = async () => {
     if (!docUploadForm.file) { toast.error("Please choose a file"); return; }
     const today = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    const fileName = docUploadForm.file instanceof File ? docUploadForm.file.name : (docUploadForm.file as any)?.name || "document";
     setStudentDocs(list => list.map(d => d.name === docUploadForm.name
-      ? { ...d, status: "pending", file: docUploadForm.file, uploadedDate: today }
+      ? { ...d, status: "pending", file: fileName, uploadedDate: today }
       : d));
     setShowDocUpload(false);
     toast.success(`${docUploadForm.name} submitted for review.`);
     try {
-      await api.submitDocument(docUploadForm.name, docUploadForm.fileData || docUploadForm.file, docUploadForm.file);
+      const result = await api.submitDocument(docUploadForm.name, docUploadForm.file as File);
+      // Update with real server URL
+      if (result?.fileUrl) {
+        setStudentDocs(list => list.map(d => d.name === docUploadForm.name
+          ? { ...d, file: result.fileUrl } : d));
+      }
     } catch (err: any) {
       console.log("Document submit error:", err);
       toast.error("Saved locally but failed to sync to server.");
@@ -517,7 +520,7 @@ export function StudentDashboard() {
           <button className="text-xs text-primary hover:underline" onClick={() => setActiveSection("announcements")}>View All</button>
         </CardHeader>
         <CardContent className="space-y-3">
-          {announcements.slice(0, 3).map(a => (
+          {announcementData.slice(0, 3).map(a => (
             <div key={a.id} className={`flex items-start gap-3 p-3 rounded-lg border ${!a.read ? "border-blue-100 bg-blue-50/50" : "border-border bg-muted/20"}`}>
               <div className={`mt-0.5 h-2 w-2 rounded-full flex-shrink-0 ${!a.read ? "bg-primary" : "bg-muted-foreground/30"}`} />
               <div className="flex-1 min-w-0">
@@ -1093,15 +1096,25 @@ export function StudentDashboard() {
             <div className="grid md:grid-cols-2 gap-3">
               {templateData.map((t, i) => (
                 <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/10">
-                  <div className="h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-blue-100 text-blue-600">
+                  <div className={`h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 ${t.file ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-400"}`}>
                     <FileText className="h-5 w-5" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{t.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{t.file} • {t.size}</p>
+                    <p className="text-xs text-muted-foreground truncate">{t.file ? `${t.size} • ${t.uploaded}` : "Not uploaded yet"}</p>
                   </div>
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => toast.info(`Previewing ${t.name}`)}><Eye className="h-3.5 w-3.5" /></Button>
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => toast.success(`Downloading ${t.file}`)}><Download className="h-3.5 w-3.5" /></Button>
+                  {t.file ? (
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
+                        <a href={t.file} target="_blank" rel="noreferrer"><Eye className="h-3.5 w-3.5" /></a>
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
+                        <a href={t.file} download><Download className="h-3.5 w-3.5" /></a>
+                      </Button>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted-foreground italic">Coming soon</span>
+                  )}
                 </div>
               ))}
             </div>
@@ -1134,8 +1147,12 @@ export function StudentDashboard() {
                   <StatusBadge status={doc.status} />
                   {doc.file && (
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => toast.info(`Previewing ${doc.name}`)}><Eye className="h-3.5 w-3.5" /></Button>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => toast.success(`Downloading ${doc.file}`)}><Download className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
+                        <a href={doc.file} target="_blank" rel="noreferrer"><Eye className="h-3.5 w-3.5" /></a>
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
+                        <a href={doc.file} download><Download className="h-3.5 w-3.5" /></a>
+                      </Button>
                     </div>
                   )}
                   {doc.status === "missing" ? (
@@ -1165,8 +1182,9 @@ export function StudentDashboard() {
                 </select>
               </div>
               <div>
-                <Label>File (PDF, JPG, PNG up to 10MB)</Label>
-                <Input type="file" className="mt-1.5" accept=".pdf,.jpg,.jpeg,.png" onChange={e => handleDocFileChange(e.target.files?.[0])} />
+                <Label>File (PDF, JPG, PNG up to 20MB)</Label>
+                <Input type="file" className="mt-1.5" accept=".pdf,.jpg,.jpeg,.png,.docx,.doc" onChange={e => handleDocFileChange(e.target.files?.[0])} />
+                {docUploadForm.file && <p className="text-xs text-muted-foreground mt-1">{(docUploadForm.file as File).name} — {((docUploadForm.file as File).size / 1024).toFixed(0)} KB</p>}
               </div>
               <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-700">
                 Your submission will be reviewed by the OJT Coordinator. You can replace it before approval.
@@ -1189,7 +1207,7 @@ export function StudentDashboard() {
         <p className="text-muted-foreground mt-1">Stay updated with OJT announcements from your coordinator</p>
       </div>
       <div className="grid gap-4">
-        {announcements.map(a => (
+        {announcementData.map(a => (
           <Card key={a.id} className={`border-0 shadow-sm cursor-pointer hover:shadow-md transition-all ${!a.read ? "border-l-4 border-l-primary" : ""}`}>
             <CardContent className="p-5">
               <div className="flex items-start gap-4">

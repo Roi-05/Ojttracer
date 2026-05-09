@@ -1,12 +1,8 @@
--- ════════════════════════════════════════════════════════════════════════════
--- PampangaStateU-Link — Initial relational schema
--- Run this once in the Supabase SQL Editor (or via `supabase db push`).
--- ════════════════════════════════════════════════════════════════════════════
-
--- ── PROFILES (one row per auth.users row) ──────────────────────────────────
+-- ── PROFILES ──────────────────────────────────
 create table if not exists public.profiles (
-  id          uuid primary key references auth.users(id) on delete cascade,
+  id          uuid primary key default gen_random_uuid(),
   email       text not null unique,
+  password_hash text not null,
   name        text not null,
   role        text not null check (role in ('student','company','admin')),
   created_at  timestamptz not null default now()
@@ -127,75 +123,3 @@ create table if not exists public.evaluations (
   comments       text default '',
   submitted_at   timestamptz not null default now()
 );
-
--- ── EXTRA INDEXES ──────────────────────────────────────────────────────────
--- Fast role-based filtering (used by getStudents / getCompanies / getDocuments)
-create index if not exists idx_profiles_role  on public.profiles(role);
--- Fast email lookup (used by auth self-heal and duplicate-check logic)
-create index if not exists idx_profiles_email on public.profiles(email);
-
--- ── AUTO-PROFILE TRIGGER ───────────────────────────────────────────────────
--- Inserts a profiles row (and the matching students/companies row) immediately
--- when auth.users gets a new entry.  This makes registration atomic: even if
--- the edge function crashes between createUser() and the subsequent INSERT,
--- the profile row already exists so the user is never left orphaned.
---
--- The server's own upsert (onConflict:"id") is a safe no-op when this trigger
--- has already created the row — both paths always produce the same data.
-create or replace function public.handle_new_user()
-returns trigger
-language plpgsql
-security definer set search_path = public
-as $$
-declare
-  v_role text;
-  v_name text;
-begin
-  v_role := coalesce(new.raw_user_meta_data->>'role', 'student');
-  v_name := coalesce(new.raw_user_meta_data->>'name', new.email);
-
-  -- Create the base profile.  ON CONFLICT DO NOTHING means the server's own
-  -- upsert (which runs right after createUser returns) will not overwrite it.
-  insert into public.profiles (id, email, name, role)
-  values (new.id, new.email, v_name, v_role)
-  on conflict (id) do nothing;
-
-  -- Create the role-specific detail row.
-  if v_role = 'student' then
-    insert into public.students (user_id)
-    values (new.id)
-    on conflict (user_id) do nothing;
-
-  elsif v_role = 'company' then
-    insert into public.companies (user_id, hr_email, company_name, hr_contact)
-    values (
-      new.id,
-      new.email,
-      coalesce(new.raw_user_meta_data->>'companyName', v_name),
-      v_name
-    )
-    on conflict (user_id) do nothing;
-  end if;
-
-  return new;
-end;
-$$;
-
--- Drop before recreating to keep this migration idempotent on re-runs.
-drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
-
--- ── RLS: disabled — server uses the service-role key and enforces auth in code.
--- (Enable later if you want to call PostgREST directly from the browser.)
-alter table public.profiles        disable row level security;
-alter table public.students        disable row level security;
-alter table public.companies       disable row level security;
-alter table public.dtr_records     disable row level security;
-alter table public.accomplishments disable row level security;
-alter table public.documents       disable row level security;
-alter table public.templates       disable row level security;
-alter table public.announcements   disable row level security;
-alter table public.deployments     disable row level security;
-alter table public.evaluations     disable row level security;

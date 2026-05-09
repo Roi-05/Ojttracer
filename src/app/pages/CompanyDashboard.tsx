@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Country, State, City } from "country-state-city";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { useAuth } from "../contexts/AuthContext";
 import * as api from "../lib/api";
@@ -79,6 +80,8 @@ export function CompanyDashboard() {
   const [activeSection, setActiveSection] = useState("dashboard");
   const [showEvalModal, setShowEvalModal] = useState<string | number | null>(null);
   const [evalScores, setEvalScores] = useState<Record<string, number>>({});
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const { refreshProfile } = useAuth();
 
   const companyInfo = {
     name: (user as any)?.companyName || user?.name || emptyCompanyInfo.name,
@@ -95,6 +98,53 @@ export function CompanyDashboard() {
   };
 
   const [interns, setInterns] = useState<Intern[]>([]);
+
+  const [profileForm, setProfileForm] = useState({
+    companyName: companyInfo.name,
+    industry: companyInfo.industry,
+    phone: companyInfo.phone,
+    hrContact: companyInfo.hrContact,
+    hrEmail: companyInfo.hrEmail,
+    description: companyInfo.description,
+    country: "PH",
+    state: "",
+    city: "",
+    street: companyInfo.address,
+  });
+
+  const handleSaveProfile = async () => {
+    setIsSavingProfile(true);
+    try {
+      // Build the full address string
+      const countryObj = Country.getCountryByCode(profileForm.country);
+      const stateObj = State.getStateByCodeAndCountry(profileForm.state, profileForm.country);
+      const cityObj = City.getCitiesOfState(profileForm.country, profileForm.state).find(c => c.name === profileForm.city);
+      
+      const parts = [profileForm.street];
+      if (cityObj) parts.push(cityObj.name);
+      if (stateObj) parts.push(stateObj.name);
+      if (countryObj) parts.push(countryObj.name);
+      
+      const fullAddress = parts.filter(Boolean).join(", ");
+
+      await api.updateProfile({
+        companyName: profileForm.companyName,
+        industry: profileForm.industry,
+        phone: profileForm.phone,
+        hrContact: profileForm.hrContact,
+        hrEmail: profileForm.hrEmail,
+        description: profileForm.description,
+        companyAddress: fullAddress,
+      });
+      await refreshProfile();
+      toast.success("Profile updated successfully!");
+    } catch (e: any) {
+      toast.error(`Failed to update profile: ${e.message}`);
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
 
   type InternAccomplishment = { id: string | number; internId: string | number; internName: string; date: string; hours: number; details: string; picture: string | null; status: "pending" | "approved" | "rejected" };
   const [accomplishments, setAccomplishments] = useState<InternAccomplishment[]>([]);
@@ -282,62 +332,125 @@ export function CompanyDashboard() {
     </div>
   );
 
-  const renderProfile = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Company Profile</h1>
-          <p className="text-muted-foreground mt-1">Manage your company information and HTE accreditation</p>
+  const renderProfile = () => {
+    const countries = Country.getAllCountries();
+    const states = profileForm.country ? State.getStatesOfCountry(profileForm.country) : [];
+    const cities = profileForm.state ? City.getCitiesOfState(profileForm.country, profileForm.state) : [];
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Company Profile</h1>
+            <p className="text-muted-foreground mt-1">Manage your company information and HTE accreditation</p>
+          </div>
+          <Button 
+            className="bg-primary hover:bg-primary/90 text-white gap-2" 
+            onClick={handleSaveProfile}
+            disabled={isSavingProfile}
+          >
+            <Edit className="h-4 w-4" /> {isSavingProfile ? "Saving..." : "Save Changes"}
+          </Button>
         </div>
-        <Button className="bg-primary hover:bg-primary/90 text-white gap-2">
-          <Edit className="h-4 w-4" /> Save Changes
-        </Button>
-      </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        <Card className="border-0 shadow-sm text-center">
-          <CardContent className="p-6">
-            <div className="h-20 w-20 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Building2 className="h-10 w-10 text-green-600" />
-            </div>
-            <h3 className="font-bold text-lg">{companyInfo.name}</h3>
-            <p className="text-muted-foreground text-sm">{companyInfo.industry}</p>
-            <div className="mt-3 flex flex-col gap-2">
-              <span className="inline-flex items-center justify-center gap-1.5 text-xs bg-green-100 text-green-700 px-3 py-1.5 rounded-full mx-auto">
-                <CheckCircle className="h-3 w-3" /> MOA Active
-              </span>
-              <p className="text-xs text-muted-foreground">Accredited until: {companyInfo.accreditedUntil}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="grid lg:grid-cols-3 gap-6">
+          <Card className="border-0 shadow-sm text-center">
+            <CardContent className="p-6">
+              <div className="h-20 w-20 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Building2 className="h-10 w-10 text-green-600" />
+              </div>
+              <h3 className="font-bold text-lg">{profileForm.companyName}</h3>
+              <p className="text-muted-foreground text-sm">{profileForm.industry}</p>
+              <div className="mt-3 flex flex-col gap-2">
+                <span className="inline-flex items-center justify-center gap-1.5 text-xs bg-green-100 text-green-700 px-3 py-1.5 rounded-full mx-auto">
+                  <CheckCircle className="h-3 w-3" /> MOA {companyInfo.moaStatus === 'active' ? 'Active' : 'Pending'}
+                </span>
+                <p className="text-xs text-muted-foreground">Accredited until: {companyInfo.accreditedUntil || "—"}</p>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card className="lg:col-span-2 border-0 shadow-sm">
-          <CardHeader className="pb-3"><CardTitle className="text-base">Company Information</CardTitle></CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div><Label className="text-xs text-muted-foreground">Company Name</Label><Input defaultValue={companyInfo.name} className="mt-1" /></div>
-              <div><Label className="text-xs text-muted-foreground">Industry</Label><Input defaultValue={companyInfo.industry} className="mt-1" /></div>
-              <div><Label className="text-xs text-muted-foreground">Email</Label><Input defaultValue={companyInfo.email} className="mt-1" /></div>
-              <div><Label className="text-xs text-muted-foreground">Phone</Label><Input defaultValue={companyInfo.phone} className="mt-1" /></div>
-              <div><Label className="text-xs text-muted-foreground">HR Contact</Label><Input defaultValue={companyInfo.hrContact} className="mt-1" /></div>
-              <div><Label className="text-xs text-muted-foreground">HR Email</Label><Input defaultValue={companyInfo.hrEmail} className="mt-1" /></div>
-              <div className="col-span-2"><Label className="text-xs text-muted-foreground">Address</Label><Input defaultValue={companyInfo.address} className="mt-1" /></div>
-              <div><Label className="text-xs text-muted-foreground">Website</Label><Input defaultValue={companyInfo.website} className="mt-1" /></div>
-              <div><Label className="text-xs text-muted-foreground">MOA Status</Label>
-                <div className="mt-1 flex items-center gap-2 h-10 px-3 bg-muted/30 rounded-lg">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span className="text-sm text-green-700 font-medium">Active</span>
+          <Card className="lg:col-span-2 border-0 shadow-sm">
+            <CardHeader className="pb-3"><CardTitle className="text-base">Company Information</CardTitle></CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <div><Label className="text-xs text-muted-foreground">Company Name</Label><Input value={profileForm.companyName} onChange={e => setProfileForm(p => ({ ...p, companyName: e.target.value }))} className="mt-1" /></div>
+                <div><Label className="text-xs text-muted-foreground">Industry</Label><Input value={profileForm.industry} onChange={e => setProfileForm(p => ({ ...p, industry: e.target.value }))} className="mt-1" /></div>
+                <div><Label className="text-xs text-muted-foreground">Supervisor</Label><Input value={profileForm.hrContact} onChange={e => setProfileForm(p => ({ ...p, hrContact: e.target.value }))} className="mt-1" /></div>
+                <div><Label className="text-xs text-muted-foreground">Supervisor Email</Label><Input value={profileForm.hrEmail} onChange={e => setProfileForm(p => ({ ...p, hrEmail: e.target.value }))} className="mt-1" /></div>
+                <div><Label className="text-xs text-muted-foreground">Phone</Label><Input value={profileForm.phone} onChange={e => setProfileForm(p => ({ ...p, phone: e.target.value }))} className="mt-1" /></div>
+                
+                <div>
+                  <Label className="text-xs text-muted-foreground">MOA Status</Label>
+                  <div className="mt-1 flex items-center gap-2 h-10 px-3 bg-muted/30 rounded-lg">
+                    {companyInfo.moaStatus === 'active' ? (
+                      <><CheckCircle className="h-4 w-4 text-green-600" /><span className="text-sm text-green-700 font-medium">Active</span></>
+                    ) : (
+                      <><span className="text-sm text-orange-700 font-medium">Pending Verification</span></>
+                    )}
+                  </div>
+                </div>
+
+                <div className="col-span-2 mt-2">
+                  <h4 className="text-sm font-medium mb-3 border-b pb-2">Address Details</h4>
+                  <div className="grid grid-cols-3 gap-4 mb-3">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Country</Label>
+                      <select 
+                        value={profileForm.country} 
+                        onChange={e => setProfileForm(p => ({ ...p, country: e.target.value, state: "", city: "" }))}
+                        className="w-full mt-1 border border-border rounded-lg p-2 text-sm bg-card"
+                      >
+                        <option value="">Select Country</option>
+                        {countries.map(c => <option key={c.isoCode} value={c.isoCode}>{c.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Region / State</Label>
+                      <select 
+                        value={profileForm.state} 
+                        onChange={e => setProfileForm(p => ({ ...p, state: e.target.value, city: "" }))}
+                        className="w-full mt-1 border border-border rounded-lg p-2 text-sm bg-card"
+                        disabled={!profileForm.country}
+                      >
+                        <option value="">Select Region</option>
+                        {states.map(s => <option key={s.isoCode} value={s.isoCode}>{s.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">City / Municipality</Label>
+                      <select 
+                        value={profileForm.city} 
+                        onChange={e => setProfileForm(p => ({ ...p, city: e.target.value }))}
+                        className="w-full mt-1 border border-border rounded-lg p-2 text-sm bg-card"
+                        disabled={!profileForm.state}
+                      >
+                        <option value="">Select City</option>
+                        {cities.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Street / Building / Barangay</Label>
+                    <Input 
+                      value={profileForm.street} 
+                      onChange={e => setProfileForm(p => ({ ...p, street: e.target.value }))} 
+                      className="mt-1" 
+                      placeholder="e.g. 123 Main St, Brgy. San Jose"
+                    />
+                  </div>
+                </div>
+
+                <div className="col-span-2"><Label className="text-xs text-muted-foreground">Company Description</Label>
+                  <textarea rows={3} value={profileForm.description} onChange={e => setProfileForm(p => ({ ...p, description: e.target.value }))} className="w-full mt-1 border border-border rounded-lg p-2 text-sm bg-card resize-none focus:outline-none focus:ring-2 focus:ring-primary/30" />
                 </div>
               </div>
-              <div className="col-span-2"><Label className="text-xs text-muted-foreground">Company Description</Label>
-                <textarea rows={3} defaultValue={companyInfo.description} className="w-full mt-1 border border-border rounded-lg p-2 text-sm bg-card resize-none focus:outline-none focus:ring-2 focus:ring-primary/30" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderInterns = () => (
     <div className="space-y-6">

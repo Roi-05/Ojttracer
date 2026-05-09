@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { useAuth } from "../contexts/AuthContext";
 import * as api from "../lib/api";
+import { deleteTemplate } from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
@@ -40,7 +41,7 @@ const hoursProgressData: Array<{ week: string; avg: number }> = [];
 const SECTIONS = ["4A", "4B", "4C", "4D"];
 
 type AdminStudent = { id: string | number; name: string; studentId: string; course: string; section: string; company: string; position: string; hoursCompleted: number; requiredHours: number; status: string };
-type AdminCompany = { id: string | number; name: string; industry: string; location: string; activeInterns: number; totalCapacity: number; moaStatus: string; moaExpiry: string; contactPerson: string; verified: boolean };
+type AdminCompany = { id: string | number; name: string; industry: string; location: string; activeInterns: number; totalCapacity: number; moaStatus: string; moaExpiry: string; contactPerson: string; verified: boolean; hrContact?: string; hrEmail?: string };
 type DTRLog = { student: string; date: string; timeIn: string; timeOut: string; hours: number; status: string };
 type JournalLog = { student: string; week: string; title: string; submitted: string; status: string };
 type Announcement = { id: string | number; title: string; content: string; date: string; category: string; priority: string };
@@ -130,6 +131,7 @@ export function AdminDashboard() {
         location: c.companyAddress || "—", activeInterns: 0, totalCapacity: 0,
         moaStatus: c.moaStatus || "pending", moaExpiry: c.accreditedUntil || "—",
         contactPerson: c.hrContact || c.name, verified: c.moaStatus === "active",
+        hrContact: c.hrContact, hrEmail: c.hrEmail
       }));
       setCompanies(mapped);
       setCompanyList(mapped);
@@ -189,9 +191,9 @@ export function AdminDashboard() {
 
   // ---- Document templates uploaded by admin (students download these) ----
   // (REQUIRED_DOC_NAMES is declared at the top of this component)
-  type AdminTemplate = { name: string; file: string | null; size: string; uploaded: string };
+  type AdminTemplate = { name: string; file: string | null; size: string; uploaded: string; docSlug: string | null };
   const [templates, setTemplates] = useState<AdminTemplate[]>(
-    REQUIRED_DOC_NAMES.map((name) => ({ name, file: null, size: "—", uploaded: "—" }))
+    REQUIRED_DOC_NAMES.map((name) => ({ name, file: null, size: "—", uploaded: "—", docSlug: null }))
   );
 
   type AdminDocEntry = { name: string; status: string; file: string | null; uploaded: string };
@@ -207,30 +209,48 @@ export function AdminDashboard() {
       const merged: AdminTemplate[] = REQUIRED_DOC_NAMES.map((name) => {
         const found = (data || []).find((t: any) => t.name === name);
         return found
-          ? { name, file: found.fileUrl || `${name.replace(/\s+/g, "_")}.pdf`, size: found.size || "—", uploaded: found.uploadedDate || "—" }
-          : { name, file: null, size: "—", uploaded: "—" };
+          ? { name, file: found.fileUrl || null, size: found.size || "—", uploaded: found.uploadedDate || "—", docSlug: found.docSlug || null }
+          : { name, file: null, size: "—", uploaded: "—", docSlug: null };
       });
       setTemplates(merged);
     }).catch((e: any) => console.log("Templates load error:", e));
   }, [user]);
 
   const [showTemplateUpload, setShowTemplateUpload] = useState(false);
-  const [templateForm, setTemplateForm] = useState({ name: REQUIRED_DOC_NAMES[0], file: "" });
+  const [templateForm, setTemplateForm] = useState<{ name: string; file: File | null }>({ name: REQUIRED_DOC_NAMES[0], file: null });
   const [viewSubmissionId, setViewSubmissionId] = useState<string | number | null>(null);
-  const [deployForm, setDeployForm] = useState<{ studentId: string | number; company: string; position: string; startDate: string; endDate: string }>({ studentId: "", company: "", position: "", startDate: "", endDate: "" });
+  const [deployForm, setDeployForm] = useState<{ 
+    studentId: string | number; 
+    company: string; 
+    position: string; 
+    startDate: string; 
+    endDate: string;
+    supervisor: string;
+    supervisorEmail: string;
+    address: string;
+    requiredHours: number;
+  }>({ 
+    studentId: "", 
+    company: "", 
+    position: "", 
+    startDate: "", 
+    endDate: "",
+    supervisor: "",
+    supervisorEmail: "",
+    address: "",
+    requiredHours: 486
+  });
   const [showDeployModal, setShowDeployModal] = useState(false);
 
   const handleSaveTemplate = async () => {
     if (!templateForm.file) { toast.error("Please choose a file"); return; }
-    // Optimistic UI update
     setTemplates(list => list.map(t => t.name === templateForm.name
-      ? { ...t, file: templateForm.file, size: "—", uploaded: "Uploading…" }
-      : t));
+      ? { ...t, uploaded: "Uploading…" } : t));
     setShowTemplateUpload(false);
     try {
-      await api.uploadTemplate(templateForm.name, templateForm.file, templateForm.file);
+      const result = await api.uploadTemplate(templateForm.name, templateForm.file);
       setTemplates(list => list.map(t => t.name === templateForm.name
-        ? { ...t, uploaded: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) }
+        ? { ...t, file: result.fileUrl || t.file, size: result.fileSize || "—", uploaded: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) }
         : t));
       toast.success(`${templateForm.name} template uploaded.`);
     } catch (e: any) {
@@ -238,7 +258,7 @@ export function AdminDashboard() {
       setTemplates(list => list.map(t => t.name === templateForm.name
         ? { ...t, file: null, size: "—", uploaded: "—" } : t));
     }
-    setTemplateForm({ name: REQUIRED_DOC_NAMES[0], file: "" });
+    setTemplateForm({ name: REQUIRED_DOC_NAMES[0], file: null });
   };
 
   const allDocsApproved = (subId: string | number) => {
@@ -282,7 +302,17 @@ export function AdminDashboard() {
   const openDeploy = (subId: string | number) => {
     const s = studentSubmissions.find(x => x.studentId === subId);
     if (!s) return;
-    setDeployForm({ studentId: subId, company: "", position: "", startDate: "", endDate: "" });
+    setDeployForm({ 
+      studentId: subId, 
+      company: "", 
+      position: "", 
+      startDate: "", 
+      endDate: "",
+      supervisor: "",
+      supervisorEmail: "",
+      address: "",
+      requiredHours: 486
+    });
     setShowDeployModal(true);
   };
 
@@ -297,7 +327,10 @@ export function AdminDashboard() {
         position: deployForm.position,
         startDate: deployForm.startDate,
         endDate: deployForm.endDate,
-        requiredHours: 486,
+        requiredHours: deployForm.requiredHours,
+        supervisor: deployForm.supervisor,
+        supervisorEmail: deployForm.supervisorEmail,
+        address: deployForm.address
       });
       // Reflect in local state
       setStudentSubmissions(list => list.map(s => s.studentId === deployForm.studentId
@@ -312,9 +345,16 @@ export function AdminDashboard() {
     }
   };
 
-  const handleVerifyCompany = (id: number, name: string) => {
+  const handleVerifyCompany = (id: string | number, name: string) => {
+    // Optimistic update
     setCompanyList(list => list.map(c => c.id === id ? { ...c, verified: true, moaStatus: "active" } : c));
-    toast.success(`${name} has been verified and approved.`);
+    api.verifyCompany(id, "active")
+      .then(() => toast.success(`${name} has been verified and approved.`))
+      .catch((e: any) => {
+        toast.error(`Verification failed: ${e.message}`);
+        // Revert on failure
+        setCompanyList(list => list.map(c => c.id === id ? { ...c, verified: false, moaStatus: "pending" } : c));
+      });
   };
 
   // ---- RENDER SECTIONS ----
@@ -911,16 +951,26 @@ export function AdminDashboard() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{t.name}</p>
-                  <p className="text-xs text-muted-foreground">{t.file ? `${t.file} • ${t.size} • ${t.uploaded}` : "No template uploaded"}</p>
+                  <p className="text-xs text-muted-foreground">{t.file ? `${t.size} • ${t.uploaded}` : "No template uploaded"}</p>
                 </div>
                 {t.file ? (
                   <div className="flex gap-1.5">
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => toast.info(`Previewing ${t.name}`)}><Eye className="h-3.5 w-3.5" /></Button>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => toast.success(`Downloading ${t.file}`)}><Download className="h-3.5 w-3.5" /></Button>
-                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => { setTemplateForm({ name: t.name, file: "" }); setShowTemplateUpload(true); }}>Replace</Button>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
+                      <a href={t.file} target="_blank" rel="noreferrer"><Eye className="h-3.5 w-3.5" /></a>
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
+                      <a href={t.file} download><Download className="h-3.5 w-3.5" /></a>
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => { setTemplateForm({ name: t.name, file: null }); setShowTemplateUpload(true); }}>Replace</Button>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-400 hover:text-red-600" onClick={async () => {
+                      const slug = t.docSlug || t.name.replace(/\s+/g, '_').toLowerCase();
+                      setTemplates(list => list.map(x => x.name === t.name ? { ...x, file: null, size: "—", uploaded: "—", docSlug: null } : x));
+                      try { await deleteTemplate(slug); toast.success(`${t.name} template deleted.`); }
+                      catch (e: any) { toast.error(`Delete failed: ${e.message}`); }
+                    }}><Trash2 className="h-3.5 w-3.5" /></Button>
                   </div>
                 ) : (
-                  <Button size="sm" className="h-7 text-xs gap-1 bg-primary hover:bg-primary/90 text-white" onClick={() => { setTemplateForm({ name: t.name, file: "" }); setShowTemplateUpload(true); }}>
+                  <Button size="sm" className="h-7 text-xs gap-1 bg-primary hover:bg-primary/90 text-white" onClick={() => { setTemplateForm({ name: t.name, file: null }); setShowTemplateUpload(true); }}>
                     <Upload className="h-3 w-3" /> Upload
                   </Button>
                 )}
@@ -1013,8 +1063,9 @@ export function AdminDashboard() {
               </select>
             </div>
             <div>
-              <Label>File (PDF, DOCX)</Label>
-              <Input type="file" className="mt-1.5" onChange={e => setTemplateForm({ ...templateForm, file: e.target.files?.[0]?.name || "template.pdf" })} />
+              <Label>File (PDF, DOCX, JPG)</Label>
+              <Input type="file" accept=".pdf,.docx,.doc,.jpg,.jpeg,.png" className="mt-1.5" onChange={e => setTemplateForm({ ...templateForm, file: e.target.files?.[0] ?? null })} />
+              {templateForm.file && <p className="text-xs text-muted-foreground mt-1">{(templateForm.file as File).name} — {((templateForm.file as File).size / 1024).toFixed(0)} KB</p>}
             </div>
             <div className="flex gap-3">
               <Button variant="outline" className="flex-1" onClick={() => setShowTemplateUpload(false)}>Cancel</Button>
@@ -1026,14 +1077,14 @@ export function AdminDashboard() {
 
       {/* Review Submission Modal */}
       <Dialog open={!!viewSub} onOpenChange={(o) => !o && setViewSubmissionId(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] p-0 overflow-hidden flex flex-col">
+          <DialogHeader className="p-6 pb-2">
             <DialogTitle>Documents — {viewSub?.name}</DialogTitle>
             <DialogDescription>{viewSub?.studentNo} • BSIT {viewSub?.section} — Review and approve submitted OJT documents.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-2 space-y-2">
             {viewSub?.docs.map((d, i) => (
-              <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border">
+              <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card">
                 <div className={`h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
                   d.status === "approved" ? "bg-green-100 text-green-600" :
                   d.status === "pending" ? "bg-orange-100 text-orange-600" :
@@ -1041,21 +1092,25 @@ export function AdminDashboard() {
                 }`}><FileCheck className="h-4 w-4" /></div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{d.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{d.file ? `${d.file} • Uploaded ${d.uploaded}` : "Not yet submitted"}</p>
+                  <p className="text-xs text-muted-foreground truncate">{d.file ? `Uploaded ${d.uploaded}` : "Not yet submitted"}</p>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full border ${
+                <span className={`text-xs px-2 py-0.5 rounded-full border flex-shrink-0 ${
                   d.status === "approved" ? "bg-green-100 text-green-700 border-green-200" :
                   d.status === "pending" ? "bg-orange-100 text-orange-700 border-orange-200" :
                   "bg-red-100 text-red-700 border-red-200"
                 }`}>{d.status === "missing" ? "Missing" : d.status.charAt(0).toUpperCase() + d.status.slice(1)}</span>
                 {d.file && (
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => toast.info(`Previewing ${d.name}`)}><Eye className="h-3.5 w-3.5" /></Button>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => toast.success(`Downloading ${d.file}`)}><Download className="h-3.5 w-3.5" /></Button>
+                  <div className="flex gap-1 flex-shrink-0">
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
+                      <a href={d.file} target="_blank" rel="noreferrer"><Eye className="h-3.5 w-3.5" /></a>
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
+                      <a href={d.file} download><Download className="h-3.5 w-3.5" /></a>
+                    </Button>
                   </div>
                 )}
                 {d.status === "pending" && viewSub && (
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 flex-shrink-0">
                     <Button size="sm" className="h-7 px-2 text-xs bg-green-600 hover:bg-green-700 text-white" onClick={() => handleApproveDoc(viewSub.studentId, d.name)}><CheckCircle className="h-3.5 w-3.5" /></Button>
                     <Button size="sm" variant="outline" className="h-7 px-2 text-xs text-red-600 border-red-200 hover:bg-red-50" onClick={() => handleRejectDoc(viewSub.studentId, d.name)}><XCircle className="h-3.5 w-3.5" /></Button>
                   </div>
@@ -1063,7 +1118,7 @@ export function AdminDashboard() {
               </div>
             ))}
           </div>
-          <div className="flex gap-3 mt-4">
+          <div className="p-6 pt-2 flex gap-3 mt-auto border-t bg-muted/5">
             <Button variant="outline" className="flex-1" onClick={() => setViewSubmissionId(null)}>Close</Button>
             {viewSub && !viewSub.deployed && (
               <Button disabled={!allDocsApproved(viewSub.studentId)} className="flex-1 bg-primary hover:bg-primary/90 text-white disabled:opacity-50 gap-2" onClick={() => { setViewSubmissionId(null); openDeploy(viewSub.studentId); }}>
@@ -1084,20 +1139,49 @@ export function AdminDashboard() {
             </div>
             <div>
               <Label>Assign to Company</Label>
-              <select className="w-full mt-1.5 border border-border rounded-lg p-2 text-sm bg-card" value={deployForm.company} onChange={e => setDeployForm({ ...deployForm, company: e.target.value })}>
+              <select className="w-full mt-1.5 border border-border rounded-lg p-2 text-sm bg-card" value={deployForm.company} onChange={e => {
+                const comp = companyList.find(c => c.name === e.target.value);
+                setDeployForm({ 
+                  ...deployForm, 
+                  company: e.target.value,
+                  supervisor: comp?.hrContact || "",
+                  supervisorEmail: comp?.hrEmail || "",
+                  address: comp?.location || ""
+                });
+              }}>
                 <option value="">Select a partner company...</option>
                 {companyList.filter(c => c.moaStatus === "active").map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
               </select>
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Position / Role</Label>
+                <Input className="mt-1.5" placeholder="e.g. Web Dev Intern" value={deployForm.position} onChange={e => setDeployForm({ ...deployForm, position: e.target.value })} />
+              </div>
+              <div>
+                <Label>Required Hours</Label>
+                <Input type="number" className="mt-1.5" value={deployForm.requiredHours} onChange={e => setDeployForm({ ...deployForm, requiredHours: parseInt(e.target.value) || 0 })} />
+              </div>
+            </div>
             <div>
-              <Label>Position / Role</Label>
-              <Input className="mt-1.5" placeholder="e.g. Web Dev Intern" value={deployForm.position} onChange={e => setDeployForm({ ...deployForm, position: e.target.value })} />
+              <Label>Company Address</Label>
+              <Input className="mt-1.5" placeholder="Building, Street, City..." value={deployForm.address} onChange={e => setDeployForm({ ...deployForm, address: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Supervisor Name</Label>
+                <Input className="mt-1.5" placeholder="John Doe" value={deployForm.supervisor} onChange={e => setDeployForm({ ...deployForm, supervisor: e.target.value })} />
+              </div>
+              <div>
+                <Label>Supervisor Email</Label>
+                <Input type="email" className="mt-1.5" placeholder="john@example.com" value={deployForm.supervisorEmail} onChange={e => setDeployForm({ ...deployForm, supervisorEmail: e.target.value })} />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Start Date</Label><Input type="date" className="mt-1.5" value={deployForm.startDate} onChange={e => setDeployForm({ ...deployForm, startDate: e.target.value })} /></div>
               <div><Label>End Date</Label><Input type="date" className="mt-1.5" value={deployForm.endDate} onChange={e => setDeployForm({ ...deployForm, endDate: e.target.value })} /></div>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 pt-2">
               <Button variant="outline" className="flex-1" onClick={() => setShowDeployModal(false)}>Cancel</Button>
               <Button className="flex-1 bg-primary hover:bg-primary/90 text-white" onClick={handleConfirmDeploy}>Confirm Deployment</Button>
             </div>
