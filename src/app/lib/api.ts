@@ -155,6 +155,14 @@ export async function getDeployment() {
   return apiFetch("/deployment");
 }
 
+export async function getActiveCompanies() {
+  return apiFetch("/students/active-companies");
+}
+
+export async function setIntendedCompany(companyId: string | null) {
+  return apiFetch("/students/intended-company", { method: "PUT", body: JSON.stringify({ companyId }) });
+}
+
 export async function deployStudent(studentId: string, payload: {
   companyId: string; companyName: string; position: string; startDate: string; endDate: string;
   requiredHours: number; supervisor?: string; supervisorEmail?: string; address?: string;
@@ -173,6 +181,31 @@ export async function getCompanies() {
 
 export async function verifyCompany(id: string | number, status: string = "active") {
   return apiFetch(`/companies/${id}/verify`, { method: "PUT", body: JSON.stringify({ status }) });
+}
+
+export async function updateMoa(id: string | number, status: string, expiryDate?: string) {
+  return apiFetch(`/companies/${id}/moa`, { method: "PUT", body: JSON.stringify({ status, expiryDate }) });
+}
+
+export async function uploadSignedMoa(file: File) {
+  return new Promise<any>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const result = await apiFetch("/companies/signed-moa", {
+          method: "POST",
+          body: JSON.stringify({ fileData: reader.result as string, fileName: file.name }),
+        });
+        resolve(result);
+      } catch (e) { reject(e); }
+    };
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsDataURL(file);
+  });
+}
+
+export async function getMoaTemplate() {
+  return apiFetch("/companies/moa-template");
 }
 
 export async function getInterns() {

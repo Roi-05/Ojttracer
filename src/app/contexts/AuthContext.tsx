@@ -13,6 +13,7 @@ export interface UserProfile {
   address?: string;
   skills?: string[];
   emergencyContact?: string;
+  intendedCompanyId?: string;
   // Company fields
   companyName?: string;
   industry?: string;
