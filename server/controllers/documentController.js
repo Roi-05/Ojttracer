@@ -1,0 +1,108 @@
+const db = require('../db');
+const path = require('path');
+const fs = require('fs');
+const { UPLOADS_DIR } = require('../middleware/upload');
+
+const getDocuments = async (req, res) => {
+  try {
+    const { studentId } = req.query;
+    // Admin can query all students; student can only see their own
+    if (req.user.role === 'admin') {
+      if (studentId) {
+        // Per-student docs (for review modal)
+        const docsRes = await db.query(`SELECT d.*, p.name as student_name FROM public.documents d JOIN public.profiles p ON p.id = d.student_id WHERE d.student_id = $1`, [studentId]);
+        return res.json(docsRes.rows.map(r => ({ id: r.id, studentId: r.student_id, name: r.name, status: r.status, fileUrl: r.file_url, uploadedDate: r.uploaded_date, reviewNote: r.review_note })));
+      }
+      // All students aggregate
+      const profiles = await db.query(`
+        SELECT p.id, p.name, s.student_id as student_no, s.section, d.company_name
+        FROM public.profiles p 
+        LEFT JOIN public.students s ON s.user_id = p.id 
+        LEFT JOIN public.deployments d ON d.student_id = p.id
+        WHERE p.role = 'student'
+      `);
+      const all = [];
+      for (const prof of profiles.rows) {
+        const docsRes = await db.query(`SELECT * FROM public.documents WHERE student_id = $1`, [prof.id]);
+        all.push({ 
+          studentId: prof.id, 
+          studentName: prof.name, 
+          studentNo: prof.student_no || '—', 
+          section: prof.section || '—', 
+          isDeployed: !!prof.company_name,
+          assignedCompany: prof.company_name || null,
+          docs: docsRes.rows.map(r => ({ name: r.name, status: r.status, fileUrl: r.file_url, uploadedDate: r.uploaded_date, reviewNote: r.review_note })) 
+        });
+      }
+      return res.json(all);
+    }
+    // Student
+    const result = await db.query(`SELECT * FROM public.documents WHERE student_id = $1`, [req.user.id]);
+    res.json(result.rows.map(r => ({ id: r.id, name: r.name, status: r.status, fileUrl: r.file_url, uploadedDate: r.uploaded_date, reviewNote: r.review_note })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const submitDocument = async (req, res) => {
+  try {
+    const docName = req.body.docName;
+    if (!docName) return res.status(400).json({ error: 'docName is required' });
+
+    let fileUrl = null;
+    let fileName = null;
+
+    if (req.file) {
+      // Actual file upload via multipart
+      fileUrl = `http://localhost:3000/uploads/documents/${req.file.filename}`;
+      fileName = req.file.originalname;
+    } else if (req.body.fileData) {
+      // Base64 fallback
+      const ext = req.body.fileName ? path.extname(req.body.fileName) : '.pdf';
+      const fname = `${Date.now()}${ext}`;
+      const docDir = path.join(UPLOADS_DIR, 'documents');
+      if (!fs.existsSync(docDir)) fs.mkdirSync(docDir, { recursive: true });
+      const base64 = req.body.fileData.includes(',') ? req.body.fileData.split(',')[1] : req.body.fileData;
+      fs.writeFileSync(path.join(docDir, fname), Buffer.from(base64, 'base64'));
+      fileUrl = `http://localhost:3000/uploads/documents/${fname}`;
+      fileName = req.body.fileName || fname;
+    } else {
+      return res.status(400).json({ error: 'No file provided' });
+    }
+
+    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    await db.query(
+      `INSERT INTO public.documents (student_id, name, status, file_url, uploaded_date)
+       VALUES ($1, $2, 'pending', $3, $4)
+       ON CONFLICT (student_id, name) DO UPDATE SET status='pending', file_url=$3, uploaded_date=$4, review_note=''`,
+      [req.user.id, docName, fileUrl, today]
+    );
+    res.json({ success: true, fileUrl, fileName });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const reviewDocument = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    const { studentId, docName, status, note } = req.body;
+    if (!studentId || !docName || !status) return res.status(400).json({ error: 'Missing fields' });
+    await db.query(
+      `UPDATE public.documents SET status=$1, review_note=$2 WHERE student_id=$3 AND name=$4`,
+      [status, note || '', studentId, docName]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+module.exports = {
+  getDocuments,
+  submitDocument,
+  reviewDocument
+};
