@@ -1,0 +1,229 @@
+import { useState, useEffect } from "react";
+import * as api from "../lib/api";
+import { useAuth } from "../contexts/AuthContext";
+import { toast } from "sonner";
+import { REQUIRED_DOC_NAMES } from "./useStudentData";
+
+export type AdminStudent = { id: string | number; name: string; studentId: string; course: string; section: string; company: string; position: string; hoursCompleted: number; requiredHours: number; status: string; intendedCompanyId?: string | null };
+export type AdminCompany = { id: string | number; name: string; industry: string; location: string; activeInterns: number; totalCapacity: number; moaStatus: string; moaExpiry: string; contactPerson: string; verified: boolean; hrContact?: string; hrEmail?: string; signedMoaUrl?: string | null };
+export type DTRLog = { student: string; date: string; timeIn: string; timeOut: string; hours: number; status: string };
+export type JournalLog = { student: string; week: string; title: string; submitted: string; status: string };
+export type Announcement = { id: string | number; title: string; content: string; date: string; category: string; priority: string };
+export type CompanyLocation = { name: string; address: string; lat: number; lng: number; industry: string; interns: number; x: number; y: number };
+export type AdminTemplate = { name: string; file: string | null; size: string; uploaded: string; docSlug: string | null };
+export type AdminDocEntry = { name: string; status: string; file: string | null; uploaded: string };
+export type AdminSubmission = { studentId: string | number; name: string; studentNo: string; course: string; section: string; deployed: boolean; assignedCompany: string | null; docs: AdminDocEntry[] };
+
+export function useAdminData() {
+  const { user } = useAuth();
+  
+  const [students, setStudents] = useState<AdminStudent[]>([]);
+  const [companies, setCompanies] = useState<AdminCompany[]>([]);
+  const [dtrLogs, setDtrLogs] = useState<DTRLog[]>([]);
+  const [journalLogs, setJournalLogs] = useState<JournalLog[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [templates, setTemplates] = useState<AdminTemplate[]>(
+    REQUIRED_DOC_NAMES.map(name => ({ name, file: null, size: "—", uploaded: "—", docSlug: null }))
+  );
+  const [studentSubmissions, setStudentSubmissions] = useState<AdminSubmission[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    
+    let isMounted = true;
+    
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [stuRes, compRes, annRes, dtrRes, jrnRes, docRes, tplRes] = await Promise.all([
+          api.getStudents().catch(() => []),
+          api.getCompanies().catch(() => []),
+          api.getAnnouncements().catch(() => []),
+          api.getAdminDTR().catch(() => []),
+          api.getAccomplishments().catch(() => []),
+          api.getDocuments().catch(() => []),
+          api.getTemplates().catch(() => [])
+        ]);
+
+        if (!isMounted) return;
+
+        if (stuRes) {
+          setStudents((stuRes || []).map((s: any) => ({
+            id: s.id, name: s.name, studentId: s.studentId || "—",
+            course: "BSIT", section: s.section || "—",
+            company: s.deployment?.company || "—", position: s.deployment?.position || "—",
+            hoursCompleted: 0, requiredHours: s.deployment?.requiredHours || 486,
+            status: s.deployment ? (s.deployment.status || "ongoing") : "pending",
+            intendedCompanyId: s.intendedCompanyId || null,
+          })));
+        }
+
+        if (compRes) {
+          setCompanies((compRes || []).map((c: any) => ({
+            id: c.id, name: c.companyName || c.name, industry: c.industry || "—",
+            location: c.companyAddress || "—", activeInterns: 0, totalCapacity: 0,
+            moaStatus: c.moaStatus || "pending", moaExpiry: c.accreditedUntil || "—",
+            contactPerson: c.hrContact || c.name, verified: c.moaStatus === "active",
+            hrContact: c.hrContact, hrEmail: c.hrEmail, signedMoaUrl: c.signedMoaUrl || null,
+          })));
+        }
+
+        if (annRes) {
+          setAnnouncements((annRes || []).map((a: any) => ({
+            id: a.id, title: a.title, content: a.content, date: a.date,
+            category: a.category, priority: a.priority,
+          })));
+        }
+
+        if (dtrRes) {
+          setDtrLogs((dtrRes || []).map((r: any) => ({
+            student: r.studentName || r.studentId || "—",
+            date: r.date || "—",
+            timeIn: r.timeIn || "—",
+            timeOut: r.timeOut || "—",
+            hours: Number(r.hours) || 0,
+            status: r.timeOut ? "regular" : r.timeIn ? "ongoing" : "rest",
+          })));
+        }
+
+        if (jrnRes) {
+          setJournalLogs((jrnRes || []).map((a: any) => ({
+            student: a.studentName || a.studentId || "—",
+            week: a.date || "—",
+            title: a.details ? (a.details.length > 60 ? a.details.substring(0, 60) + "…" : a.details) : "—",
+            submitted: a.createdAt
+              ? new Date(a.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+              : "—",
+            status: a.status === "rejected" ? "not_submitted" : "submitted",
+          })));
+        }
+
+        if (docRes) {
+          setStudentSubmissions((docRes || []).map((s: any) => ({
+            studentId: s.studentId,
+            name: s.studentName || "—",
+            studentNo: s.studentNo || "—",
+            course: "BSIT",
+            section: s.section || "—",
+            deployed: s.isDeployed || false,
+            assignedCompany: s.assignedCompany || null,
+            docs: REQUIRED_DOC_NAMES.map((docName) => {
+              const found = (s.docs || []).find((d: any) => d.name === docName);
+              return found
+                ? { name: docName, status: found.status || "missing", file: found.fileUrl || null, uploaded: found.uploadedDate || "—" }
+                : { name: docName, status: "missing", file: null, uploaded: "—" };
+            }),
+          })));
+        }
+
+        if (tplRes) {
+          setTemplates(REQUIRED_DOC_NAMES.map((name) => {
+            const found = (tplRes || []).find((t: any) => t.name === name);
+            return found
+              ? { name, file: found.fileUrl || null, size: found.size || "—", uploaded: found.uploadedDate || "—", docSlug: found.docSlug || null }
+              : { name, file: null, size: "—", uploaded: "—", docSlug: null };
+          }));
+        }
+
+      } catch (err) {
+        console.error("Failed to load admin data", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    loadData();
+    return () => { isMounted = false; };
+  }, [user]);
+
+  const verifyCompany = async (id: string | number, name: string) => {
+    try {
+      setCompanies(list => list.map(c => c.id === id ? { ...c, verified: true, moaStatus: 'active' } : c));
+      await api.verifyCompany(id, 'active');
+      toast.success(`${name} has been verified and approved.`);
+    } catch (err: any) {
+      setCompanies(list => list.map(c => c.id === id ? { ...c, verified: false, moaStatus: 'pending' } : c));
+      toast.error(`Verification failed: ${err.message}`);
+      throw err;
+    }
+  };
+
+  const updateMoaStatus = async (id: string | number, status: string, expiry: string) => {
+    try {
+      setCompanies(list => list.map(c => c.id === id
+        ? { ...c, moaStatus: status, moaExpiry: expiry || '—', verified: status === 'active' }
+        : c));
+      await api.updateMoa(id, status, expiry || undefined);
+      toast.success('MOA status updated successfully.');
+    } catch (err: any) {
+      toast.error(`Failed to update MOA: ${err.message}`);
+      throw err;
+    }
+  };
+
+  const uploadTemplate = async (name: string, file: File) => {
+    try {
+      setTemplates(list => list.map(t => t.name === name ? { ...t, uploaded: "Uploading…" } : t));
+      const result = await api.uploadTemplate(name, file);
+      setTemplates(list => list.map(t => t.name === name
+        ? { ...t, file: result.fileUrl || t.file, size: result.fileSize || "—", uploaded: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) }
+        : t));
+      toast.success(`${name} template uploaded.`);
+    } catch (err: any) {
+      setTemplates(list => list.map(t => t.name === name ? { ...t, file: null, size: "—", uploaded: "—" } : t));
+      toast.error(`Upload failed: ${err.message}`);
+      throw err;
+    }
+  };
+
+  const reviewDocument = async (subId: string | number, docName: string, status: "approved" | "rejected") => {
+    try {
+      setStudentSubmissions(list => list.map(s => s.studentId === subId
+        ? { ...s, docs: s.docs.map(d => d.name === docName ? { ...d, status, file: status === "rejected" ? null : d.file, uploaded: status === "rejected" ? "—" : d.uploaded } : d) }
+        : s));
+      await api.reviewDocument(String(subId), docName, status);
+      if (status === "approved") {
+        toast.success(`${docName} approved.`);
+      } else {
+        toast.error(`${docName} rejected — student must resubmit.`);
+      }
+    } catch (err: any) {
+      toast.error(`Failed to save review: ${err.message}`);
+      setStudentSubmissions(list => list.map(s => s.studentId === subId
+        ? { ...s, docs: s.docs.map(d => d.name === docName ? { ...d, status: "pending" } : d) }
+        : s));
+      throw err;
+    }
+  };
+
+  const deployStudent = async (studentId: string | number, payload: any) => {
+    try {
+      await api.deployStudent(String(studentId), payload);
+      setStudentSubmissions(list => list.map(s => s.studentId === studentId
+        ? { ...s, deployed: true, assignedCompany: payload.companyName } : s));
+      setStudents(list => list.map(s => String(s.id) === String(studentId)
+        ? { ...s, company: payload.companyName, position: payload.position, status: "ongoing" } : s));
+      toast.success("Student deployed and linked to company.");
+    } catch (err: any) {
+      toast.error(`Deployment failed: ${err.message}`);
+      throw err;
+    }
+  };
+
+  return {
+    loading,
+    students,
+    companies,
+    dtrLogs,
+    journalLogs,
+    announcements,
+    templates,
+    studentSubmissions,
+    verifyCompany,
+    updateMoaStatus,
+    uploadTemplate,
+    reviewDocument,
+    deployStudent
+  };
+}

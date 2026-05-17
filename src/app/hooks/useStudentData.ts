@@ -1,0 +1,256 @@
+import { useState, useEffect, useRef } from "react";
+import * as api from "../lib/api";
+import { useAuth } from "../contexts/AuthContext";
+import { toast } from "sonner";
+
+export type DTRRecord = {
+  date: string;
+  day: string;
+  timeIn: string | null;
+  timeOut: string | null;
+  timeInPhoto: string | null;
+  timeOutPhoto: string | null;
+  hours: number;
+  remarks: string;
+};
+
+export type DailyAccomplishment = {
+  id: number | string;
+  date: string;
+  hours: number;
+  details: string;
+  picture: string | null;
+  status: "pending" | "approved" | "rejected";
+};
+
+export type StudentDocument = {
+  name: string;
+  status: string;
+  file: string | null;
+  uploadedDate: string;
+};
+
+export type Template = {
+  name: string;
+  file: string | null;
+  size: string;
+  uploaded: string;
+};
+
+export type Announcement = {
+  id: number | string;
+  title: string;
+  content: string;
+  date: string;
+  category: string;
+  priority: string;
+  read: boolean;
+};
+
+export const REQUIRED_DOC_NAMES = [
+  "Parent Guardian Consent Form",
+  "Certificate of Enrollment",
+  "Certification Form",
+  "Internship Endorsement Form",
+  "1st Endorsement Form",
+  "Internship Agreement Form",
+  "Memorandum of Agreement",
+];
+
+export function useStudentData() {
+  const { user, refreshProfile } = useAuth();
+  
+  const [dtrRecords, setDtrRecords] = useState<DTRRecord[]>([]);
+  const [accomplishments, setAccomplishments] = useState<DailyAccomplishment[]>([]);
+  const [documents, setDocuments] = useState<StudentDocument[]>(
+    REQUIRED_DOC_NAMES.map(name => ({ name, status: "missing", file: null, uploadedDate: "—" }))
+  );
+  const [deployment, setDeployment] = useState<any>(null);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [templates, setTemplates] = useState<Template[]>(
+    REQUIRED_DOC_NAMES.map(name => ({ name, file: null, size: "—", uploaded: "—" }))
+  );
+  const [activeCompanies, setActiveCompanies] = useState<any[]>([]);
+  const [intendedCompanyId, setIntendedCompanyId] = useState<string | null>(null);
+  
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    
+    let isMounted = true;
+    
+    const loadAllData = async () => {
+      try {
+        setLoading(true);
+        const [dtrRes, accRes, docRes, depRes, annRes, tplRes, compRes] = await Promise.all([
+          api.getDTR().catch(() => []),
+          api.getAccomplishments().catch(() => []),
+          api.getDocuments().catch(() => []),
+          api.getDeployment().catch(() => null),
+          api.getAnnouncements().catch(() => []),
+          api.getTemplates().catch(() => []),
+          api.getActiveCompanies().catch(() => [])
+        ]);
+
+        if (!isMounted) return;
+
+        setIntendedCompanyId((user as any)?.intendedCompanyId || null);
+        if (compRes) setActiveCompanies(compRes);
+
+        if (dtrRes?.length) {
+          setDtrRecords(dtrRes.map((r: any) => ({
+            date: r.date, day: r.day || "", timeIn: r.timeIn || null, timeOut: r.timeOut || null,
+            timeInPhoto: r.timeInPhotoUrl || null, timeOutPhoto: r.timeOutPhotoUrl || null,
+            hours: parseFloat(r.hours) || 0, remarks: r.remarks || "Regular",
+          })));
+        }
+
+        if (accRes?.length) {
+          setAccomplishments(accRes.map((r: any) => ({
+            id: r.id, date: r.date, hours: parseFloat(r.hours) || 0, details: r.details,
+            picture: r.photoUrl || null, status: r.status,
+          })));
+        }
+
+        if (docRes !== null) {
+          setDocuments(REQUIRED_DOC_NAMES.map((name) => {
+            const found = (docRes || []).find((d: any) => d.name === name);
+            return found ? { name, status: found.status, file: found.fileUrl || found.file || null, uploadedDate: found.uploadedDate || "—" }
+              : { name, status: "missing", file: null, uploadedDate: "—" };
+          }));
+        }
+
+        if (depRes) setDeployment(depRes);
+
+        if (annRes?.length) {
+          setAnnouncements(annRes.map((a: any) => ({
+            id: a.id, title: a.title, content: a.content, date: a.date,
+            category: a.category, priority: a.priority, read: false,
+          })));
+        }
+
+        if (tplRes?.length) {
+          setTemplates(REQUIRED_DOC_NAMES.map((name) => {
+            const found = tplRes.find((t: any) => t.name === name);
+            return found ? { name, file: found.fileUrl || name.replace(/\\s+/g, "_") + "_Template.pdf", size: found.size || "—", uploaded: found.uploadedDate || "—" }
+              : { name, file: null, size: "—", uploaded: "—" };
+          }));
+        }
+
+      } catch (err) {
+        console.error("Error loading student data", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    loadAllData();
+    
+    return () => { isMounted = false; };
+  }, [user]);
+
+  const clockIn = async (date: string, time: string, photo: string | null, day: string) => {
+    try {
+      setDtrRecords(records => {
+        const existing = records.find(r => r.date === date);
+        if (existing) {
+          return records.map(r => r.date === date
+            ? { ...r, timeIn: time, timeInPhoto: photo, remarks: r.remarks || "Regular" }
+            : r);
+        }
+        return [{
+          date, day, timeIn: time, timeOut: null, timeInPhoto: photo, timeOutPhoto: null,
+          hours: 0, remarks: "Regular",
+        }, ...records];
+      });
+      await api.clockDTR({ date, mode: "in", time, photo, day });
+    } catch (err) {
+      toast.error("Clock recorded locally but failed to save to server.");
+      throw err;
+    }
+  };
+
+  const clockOut = async (date: string, time: string, photo: string | null, hours: number) => {
+    try {
+      setDtrRecords(records => records.map(r => {
+        if (r.date !== date || !r.timeIn) return r;
+        return { ...r, timeOut: time, timeOutPhoto: photo, hours };
+      }));
+      await api.clockDTR({ date, mode: "out", time, photo });
+    } catch (err) {
+      toast.error("Clock recorded locally but failed to save to server.");
+      throw err;
+    }
+  };
+
+  const submitDocument = async (docName: string, file: File | string, fileName?: string) => {
+    try {
+      const today = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      const tempFileName = file instanceof File ? file.name : (fileName || "document");
+      
+      setDocuments(list => list.map(d => d.name === docName
+        ? { ...d, status: "pending", file: tempFileName, uploadedDate: today }
+        : d));
+        
+      const result = await api.submitDocument(docName, file as any, fileName);
+      if (result?.fileUrl) {
+        setDocuments(list => list.map(d => d.name === docName
+          ? { ...d, file: result.fileUrl } : d));
+      }
+    } catch (err) {
+      toast.error("Failed to submit document to server.");
+      throw err;
+    }
+  };
+
+  const submitAccomplishment = async (date: string, hours: number, details: string, photo: string | null) => {
+    const tempId = Date.now();
+    try {
+      // Optimistic insert
+      setAccomplishments(list => [
+        { id: tempId, date, hours, details, picture: photo, status: "pending" },
+        ...list,
+      ]);
+      const res = await api.createAccomplishment({ date, hours, details, photo });
+      // Replace temp id with real one from server
+      setAccomplishments(list => list.map(a => a.id === tempId
+        ? { ...a, id: res.accomplishment?.id || tempId }
+        : a));
+    } catch (err: any) {
+      // Roll back the optimistic insert
+      setAccomplishments(list => list.filter(a => a.id !== tempId));
+      toast.error(err?.message || "Failed to save journal entry.");
+      throw err;
+    }
+  };
+
+  const setTargetCompany = async (companyId: string) => {
+    try {
+      await api.setIntendedCompany(companyId);
+      setIntendedCompanyId(companyId);
+      await refreshProfile();
+      toast.success('Target company updated successfully.');
+    } catch (err: any) {
+      toast.error(`Failed to set target company: ${err.message}`);
+      throw err;
+    }
+  };
+
+  return {
+    loading,
+    dtrRecords,
+    accomplishments,
+    documents,
+    deployment,
+    announcements,
+    templates,
+    activeCompanies,
+    intendedCompanyId,
+    clockIn,
+    clockOut,
+    submitDocument,
+    submitAccomplishment,
+    setTargetCompany
+  };
+}

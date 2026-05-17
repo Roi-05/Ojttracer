@@ -3,14 +3,14 @@
 :root {
   --font-size: 16px;
   --background: #ffffff;
-  --foreground: oklch(0.145 0 0);
+  --foreground: #09090b;
   --card: #ffffff;
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
+  --card-foreground: #09090b;
+  --popover: #ffffff;
+  --popover-foreground: #09090b;
   --primary: #701C1C;
   --primary-foreground: #F0EAD6;
-  --secondary: oklch(0.95 0.0058 264.53);
+  --secondary: #f1f5f9;
   --secondary-foreground: #030213;
   --muted: #ececf0;
   --muted-foreground: #717182;
@@ -24,12 +24,12 @@
   --switch-background: #cbced4;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  --ring: #a1a1aa;
+  --chart-1: #e76e50;
+  --chart-2: #2a9d90;
+  --chart-3: #274754;
+  --chart-4: #e8c468;
+  --chart-5: #f4a462;
   --radius: 0.625rem;
   --sidebar: #701C1C;
   --sidebar-foreground: #F0EAD6;
@@ -38,7 +38,7 @@
   --sidebar-accent: #8B2424;
   --sidebar-accent-foreground: #F0EAD6;
   --sidebar-border: rgba(255, 255, 255, 0.1);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-ring: #a1a1aa;
 }
 
 .dark {
@@ -50,7 +50,7 @@
   --popover-foreground: #F0EAD6;
   --primary: #F0EAD6;
   --primary-foreground: #701C1C;
-  --secondary: oklch(0.269 0 0);
+  --secondary: #27272a;
   --secondary-foreground: #F0EAD6;
   --muted: #3a3a3a;
   --muted-foreground: #F0EAD6;
@@ -63,11 +63,11 @@
   --ring: #701C1C;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
+  --chart-1: #3b82f6;
+  --chart-2: #2dd4bf;
+  --chart-3: #f97316;
+  --chart-4: #a855f7;
+  --chart-5: #e11d48;
   --sidebar: #701C1C;
   --sidebar-foreground: #F0EAD6;
   --sidebar-primary: #F0EAD6;
