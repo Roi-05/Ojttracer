@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import { getCurrentPosition, checkGeofence } from "../lib/geolocation";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { useAuth } from "../contexts/AuthContext";
 import { useStudentData } from "../hooks/useStudentData";
@@ -74,6 +75,7 @@ export function StudentDashboard() {
   const [cameraModal, setCameraModal] = useState<{ open: boolean, mode: "in" | "out" }>({ open: false, mode: "in" });
   const [docUploadModal, setDocUploadModal] = useState<{ open: boolean, docName: string }>({ open: false, docName: "" });
   const [accModalOpen, setAccModalOpen] = useState(false);
+  const [geofenceStatus, setGeofenceStatus] = useState<"idle" | "checking" | "allowed" | "denied" | "out_of_range" | "no_gps">("idle");
 
   // Derived state
   const todayRecord = dtrRecords.find(r => r.date === TODAY_ISO) || null;
@@ -82,7 +84,40 @@ export function StudentDashboard() {
   const effectiveDeployment = { ...activeDeployment, completedHours: Math.round(completedHours * 10) / 10 };
   const pct = effectiveDeployment.requiredHours ? Math.round((effectiveDeployment.completedHours / effectiveDeployment.requiredHours) * 100) : 0;
 
-  // Handlers
+  // Geofence-gated camera opener
+  const openDTRCamera = async (mode: "in" | "out") => {
+    const companyLat = activeDeployment?.companyLat;
+    const companyLng = activeDeployment?.companyLng;
+    const radius = activeDeployment?.geofenceRadius || 200;
+
+    // Grace mode: no GPS set for company — skip geofencing
+    if (companyLat == null || companyLng == null) {
+      setGeofenceStatus("no_gps");
+      setCameraModal({ open: true, mode });
+      return;
+    }
+
+    setGeofenceStatus("checking");
+    try {
+      const pos = await getCurrentPosition();
+      const result = checkGeofence(pos.latitude, pos.longitude, companyLat, companyLng, radius);
+      if (result.allowed) {
+        setGeofenceStatus("allowed");
+        setCameraModal({ open: true, mode });
+      } else {
+        setGeofenceStatus("out_of_range");
+        toast.error(
+          `You are ${result.distance}m away from your company. You must be within ${result.radius}m to Time ${mode === "in" ? "In" : "Out"}.`,
+          { duration: 5000 }
+        );
+      }
+    } catch (err: any) {
+      setGeofenceStatus("denied");
+      toast.error(err as string, { duration: 5000 });
+    }
+  };
+
+  // Actual camera capture handler (called after geofence is cleared)
   const handleCameraCapture = async (photo: string) => {
     const d = new Date();
     // Always use 24h HH:MM so backend parsing is unambiguous
@@ -131,7 +166,7 @@ export function StudentDashboard() {
         <p className="font-medium text-lg">Deployment Not Active</p>
         <p className="text-sm text-muted-foreground mt-1">You must have an ongoing deployment to view and manage your Daily Time Record.</p>
       </div>
-    ) : <DTRTab dtrRecords={dtrRecords} todayRecord={todayRecord} openCamera={(mode) => setCameraModal({ open: true, mode })} />,
+    ) : <DTRTab dtrRecords={dtrRecords} todayRecord={todayRecord} openCamera={openDTRCamera} geofenceStatus={geofenceStatus} />,
     journal: () => activeDeployment.status !== "ongoing" ? (
       <div className="p-8 text-center bg-muted/5 border border-border rounded-xl mt-6">
         <p className="font-medium text-lg">Deployment Not Active</p>
@@ -143,6 +178,7 @@ export function StudentDashboard() {
       studentId={studentProfile.studentId}
       studentName={studentProfile.name}
       studentSection={`${studentProfile.course} ${studentProfile.year} ${studentProfile.section}`}
+      studentProfile={studentProfile}
       deployment={{ company: activeDeployment.company, position: activeDeployment.position, supervisor: activeDeployment.supervisor }}
     />,
     documents: () => (

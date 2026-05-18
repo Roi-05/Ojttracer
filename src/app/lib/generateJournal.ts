@@ -18,7 +18,17 @@ export interface JournalMonthGroup {
 export interface JournalInfo {
   studentName: string;
   studentId: string;
+  firstName: string;
+  lastName: string;
+  middleInitial: string;
+  course: string;
+  year: string;
   section: string;
+  address: string;
+  dateOfBirth: string;
+  age: string;
+  civilStatus: string;
+  religion: string;
   company: string;
   companyAddress: string;
   supervisor: string;
@@ -71,13 +81,31 @@ export async function generateJournalDOCX(info: JournalInfo): Promise<void> {
     };
   });
 
+  const globalTotalHours = info.months.reduce((sum, mGroup) => 
+    sum + mGroup.entries.reduce((s, e) => s + Number(e.hours), 0), 0
+  );
+
   const data = {
     studentName: info.studentName || "",
+    studentname: info.studentName || "",
+    firstName: info.firstName || "",
+    lastName: info.lastName || "",
+    middleInitial: info.middleInitial || "",
+    course: info.course || "",
+    year: info.year || "",
     section: info.section || "",
+    address: info.address || "",
+    dateOfBirth: info.dateOfBirth || "",
+    age: info.age || "",
+    civilStatus: info.civilStatus || "",
+    religion: info.religion || "",
     company: info.company || "",
     companyAddress: info.companyAddress || "",
     supervisor: info.supervisor || "",
     supervisorContact: info.supervisorContact || "",
+    position: info.position || "",
+    totalHours: globalTotalHours,
+    profilepicture2x2: "",
     months: formattedMonths.length ? formattedMonths : []
   };
 

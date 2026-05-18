@@ -1,16 +1,19 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
 import { Button } from "../ui/button";
-import { Camera, CameraOff, Download } from "lucide-react";
+import { Camera, CameraOff, Download, Loader2, CheckCircle2, XCircle, MapPin, AlertTriangle } from "lucide-react";
 import { DTRRecord } from "../../hooks/useStudentData";
 import { formatDate, TODAY_LABEL, TODAY_DAY } from "./shared";
+
+type GeofenceStatus = "idle" | "checking" | "allowed" | "denied" | "out_of_range" | "no_gps";
 
 interface DTRTabProps {
   dtrRecords: DTRRecord[];
   todayRecord: DTRRecord | null;
   openCamera: (mode: "in" | "out") => void;
+  geofenceStatus?: GeofenceStatus;
 }
 
-export function DTRTab({ dtrRecords, todayRecord, openCamera }: DTRTabProps) {
+export function DTRTab({ dtrRecords, todayRecord, openCamera, geofenceStatus = "idle" }: DTRTabProps) {
   const hasTimeIn = !!todayRecord?.timeIn;
   const hasTimeOut = !!todayRecord?.timeOut;
   const sortedRecords = [...dtrRecords].sort((a, b) => b.date.localeCompare(a.date));
@@ -28,6 +31,32 @@ export function DTRTab({ dtrRecords, todayRecord, openCamera }: DTRTabProps) {
           <CardDescription>{TODAY_LABEL} — {TODAY_DAY}</CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Geofence Status Banner */}
+          {geofenceStatus === "checking" && (
+            <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-blue-50 text-blue-700 text-sm border border-blue-200">
+              <Loader2 className="h-4 w-4 animate-spin shrink-0" /> Checking your location…
+            </div>
+          )}
+          {geofenceStatus === "allowed" && (
+            <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-green-50 text-green-700 text-sm border border-green-200">
+              <CheckCircle2 className="h-4 w-4 shrink-0" /> You are within your company's geofence ✔
+            </div>
+          )}
+          {geofenceStatus === "out_of_range" && (
+            <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-red-50 text-red-700 text-sm border border-red-200">
+              <XCircle className="h-4 w-4 shrink-0" /> You are outside the allowed area. Move closer to your company.
+            </div>
+          )}
+          {geofenceStatus === "denied" && (
+            <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-orange-50 text-orange-700 text-sm border border-orange-200">
+              <AlertTriangle className="h-4 w-4 shrink-0" /> Location access denied. Enable it in browser settings to use DTR.
+            </div>
+          )}
+          {geofenceStatus === "no_gps" && (
+            <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-muted text-muted-foreground text-sm border border-border">
+              <MapPin className="h-4 w-4 shrink-0" /> No geofence set for your company. DTR available without location check.
+            </div>
+          )}
           <div className="grid md:grid-cols-2 gap-4">
             <div className="p-4 rounded-lg border border-border bg-muted/20">
               <div className="flex items-center justify-between mb-3">

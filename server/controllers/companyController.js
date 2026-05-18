@@ -9,7 +9,8 @@ const getCompanies = async (req, res) => {
       SELECT p.id, p.email, p.name, p.role, p.created_at,
              c.company_name, c.industry, c.company_address, c.website,
              c.hr_contact, c.hr_email, c.phone as company_phone,
-             c.description, c.moa_status, c.accredited_until, c.signed_moa_url
+             c.description, c.moa_status, c.accredited_until, c.signed_moa_url,
+             c.latitude, c.longitude, c.geofence_radius
       FROM public.profiles p
       LEFT JOIN public.companies c ON c.user_id = p.id
       WHERE p.role = 'company'
@@ -31,6 +32,9 @@ const getCompanies = async (req, res) => {
       moaStatus: c.moa_status || 'pending',
       accreditedUntil: c.accredited_until || '—',
       signedMoaUrl: c.signed_moa_url || null,
+      latitude: c.latitude != null ? parseFloat(c.latitude) : null,
+      longitude: c.longitude != null ? parseFloat(c.longitude) : null,
+      geofenceRadius: c.geofence_radius || 200,
     })));
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -134,11 +138,30 @@ const getInterns = async (req, res) => {
   }
 };
 
+const updateCompanyLocation = async (req, res) => {
+  try {
+    if (!['admin', 'company'].includes(req.user.role))
+      return res.status(403).json({ error: 'Not authorized' });
+    const { latitude, longitude, geofenceRadius } = req.body;
+    if (latitude == null || longitude == null)
+      return res.status(400).json({ error: 'latitude and longitude are required' });
+    const targetId = req.user.role === 'admin' ? req.params.id : req.user.id;
+    await db.query(
+      `UPDATE public.companies SET latitude = $1, longitude = $2, geofence_radius = $3 WHERE user_id = $4`,
+      [latitude, longitude, geofenceRadius || 200, targetId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 module.exports = {
   getCompanies,
   verifyCompany,
   updateMoa,
   uploadSignedMoa,
   getMoaTemplate,
-  getInterns
+  getInterns,
+  updateCompanyLocation
 };

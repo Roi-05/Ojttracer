@@ -11,6 +11,7 @@ import { ViewSubmissionModal } from "../components/admin/ViewSubmissionModal";
 import { DeployStudentModal } from "../components/admin/DeployStudentModal";
 import { UpdateMoaModal } from "../components/admin/UpdateMoaModal";
 import { UploadMoaTemplateModal } from "../components/admin/UploadMoaTemplateModal";
+import { GenerateReportsModal } from "../components/admin/GenerateReportsModal";
 
 import { OverviewTab } from "../components/admin/OverviewTab";
 import { StudentsTab } from "../components/admin/StudentsTab";
@@ -65,6 +66,7 @@ export function AdminDashboard() {
   const [showDeployModal, setShowDeployModal] = useState<{ open: boolean, studentId: string | number }>({ open: false, studentId: "" });
   const [moaModalCompany, setMoaModalCompany] = useState<any | null>(null);
   const [showMoaTemplateUpload, setShowMoaTemplateUpload] = useState(false);
+  const [showReportsModal, setShowReportsModal] = useState(false);
 
   const sectionDistribution = SECTIONS.map((name, i) => ({
     name,
@@ -81,7 +83,7 @@ export function AdminDashboard() {
 
 
   const sectionMap: Record<string, () => JSX.Element> = {
-    dashboard: () => <OverviewTab students={students} companies={companies} setActiveSection={setActiveSection} monthlyPlacementData={monthlyPlacementData} sectionDistribution={sectionDistribution} />,
+    dashboard: () => <OverviewTab students={students} companies={companies} setActiveSection={setActiveSection} monthlyPlacementData={monthlyPlacementData} sectionDistribution={sectionDistribution} openReportsModal={() => setShowReportsModal(true)} />,
     students: () => <StudentsTab students={students} sections={SECTIONS} openImportModal={() => setShowImportModal(true)} />,
     companies: () => <CompaniesTab companies={companies} openAddModal={() => setShowCompanyModal(true)} onManageMoa={(c) => setMoaModalCompany(c)} openUploadMoa={() => setShowMoaTemplateUpload(true)} />,
     deployment: () => <DeploymentTab students={students} />,
@@ -140,6 +142,7 @@ export function AdminDashboard() {
         onClose={() => setShowMoaTemplateUpload(false)}
         onSave={uploadTemplate}
       />
+      <GenerateReportsModal open={showReportsModal} onClose={() => setShowReportsModal(false)} students={students} companies={companies} />
     </DashboardLayout>
   );
 }

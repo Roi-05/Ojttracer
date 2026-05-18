@@ -2,7 +2,12 @@ const db = require('../db');
 
 const getDeployment = async (req, res) => {
   try {
-    const result = await db.query(`SELECT * FROM public.deployments WHERE student_id = $1`, [req.user.id]);
+    const result = await db.query(`
+      SELECT d.*, c.latitude, c.longitude, c.geofence_radius
+      FROM public.deployments d
+      LEFT JOIN public.companies c ON c.user_id = d.company_id
+      WHERE d.student_id = $1
+    `, [req.user.id]);
     const d = result.rows[0];
     if (!d) return res.json(null);
     res.json({
@@ -17,6 +22,9 @@ const getDeployment = async (req, res) => {
       requiredHours: d.required_hours || 486,
       position: d.position || '',
       status: d.status || 'pending',
+      companyLat: d.latitude != null ? parseFloat(d.latitude) : null,
+      companyLng: d.longitude != null ? parseFloat(d.longitude) : null,
+      geofenceRadius: d.geofence_radius || 200,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

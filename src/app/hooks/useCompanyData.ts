@@ -40,6 +40,9 @@ export const emptyCompanyInfo = {
   description: "",
   moaStatus: "pending",
   accreditedUntil: "",
+  latitude: null as number | null,
+  longitude: null as number | null,
+  geofenceRadius: 200,
 };
 
 export function useCompanyData() {
@@ -63,6 +66,9 @@ export function useCompanyData() {
     description: (user as any)?.description || emptyCompanyInfo.description,
     moaStatus: (user as any)?.moaStatus || emptyCompanyInfo.moaStatus,
     accreditedUntil: (user as any)?.accreditedUntil || emptyCompanyInfo.accreditedUntil,
+    latitude: (user as any)?.latitude ?? null,
+    longitude: (user as any)?.longitude ?? null,
+    geofenceRadius: (user as any)?.geofenceRadius || 200,
   };
 
   useEffect(() => {

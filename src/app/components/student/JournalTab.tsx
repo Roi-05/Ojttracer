@@ -20,6 +20,7 @@ interface JournalTabProps {
     position?: string;
     supervisor?: string;
   };
+  studentProfile?: any;
 }
 
 // Days of week for journal template ordering
@@ -78,6 +79,7 @@ export function JournalTab({
   studentName = "",
   studentSection = "",
   deployment = {},
+  studentProfile = {},
 }: JournalTabProps) {
   const sortedDesc = [...accomplishmentList].sort((a, b) => b.date.localeCompare(a.date));
   const approved = accomplishmentList.filter(a => a.status === "approved").length;
@@ -101,14 +103,32 @@ export function JournalTab({
       entries
     }));
 
+    let ageStr = "";
+    if (studentProfile.dateOfBirth) {
+      const dob = new Date(studentProfile.dateOfBirth);
+      const diffMs = Date.now() - dob.getTime();
+      const ageDt = new Date(diffMs);
+      ageStr = String(Math.abs(ageDt.getUTCFullYear() - 1970));
+    }
+
     const promise = generateJournalDOCX({
-      studentName,
-      studentId,
-      section: studentSection,
+      studentName: studentProfile.name || studentName,
+      studentId: studentProfile.studentId || studentId,
+      firstName: studentProfile.firstName || "",
+      lastName: studentProfile.lastName || "",
+      middleInitial: studentProfile.middleName ? studentProfile.middleName.charAt(0) + "." : "",
+      course: studentProfile.course || "",
+      year: studentProfile.year || "",
+      section: studentProfile.section || studentSection,
+      address: studentProfile.address || "",
+      dateOfBirth: studentProfile.dateOfBirth ? new Date(studentProfile.dateOfBirth).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "",
+      age: ageStr,
+      civilStatus: studentProfile.civilStatus || "",
+      religion: studentProfile.religion || "",
       company: deployment.company || "",
-      companyAddress: "",
+      companyAddress: "", // could be added to deployment in future
       supervisor: deployment.supervisor || "",
-      supervisorContact: "",
+      supervisorContact: "", // could be added to deployment in future
       position: deployment.position || "",
       months: monthsPayload,
     });

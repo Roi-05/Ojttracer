@@ -32,7 +32,21 @@ async function loadProfile(userId) {
   } else if (base.role === 'company') {
     const cRes = await db.query(`SELECT * FROM public.companies WHERE user_id = $1`, [userId]);
     const cmp = cRes.rows[0];
-    if (cmp) Object.assign(out, { companyName: cmp.company_name, industry: cmp.industry, companyAddress: cmp.company_address, website: cmp.website, hrContact: cmp.hr_contact, hrEmail: cmp.hr_email, phone: cmp.phone, description: cmp.description, moaStatus: cmp.moa_status, accreditedUntil: cmp.accredited_until });
+    if (cmp) Object.assign(out, {
+      companyName: cmp.company_name,
+      industry: cmp.industry,
+      companyAddress: cmp.company_address,
+      website: cmp.website,
+      hrContact: cmp.hr_contact,
+      hrEmail: cmp.hr_email,
+      phone: cmp.phone,
+      description: cmp.description,
+      moaStatus: cmp.moa_status,
+      accreditedUntil: cmp.accredited_until,
+      latitude: cmp.latitude != null ? parseFloat(cmp.latitude) : null,
+      longitude: cmp.longitude != null ? parseFloat(cmp.longitude) : null,
+      geofenceRadius: cmp.geofence_radius || 200,
+    });
   }
   return out;
 }

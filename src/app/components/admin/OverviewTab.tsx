@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { GraduationCap, Building2, Briefcase, CheckCircle2, AlertTriangle, Clock, TrendingUp, ArrowRight, Users } from "lucide-react";
+import { Button } from "../ui/button";
+import { GraduationCap, Building2, Briefcase, CheckCircle2, AlertTriangle, Clock, TrendingUp, ArrowRight, Users, Download } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { AdminStudent, AdminCompany } from "../../hooks/useAdminData";
 import { StatusBadge } from "../student/shared";
@@ -10,11 +11,12 @@ interface OverviewTabProps {
   setActiveSection: (section: string) => void;
   monthlyPlacementData: any[];
   sectionDistribution: any[];
+  openReportsModal?: () => void;
 }
 
 const COLORS = ["#2563EB", "#16A34A", "#EA580C", "#7C3AED", "#DC2626"];
 
-export function OverviewTab({ students, companies, setActiveSection, sectionDistribution }: OverviewTabProps) {
+export function OverviewTab({ students, companies, setActiveSection, sectionDistribution, openReportsModal }: OverviewTabProps) {
   const ongoing    = students.filter(s => s.status === "ongoing").length;
   const completed  = students.filter(s => s.status === "completed").length;
   const pending    = students.filter(s => s.status === "pending").length;
@@ -78,9 +80,16 @@ export function OverviewTab({ students, companies, setActiveSection, sectionDist
             {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
           </p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full text-xs text-green-700 font-medium">
-          <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-          System Live
+        <div className="flex items-center gap-3">
+          {openReportsModal && (
+            <Button variant="outline" className="gap-2 border-green-200 text-green-700 hover:bg-green-50 hover:text-green-800" onClick={openReportsModal}>
+              <Download className="h-4 w-4" /> Generate Reports
+            </Button>
+          )}
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full text-xs text-green-700 font-medium">
+            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+            System Live
+          </div>
         </div>
       </div>
 

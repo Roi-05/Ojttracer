@@ -187,6 +187,10 @@ export async function updateMoa(id: string | number, status: string, expiryDate?
   return apiFetch(`/companies/${id}/moa`, { method: "PUT", body: JSON.stringify({ status, expiryDate }) });
 }
 
+export async function updateCompanyLocation(id: string | number, latitude: number, longitude: number, geofenceRadius: number) {
+  return apiFetch(`/companies/${id}/location`, { method: "PUT", body: JSON.stringify({ latitude, longitude, geofenceRadius }) });
+}
+
 export async function uploadSignedMoa(file: File) {
   return new Promise<any>((resolve, reject) => {
     const reader = new FileReader();

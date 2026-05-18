@@ -15,7 +15,7 @@ export type AdminStudent = {
 };
 export type AdminCompany = { id: string | number; name: string; industry: string; location: string; activeInterns: number; totalCapacity: number; moaStatus: string; moaExpiry: string; contactPerson: string; verified: boolean; hrContact?: string; hrEmail?: string; signedMoaUrl?: string | null };
 export type DTRLog = { student: string; date: string; timeIn: string; timeOut: string; hours: number; status: string };
-export type JournalLog = { student: string; week: string; title: string; submitted: string; status: string };
+export type JournalLog = { student: string; section: string; week: string; title: string; submitted: string; status: string };
 export type Announcement = { id: string | number; title: string; content: string; date: string; category: string; priority: string };
 export type CompanyLocation = { name: string; address: string; lat: number; lng: number; industry: string; interns: number; x: number; y: number };
 export type AdminTemplate = { name: string; file: string | null; size: string; uploaded: string; docSlug: string | null };
@@ -98,15 +98,19 @@ export function useAdminData() {
       }
 
       if (jrnRes) {
-        setJournalLogs((jrnRes || []).map((a: any) => ({
-          student: a.studentName || a.studentId || "—",
-          week: a.date || "—",
+        setJournalLogs((jrnRes || []).map((a: any) => {
+          const matchedStudent = (stuRes || []).find((s: any) => s.id === a.studentId);
+          return {
+            student: a.studentName || a.studentId || "—",
+            section: matchedStudent?.section || "—",
+          week: a.date ? new Date(a.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—",
           title: a.details ? (a.details.length > 60 ? a.details.substring(0, 60) + "…" : a.details) : "—",
           submitted: a.createdAt
             ? new Date(a.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })
             : "—",
           status: a.status === "rejected" ? "not_submitted" : "submitted",
-        })));
+          };
+        }));
       }
 
       if (docRes) {
