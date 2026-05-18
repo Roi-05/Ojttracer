@@ -213,12 +213,27 @@ export async function getInterns() {
 }
 
 // ─── Evaluations ────────────────────────────────────────────────────────
-export async function getEvaluation(studentId: string) {
-  return apiFetch(`/evaluations/${studentId}`);
-}
+export const getAllEvaluations = async () => {
+  return apiFetch("/evaluations");
+};
 
-export async function submitEvaluation(payload: {
-  studentId: string; studentName: string; scores: Record<string, number>; comments?: string;
-}) {
+export const getEvaluation = async (studentId: string) => {
+  return apiFetch(`/evaluations/${studentId}`);
+};
+
+export const submitEvaluation = async (payload: { studentId: string, studentName: string, scores: Record<string, number>, comments: string }) => {
   return apiFetch("/evaluations", { method: "POST", body: JSON.stringify(payload) });
-}
+};
+
+// ─── Import ──────────────────────────────────────────────────────────────
+export const previewImport = async (file: File) => {
+  const form = new FormData();
+  form.append("file", file);
+  return apiFetch("/import/students/preview", { method: "POST", body: form });
+};
+
+export const importStudents = async (file: File) => {
+  const form = new FormData();
+  form.append("file", file);
+  return apiFetch("/import/students", { method: "POST", body: form });
+};

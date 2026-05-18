@@ -1,3 +1,7 @@
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env.local') });
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
+
 const express = require('express');
 const cors = require('cors');
 const { UPLOADS_DIR } = require('./middleware/upload');
@@ -15,6 +19,7 @@ const companyRoutes = require('./routes/companies');
 const internRoutes = require('./routes/interns');
 const accomplishmentRoutes = require('./routes/accomplishments');
 const evaluationRoutes = require('./routes/evaluations');
+const importRoutes = require('./routes/import');
 
 const app = express();
 
@@ -39,6 +44,7 @@ app.use('/companies', companyRoutes);
 app.use('/interns', internRoutes);
 app.use('/accomplishments', accomplishmentRoutes);
 app.use('/evaluations', evaluationRoutes);
+app.use('/import', importRoutes);
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`Server listening on port ${port}`));

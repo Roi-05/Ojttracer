@@ -104,12 +104,17 @@ export function LoginPage() {
               </TabsList>
 
               <TabsContent value="student">
+                <div className="mb-4 flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-xl p-3.5">
+                  <GraduationCap className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                  <p className="text-sm text-blue-700">Student accounts are created by the OJT Coordinator. Your login credentials will be sent to your PSU email. Contact the coordinator if you need help.</p>
+                </div>
                 <LoginForm
                   role="student"
                   onLogin={handleLogin}
                   onRegister={handleRegister}
-                  isRegistering={isRegistering}
-                  setIsRegistering={setIsRegistering}
+                  isRegistering={false}
+                  setIsRegistering={() => {}}
+                  hideRegisterLink
                 />
               </TabsContent>
               <TabsContent value="company">
@@ -150,12 +155,14 @@ function LoginForm({
   onRegister,
   isRegistering,
   setIsRegistering,
+  hideRegisterLink,
 }: {
   role: string;
   onLogin: (role: string, email: string, password: string) => Promise<void>;
   onRegister: (role: string, payload: any) => Promise<void>;
   isRegistering: boolean;
   setIsRegistering: (value: boolean) => void;
+  hideRegisterLink?: boolean;
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -367,7 +374,7 @@ function LoginForm({
               Login here
             </button>
           </>
-        ) : role !== "admin" && (
+        ) : !isRegistering && role !== "admin" && role !== "student" && !hideRegisterLink && (
           <>
             Don't have an account?{" "}
             <button

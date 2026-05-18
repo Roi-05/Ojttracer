@@ -26,24 +26,37 @@ const getDeployment = async (req, res) => {
 const getStudents = async (req, res) => {
   try {
     const result = await db.query(`
-      SELECT p.*, s.student_id, s.section, s.phone, s.address, s.skills, s.emergency_contact, s.intended_company_id,
-             d.company_name, d.position, d.required_hours, d.status as deployment_status
+      SELECT p.*, s.student_id, s.last_name, s.first_name, s.middle_name,
+             s.section, s.course, s.year_level, s.date_of_birth, s.civil_status, s.sex,
+             s.phone, s.address, s.skills, s.emergency_contact, s.intended_company_id,
+             d.company_name, d.position, d.required_hours, d.status as deployment_status,
+             e.overall_score
       FROM public.profiles p
       LEFT JOIN public.students s ON s.user_id = p.id
       LEFT JOIN public.deployments d ON d.student_id = p.id
+      LEFT JOIN public.evaluations e ON e.student_id = p.id
       WHERE p.role = 'student'
-    `);
+    `, []);
     res.json(result.rows.map(r => ({
       id: r.id,
       name: r.name,
       email: r.email,
       studentId: r.student_id,
+      lastName: r.last_name || '',
+      firstName: r.first_name || '',
+      middleName: r.middle_name || '',
       section: r.section,
+      course: r.course || 'BSIT',
+      yearLevel: r.year_level || '4th Year',
+      dateOfBirth: r.date_of_birth || null,
+      civilStatus: r.civil_status || '',
+      sex: r.sex || '',
       phone: r.phone,
       address: r.address,
       skills: r.skills,
       emergencyContact: r.emergency_contact,
       intendedCompanyId: r.intended_company_id,
+      performance: parseFloat(r.overall_score) || 0,
       deployment: r.company_name ? {
         company: r.company_name,
         position: r.position,

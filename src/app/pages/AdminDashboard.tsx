@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { useAuth } from "../contexts/AuthContext";
-import { useAdminData, CompanyLocation, Announcement } from "../hooks/useAdminData";
+import { useAdminData, CompanyLocation } from "../hooks/useAdminData";
 
-import { AddStudentModal } from "../components/admin/AddStudentModal";
+import { ImportStudentsModal } from "../components/admin/ImportStudentsModal";
 import { AddCompanyModal } from "../components/admin/AddCompanyModal";
 import { AddAnnouncementModal } from "../components/admin/AddAnnouncementModal";
 import { UploadTemplateModal } from "../components/admin/UploadTemplateModal";
@@ -22,8 +22,9 @@ import { AnnouncementsTab } from "../components/admin/AnnouncementsTab";
 import { DocumentsTab } from "../components/admin/DocumentsTab";
 import { AnalyticsTab } from "../components/admin/AnalyticsTab";
 import { MapTab } from "../components/admin/MapTab";
+import { EvaluationsTab } from "../components/admin/EvaluationsTab";
 
-import { LayoutDashboard, Building2, MapPin, Clock, BookOpen, Upload, Megaphone, BarChart3, Map, GraduationCap, Briefcase, TrendingUp } from "lucide-react";
+import { LayoutDashboard, Building2, MapPin, Clock, BookOpen, Upload, Megaphone, BarChart3, Map, GraduationCap, Briefcase, Star } from "lucide-react";
 
 const menuItems = [
   { icon: <LayoutDashboard className="h-4 w-4" />, label: "Overview", value: "dashboard" },
@@ -32,6 +33,7 @@ const menuItems = [
   { icon: <Briefcase className="h-4 w-4" />, label: "Deployment", value: "deployment" },
   { icon: <Clock className="h-4 w-4" />, label: "Attendance (DTR)", value: "attendance" },
   { icon: <BookOpen className="h-4 w-4" />, label: "Journals", value: "journals" },
+  { icon: <Star className="h-4 w-4" />, label: "Evaluations", value: "evaluations" },
   { icon: <Megaphone className="h-4 w-4" />, label: "Announcements", value: "announcements" },
   { icon: <Upload className="h-4 w-4" />, label: "Documents", value: "documents" },
   { icon: <BarChart3 className="h-4 w-4" />, label: "Analytics", value: "analytics" },
@@ -50,12 +52,12 @@ export function AdminDashboard() {
   const [selectedMapCompany, setSelectedMapCompany] = useState<CompanyLocation | null>(null);
 
   const {
-    students, companies, dtrLogs, journalLogs, announcements, templates, studentSubmissions,
-    verifyCompany, updateMoaStatus, uploadTemplate, reviewDocument, deployStudent
+    students, companies, evaluations, dtrLogs, journalLogs, announcements, templates, studentSubmissions,
+    verifyCompany, updateMoaStatus, uploadTemplate, reviewDocument, deployStudent, reload
   } = useAdminData();
 
   // Modals state
-  const [showStudentModal, setShowStudentModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [showTemplateUpload, setShowTemplateUpload] = useState(false);
@@ -77,20 +79,15 @@ export function AdminDashboard() {
     return !!s && s.docs.every(d => d.status === "approved");
   };
 
-  const overviewStats = [
-    { label: "Total OJT Students", value: String(students.length), icon: <GraduationCap className="h-5 w-5" />, color: "text-blue-600 bg-blue-100", change: "" },
-    { label: "Partner Companies", value: String(companies.length), icon: <Building2 className="h-5 w-5" />, color: "text-green-600 bg-green-100", change: "" },
-    { label: "Active Deployments", value: String(students.filter(s => s.status === "ongoing").length), icon: <Briefcase className="h-5 w-5" />, color: "text-orange-600 bg-orange-100", change: "" },
-    { label: "Completed", value: String(students.filter(s => s.status === "completed").length), icon: <TrendingUp className="h-5 w-5" />, color: "text-purple-600 bg-purple-100", change: "" },
-  ];
 
   const sectionMap: Record<string, () => JSX.Element> = {
     dashboard: () => <OverviewTab students={students} companies={companies} setActiveSection={setActiveSection} monthlyPlacementData={monthlyPlacementData} sectionDistribution={sectionDistribution} />,
-    students: () => <StudentsTab students={students} sections={SECTIONS} openAddModal={() => setShowStudentModal(true)} />,
+    students: () => <StudentsTab students={students} sections={SECTIONS} openImportModal={() => setShowImportModal(true)} />,
     companies: () => <CompaniesTab companies={companies} openAddModal={() => setShowCompanyModal(true)} onManageMoa={(c) => setMoaModalCompany(c)} openUploadMoa={() => setShowMoaTemplateUpload(true)} />,
     deployment: () => <DeploymentTab students={students} />,
     attendance: () => <AttendanceTab dtrLogs={dtrLogs} />,
     journals: () => <JournalsTab journalLogs={journalLogs} />,
+    evaluations: () => <EvaluationsTab evaluations={evaluations} />,
     announcements: () => <AnnouncementsTab announcements={announcements} openAddModal={() => setShowAnnouncementModal(true)} onDelete={(id) => {}} />, // TODO implement real delete
     documents: () => <DocumentsTab 
       templates={templates} studentSubmissions={studentSubmissions} 
@@ -99,7 +96,7 @@ export function AdminDashboard() {
       openReviewSubmission={(id) => setViewSubmissionId(id)} 
       openDeployModal={(id) => setShowDeployModal({ open: true, studentId: id })} 
     />,
-    analytics: () => <AnalyticsTab overviewStats={overviewStats} hoursProgressData={hoursProgressData} monthlyPlacementData={monthlyPlacementData} sectionDistribution={sectionDistribution} />,
+    analytics: () => <AnalyticsTab students={students} companies={companies} overviewStats={[]} hoursProgressData={[]} monthlyPlacementData={[]} sectionDistribution={sectionDistribution} />,
     map: () => <MapTab companyLocations={companyLocations} selectedMapCompany={selectedMapCompany} setSelectedMapCompany={setSelectedMapCompany} />
   };
 
@@ -115,7 +112,7 @@ export function AdminDashboard() {
         {sectionMap[activeSection] ? sectionMap[activeSection]() : <div>Section not found</div>}
       </div>
 
-      <AddStudentModal open={showStudentModal} onClose={() => setShowStudentModal(false)} sections={SECTIONS} />
+      <ImportStudentsModal open={showImportModal} onClose={() => setShowImportModal(false)} onImported={reload} />
       <AddCompanyModal open={showCompanyModal} onClose={() => setShowCompanyModal(false)} />
       <AddAnnouncementModal open={showAnnouncementModal} onClose={() => setShowAnnouncementModal(false)} onAdded={(ann) => {}} />
       <UploadTemplateModal open={showTemplateUpload} onClose={() => setShowTemplateUpload(false)} onSave={uploadTemplate} />

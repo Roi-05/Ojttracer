@@ -72,6 +72,7 @@ export function useStudentData() {
   );
   const [activeCompanies, setActiveCompanies] = useState<any[]>([]);
   const [intendedCompanyId, setIntendedCompanyId] = useState<string | null>(null);
+  const [evaluation, setEvaluation] = useState<any>(null);
   
   const [loading, setLoading] = useState(true);
 
@@ -83,14 +84,15 @@ export function useStudentData() {
     const loadAllData = async () => {
       try {
         setLoading(true);
-        const [dtrRes, accRes, docRes, depRes, annRes, tplRes, compRes] = await Promise.all([
+        const [dtrRes, accRes, docRes, depRes, annRes, tplRes, compRes, evalRes] = await Promise.all([
           api.getDTR().catch(() => []),
           api.getAccomplishments().catch(() => []),
           api.getDocuments().catch(() => []),
           api.getDeployment().catch(() => null),
           api.getAnnouncements().catch(() => []),
           api.getTemplates().catch(() => []),
-          api.getActiveCompanies().catch(() => [])
+          api.getActiveCompanies().catch(() => []),
+          api.getEvaluation((user as any)?.id).catch(() => null)
         ]);
 
         if (!isMounted) return;
@@ -133,9 +135,13 @@ export function useStudentData() {
         if (tplRes?.length) {
           setTemplates(REQUIRED_DOC_NAMES.map((name) => {
             const found = tplRes.find((t: any) => t.name === name);
-            return found ? { name, file: found.fileUrl || name.replace(/\\s+/g, "_") + "_Template.pdf", size: found.size || "—", uploaded: found.uploadedDate || "—" }
+            return found ? { name, file: found.fileUrl || name.replace(/\s+/g, "_") + "_Template.pdf", size: found.size || "—", uploaded: found.uploadedDate || "—" }
               : { name, file: null, size: "—", uploaded: "—" };
           }));
+        }
+
+        if (evalRes) {
+          setEvaluation(evalRes);
         }
 
       } catch (err) {
@@ -247,6 +253,7 @@ export function useStudentData() {
     templates,
     activeCompanies,
     intendedCompanyId,
+    evaluation,
     clockIn,
     clockOut,
     submitDocument,

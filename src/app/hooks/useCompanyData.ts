@@ -94,7 +94,7 @@ export function useCompanyData() {
             endDate: i.deployment?.endDate || "—",
             hoursCompleted: i.completedHours || 0,
             requiredHours: i.deployment?.requiredHours || 486,
-            performance: 0,
+            performance: i.performance ? parseFloat(i.performance) : 0,
             status: i.deployment?.status || "ongoing",
           })));
         }
@@ -165,13 +165,27 @@ export function useCompanyData() {
     }
   };
 
-  const submitEvaluation = async (internId: string | number, internName: string, scores: Record<string, number>) => {
+  const submitEvaluation = async (internId: string | number, internName: string, scores: Record<string, number>, comments: string) => {
     try {
-      await api.submitEvaluation({ studentId: String(internId), studentName: internName, scores });
+      const res = await api.submitEvaluation({ studentId: String(internId), studentName: internName, scores, comments });
+      
+      if (res && res.evaluation && res.evaluation.overall_score !== undefined) {
+        setInterns(list => list.map(i => i.id === internId ? { ...i, performance: parseFloat(res.evaluation.overall_score) } : i));
+      }
+
       toast.success("Evaluation submitted successfully to the OJT Coordinator.");
     } catch (e: any) {
       toast.error(`Failed to submit evaluation: ${e.message}`);
       throw e;
+    }
+  };
+
+  const getEvaluation = async (internId: string | number) => {
+    try {
+      const res = await api.getEvaluation(String(internId));
+      return res;
+    } catch (e: any) {
+      return null;
     }
   };
 
@@ -186,6 +200,7 @@ export function useCompanyData() {
     uploadSignedMoa,
     approveAccomplishment,
     rejectAccomplishment,
-    submitEvaluation
+    submitEvaluation,
+    getEvaluation
   };
 }

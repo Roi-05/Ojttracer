@@ -29,6 +29,7 @@ export function CompanyDashboard() {
   const [activeSection, setActiveSection] = useState("dashboard");
   const [showEvalModal, setShowEvalModal] = useState<string | number | null>(null);
   const [evalScores, setEvalScores] = useState<Record<string, number>>({});
+  const [evalComments, setEvalComments] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "approved" | "rejected">("all");
 
   const {
@@ -41,15 +42,30 @@ export function CompanyDashboard() {
     approveAccomplishment,
     rejectAccomplishment,
     submitEvaluation,
+    getEvaluation,
   } = useCompanyData();
+
+  const handleOpenEvalModal = async (id: string | number) => {
+    setShowEvalModal(id);
+    const existing = await getEvaluation(id);
+    if (existing && existing.scores) {
+      setEvalScores(existing.scores);
+      setEvalComments(existing.comments || "");
+    } else {
+      setEvalScores({});
+      setEvalComments("");
+    }
+  };
 
   const handleSubmitEval = async (e: React.FormEvent) => {
     e.preventDefault();
     const intern = interns.find(i => i.id === showEvalModal);
+    const currentInternId = showEvalModal;
     setShowEvalModal(null);
     setEvalScores({});
-    if (!intern) return;
-    await submitEvaluation(intern.id, intern.name, evalScores);
+    setEvalComments("");
+    if (!intern || !currentInternId) return;
+    await submitEvaluation(currentInternId, intern.name, evalScores, evalComments);
   };
 
   const sectionMap: Record<string, () => JSX.Element> = {
@@ -74,7 +90,7 @@ export function CompanyDashboard() {
         onReject={rejectAccomplishment}
       />
     ),
-    evaluations: () => <EvaluationsTab interns={interns} onEvaluate={(id) => setShowEvalModal(id)} />,
+    evaluations: () => <EvaluationsTab interns={interns} onEvaluate={(id) => handleOpenEvalModal(id)} />,
   };
 
   return (
@@ -94,7 +110,9 @@ export function CompanyDashboard() {
         interns={interns}
         evalScores={evalScores}
         setEvalScores={setEvalScores}
-        onClose={() => { setShowEvalModal(null); setEvalScores({}); }}
+        evalComments={evalComments}
+        setEvalComments={setEvalComments}
+        onClose={() => { setShowEvalModal(null); setEvalScores({}); setEvalComments(""); }}
         onSubmit={handleSubmitEval}
       />
     </DashboardLayout>

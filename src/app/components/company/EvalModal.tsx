@@ -16,11 +16,13 @@ interface EvalModalProps {
   interns: Intern[];
   evalScores: Record<string, number>;
   setEvalScores: Dispatch<SetStateAction<Record<string, number>>>;
+  evalComments: string;
+  setEvalComments: Dispatch<SetStateAction<string>>;
   onClose: () => void;
   onSubmit: (e: React.FormEvent) => void;
 }
 
-export function EvalModal({ internId, interns, evalScores, setEvalScores, onClose, onSubmit }: EvalModalProps) {
+export function EvalModal({ internId, interns, evalScores, setEvalScores, evalComments, setEvalComments, onClose, onSubmit }: EvalModalProps) {
   const intern = interns.find(i => i.id === internId);
 
   return (
@@ -65,6 +67,8 @@ export function EvalModal({ internId, interns, evalScores, setEvalScores, onClos
             <Label>Overall Comments</Label>
             <textarea
               rows={3}
+              value={evalComments}
+              onChange={(e) => setEvalComments(e.target.value)}
               placeholder="Write your overall assessment and recommendations..."
               className="w-full mt-1.5 border border-border rounded-lg p-3 text-sm bg-card resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
             />

@@ -4,7 +4,15 @@ import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
 import { REQUIRED_DOC_NAMES } from "./useStudentData";
 
-export type AdminStudent = { id: string | number; name: string; studentId: string; course: string; section: string; company: string; position: string; hoursCompleted: number; requiredHours: number; status: string; intendedCompanyId?: string | null };
+export type AdminStudent = {
+  id: string | number; name: string; studentId: string;
+  lastName: string; firstName: string; middleName: string;
+  course: string; yearLevel: string; section: string;
+  dateOfBirth: string | null; civilStatus: string; sex: string;
+  email: string; phone: string; address: string;
+  company: string; position: string; hoursCompleted: number; requiredHours: number;
+  status: string; intendedCompanyId?: string | null; performance: number;
+};
 export type AdminCompany = { id: string | number; name: string; industry: string; location: string; activeInterns: number; totalCapacity: number; moaStatus: string; moaExpiry: string; contactPerson: string; verified: boolean; hrContact?: string; hrEmail?: string; signedMoaUrl?: string | null };
 export type DTRLog = { student: string; date: string; timeIn: string; timeOut: string; hours: number; status: string };
 export type JournalLog = { student: string; week: string; title: string; submitted: string; status: string };
@@ -13,6 +21,7 @@ export type CompanyLocation = { name: string; address: string; lat: number; lng:
 export type AdminTemplate = { name: string; file: string | null; size: string; uploaded: string; docSlug: string | null };
 export type AdminDocEntry = { name: string; status: string; file: string | null; uploaded: string };
 export type AdminSubmission = { studentId: string | number; name: string; studentNo: string; course: string; section: string; deployed: boolean; assignedCompany: string | null; docs: AdminDocEntry[] };
+export type EvaluationRecord = { studentId: string; studentName: string; studentNumber: string; section: string; companyName: string; scores: Record<string, number>; overallScore: number; comments: string; submittedAt: string; };
 
 export function useAdminData() {
   const { user } = useAuth();
@@ -26,115 +35,121 @@ export function useAdminData() {
     REQUIRED_DOC_NAMES.map(name => ({ name, file: null, size: "—", uploaded: "—", docSlug: null }))
   );
   const [studentSubmissions, setStudentSubmissions] = useState<AdminSubmission[]>([]);
+  const [evaluations, setEvaluations] = useState<EvaluationRecord[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [stuRes, compRes, annRes, dtrRes, jrnRes, docRes, tplRes, evalRes] = await Promise.all([
+        api.getStudents().catch(() => []),
+        api.getCompanies().catch(() => []),
+        api.getAnnouncements().catch(() => []),
+        api.getAdminDTR().catch(() => []),
+        api.getAccomplishments().catch(() => []),
+        api.getDocuments().catch(() => []),
+        api.getTemplates().catch(() => []),
+        api.getAllEvaluations().catch(() => [])
+      ]);
+
+      if (stuRes) {
+        setStudents((stuRes || []).map((s: any) => ({
+          id: s.id, name: s.name, email: s.email || '',
+          studentId: s.studentId || '—',
+          lastName: s.lastName || '', firstName: s.firstName || '', middleName: s.middleName || '',
+          course: s.course || 'BSIT', yearLevel: s.yearLevel || '4th Year',
+          section: s.section || '—',
+          dateOfBirth: s.dateOfBirth || null, civilStatus: s.civilStatus || '', sex: s.sex || '',
+          phone: s.phone || '', address: s.address || '',
+          company: s.deployment?.company || '—', position: s.deployment?.position || '—',
+          hoursCompleted: 0, requiredHours: s.deployment?.requiredHours || 486,
+          status: s.deployment ? (s.deployment.status || 'ongoing') : 'pending',
+          intendedCompanyId: s.intendedCompanyId || null,
+          performance: parseFloat(s.performance) || 0,
+        })));
+      }
+
+      if (compRes) {
+        setCompanies((compRes || []).map((c: any) => ({
+          id: c.id, name: c.companyName || c.name, industry: c.industry || "—",
+          location: c.companyAddress || "—", activeInterns: 0, totalCapacity: 0,
+          moaStatus: c.moaStatus || "pending", moaExpiry: c.accreditedUntil || "—",
+          contactPerson: c.hrContact || c.name, verified: c.moaStatus === "active",
+          hrContact: c.hrContact, hrEmail: c.hrEmail, signedMoaUrl: c.signedMoaUrl || null,
+        })));
+      }
+
+      if (annRes) {
+        setAnnouncements((annRes || []).map((a: any) => ({
+          id: a.id, title: a.title, content: a.content, date: a.date,
+          category: a.category, priority: a.priority,
+        })));
+      }
+
+      if (dtrRes) {
+        setDtrLogs((dtrRes || []).map((r: any) => ({
+          student: r.studentName || r.studentId || "—",
+          date: r.date || "—",
+          timeIn: r.timeIn || "—",
+          timeOut: r.timeOut || "—",
+          hours: Number(r.hours) || 0,
+          status: r.timeOut ? "regular" : r.timeIn ? "ongoing" : "rest",
+        })));
+      }
+
+      if (jrnRes) {
+        setJournalLogs((jrnRes || []).map((a: any) => ({
+          student: a.studentName || a.studentId || "—",
+          week: a.date || "—",
+          title: a.details ? (a.details.length > 60 ? a.details.substring(0, 60) + "…" : a.details) : "—",
+          submitted: a.createdAt
+            ? new Date(a.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+            : "—",
+          status: a.status === "rejected" ? "not_submitted" : "submitted",
+        })));
+      }
+
+      if (docRes) {
+        setStudentSubmissions((docRes || []).map((s: any) => ({
+          studentId: s.studentId,
+          name: s.studentName || "—",
+          studentNo: s.studentNo || "—",
+          course: "BSIT",
+          section: s.section || "—",
+          deployed: s.isDeployed || false,
+          assignedCompany: s.assignedCompany || null,
+          docs: REQUIRED_DOC_NAMES.map((docName) => {
+            const found = (s.docs || []).find((d: any) => d.name === docName);
+            return found
+              ? { name: docName, status: found.status || "missing", file: found.fileUrl || null, uploaded: found.uploadedDate || "—" }
+              : { name: docName, status: "missing", file: null, uploaded: "—" };
+          }),
+        })));
+      }
+
+      if (tplRes) {
+        setTemplates(REQUIRED_DOC_NAMES.map((name) => {
+          const found = (tplRes || []).find((t: any) => t.name === name);
+          return found
+            ? { name, file: found.fileUrl || null, size: found.size || "—", uploaded: found.uploadedDate || "—", docSlug: found.docSlug || null }
+            : { name, file: null, size: "—", uploaded: "—", docSlug: null };
+        }));
+      }
+
+      if (evalRes) {
+        setEvaluations(evalRes || []);
+      }
+
+    } catch (err) {
+      console.error("Failed to load admin data", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
-    
-    let isMounted = true;
-    
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        const [stuRes, compRes, annRes, dtrRes, jrnRes, docRes, tplRes] = await Promise.all([
-          api.getStudents().catch(() => []),
-          api.getCompanies().catch(() => []),
-          api.getAnnouncements().catch(() => []),
-          api.getAdminDTR().catch(() => []),
-          api.getAccomplishments().catch(() => []),
-          api.getDocuments().catch(() => []),
-          api.getTemplates().catch(() => [])
-        ]);
-
-        if (!isMounted) return;
-
-        if (stuRes) {
-          setStudents((stuRes || []).map((s: any) => ({
-            id: s.id, name: s.name, studentId: s.studentId || "—",
-            course: "BSIT", section: s.section || "—",
-            company: s.deployment?.company || "—", position: s.deployment?.position || "—",
-            hoursCompleted: 0, requiredHours: s.deployment?.requiredHours || 486,
-            status: s.deployment ? (s.deployment.status || "ongoing") : "pending",
-            intendedCompanyId: s.intendedCompanyId || null,
-          })));
-        }
-
-        if (compRes) {
-          setCompanies((compRes || []).map((c: any) => ({
-            id: c.id, name: c.companyName || c.name, industry: c.industry || "—",
-            location: c.companyAddress || "—", activeInterns: 0, totalCapacity: 0,
-            moaStatus: c.moaStatus || "pending", moaExpiry: c.accreditedUntil || "—",
-            contactPerson: c.hrContact || c.name, verified: c.moaStatus === "active",
-            hrContact: c.hrContact, hrEmail: c.hrEmail, signedMoaUrl: c.signedMoaUrl || null,
-          })));
-        }
-
-        if (annRes) {
-          setAnnouncements((annRes || []).map((a: any) => ({
-            id: a.id, title: a.title, content: a.content, date: a.date,
-            category: a.category, priority: a.priority,
-          })));
-        }
-
-        if (dtrRes) {
-          setDtrLogs((dtrRes || []).map((r: any) => ({
-            student: r.studentName || r.studentId || "—",
-            date: r.date || "—",
-            timeIn: r.timeIn || "—",
-            timeOut: r.timeOut || "—",
-            hours: Number(r.hours) || 0,
-            status: r.timeOut ? "regular" : r.timeIn ? "ongoing" : "rest",
-          })));
-        }
-
-        if (jrnRes) {
-          setJournalLogs((jrnRes || []).map((a: any) => ({
-            student: a.studentName || a.studentId || "—",
-            week: a.date || "—",
-            title: a.details ? (a.details.length > 60 ? a.details.substring(0, 60) + "…" : a.details) : "—",
-            submitted: a.createdAt
-              ? new Date(a.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-              : "—",
-            status: a.status === "rejected" ? "not_submitted" : "submitted",
-          })));
-        }
-
-        if (docRes) {
-          setStudentSubmissions((docRes || []).map((s: any) => ({
-            studentId: s.studentId,
-            name: s.studentName || "—",
-            studentNo: s.studentNo || "—",
-            course: "BSIT",
-            section: s.section || "—",
-            deployed: s.isDeployed || false,
-            assignedCompany: s.assignedCompany || null,
-            docs: REQUIRED_DOC_NAMES.map((docName) => {
-              const found = (s.docs || []).find((d: any) => d.name === docName);
-              return found
-                ? { name: docName, status: found.status || "missing", file: found.fileUrl || null, uploaded: found.uploadedDate || "—" }
-                : { name: docName, status: "missing", file: null, uploaded: "—" };
-            }),
-          })));
-        }
-
-        if (tplRes) {
-          setTemplates(REQUIRED_DOC_NAMES.map((name) => {
-            const found = (tplRes || []).find((t: any) => t.name === name);
-            return found
-              ? { name, file: found.fileUrl || null, size: found.size || "—", uploaded: found.uploadedDate || "—", docSlug: found.docSlug || null }
-              : { name, file: null, size: "—", uploaded: "—", docSlug: null };
-          }));
-        }
-
-      } catch (err) {
-        console.error("Failed to load admin data", err);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
     loadData();
-    return () => { isMounted = false; };
   }, [user]);
 
   const verifyCompany = async (id: string | number, name: string) => {
@@ -215,6 +230,7 @@ export function useAdminData() {
     loading,
     students,
     companies,
+    evaluations,
     dtrLogs,
     journalLogs,
     announcements,
@@ -224,6 +240,7 @@ export function useAdminData() {
     updateMoaStatus,
     uploadTemplate,
     reviewDocument,
-    deployStudent
+    deployStudent,
+    reload: loadData
   };
 }

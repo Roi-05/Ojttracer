@@ -12,7 +12,23 @@ async function loadProfile(userId) {
   if (base.role === 'student') {
     const sRes = await db.query(`SELECT * FROM public.students WHERE user_id = $1`, [userId]);
     const s = sRes.rows[0];
-    if (s) Object.assign(out, { studentId: s.student_id, section: s.section, phone: s.phone, address: s.address, skills: s.skills, emergencyContact: s.emergency_contact, intendedCompanyId: s.intended_company_id });
+    if (s) Object.assign(out, {
+      studentId: s.student_id,
+      lastName: s.last_name || '',
+      firstName: s.first_name || '',
+      middleName: s.middle_name || '',
+      section: s.section,
+      course: s.course || 'BSIT',
+      yearLevel: s.year_level || '4th Year',
+      dateOfBirth: s.date_of_birth || null,
+      civilStatus: s.civil_status || '',
+      sex: s.sex || '',
+      phone: s.phone,
+      address: s.address,
+      skills: s.skills,
+      emergencyContact: s.emergency_contact,
+      intendedCompanyId: s.intended_company_id
+    });
   } else if (base.role === 'company') {
     const cRes = await db.query(`SELECT * FROM public.companies WHERE user_id = $1`, [userId]);
     const cmp = cRes.rows[0];
@@ -26,9 +42,10 @@ const signup = async (req, res) => {
     const { email, password, name, role, studentId, section, companyName, industry } = req.body;
     if (!email || !password || !name || !role) return res.status(400).json({ error: 'Missing required fields' });
 
-    // Prevent admin registration
-    if (role === 'admin') {
-      return res.status(403).json({ error: 'Admin registration is disabled' });
+    // Prevent admin and student self-registration
+    // Students are created by admin via Excel import
+    if (role === 'admin' || role === 'student') {
+      return res.status(403).json({ error: role === 'admin' ? 'Admin registration is disabled' : 'Student accounts are created by the OJT Coordinator. Please contact them if you cannot log in.' });
     }
 
     const password_hash = await bcrypt.hash(password, 10);

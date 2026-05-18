@@ -37,5 +37,7 @@ module.exports = {
     UPLOADS_DIR,
     uploadTemplate,
     uploadDoc,
-    saveBase64Image
+    saveBase64Image,
+    // In-memory upload for Excel imports (no disk write needed)
+    uploadExcel: multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } }),
 };

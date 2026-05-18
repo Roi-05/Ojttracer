@@ -15,8 +15,9 @@ import { DTRTab } from "../components/student/DTRTab";
 import { JournalTab } from "../components/student/JournalTab";
 import { DocumentsTab } from "../components/student/DocumentsTab";
 import { AnnouncementsTab } from "../components/student/AnnouncementsTab";
+import { EvaluationTab } from "../components/student/EvaluationTab";
 
-import { LayoutDashboard, User, MapPin, Clock, BookOpen, Upload, Megaphone } from "lucide-react";
+import { LayoutDashboard, User, MapPin, Clock, BookOpen, Upload, Megaphone, Star } from "lucide-react";
 import { TODAY_ISO } from "../components/student/shared";
 
 const menuItems = [
@@ -26,6 +27,7 @@ const menuItems = [
   { icon: <Clock className="h-4 w-4" />, label: "Attendance (DTR)", value: "attendance" },
   { icon: <BookOpen className="h-4 w-4" />, label: "Journal", value: "journal" },
   { icon: <Upload className="h-4 w-4" />, label: "Documents", value: "documents" },
+  { icon: <Star className="h-4 w-4" />, label: "My Evaluation", value: "evaluation" },
   { icon: <Megaphone className="h-4 w-4" />, label: "Announcements", value: "announcements", badge: 2 },
 ];
 
@@ -44,9 +46,15 @@ export function StudentDashboard() {
   const studentProfile = {
     name: user?.name || emptyStudentInfo.name,
     studentId: (user as any)?.studentId || emptyStudentInfo.studentId,
-    course: emptyStudentInfo.course,
-    year: emptyStudentInfo.year,
+    lastName: (user as any)?.lastName || "",
+    firstName: (user as any)?.firstName || "",
+    middleName: (user as any)?.middleName || "",
+    course: (user as any)?.course || emptyStudentInfo.course,
+    year: (user as any)?.yearLevel || emptyStudentInfo.year,
     section: (user as any)?.section || emptyStudentInfo.section,
+    dateOfBirth: (user as any)?.dateOfBirth || null,
+    civilStatus: (user as any)?.civilStatus || "",
+    sex: (user as any)?.sex || "",
     email: user?.email || emptyStudentInfo.email,
     phone: (user as any)?.phone || emptyStudentInfo.phone,
     address: (user as any)?.address || emptyStudentInfo.address,
@@ -56,7 +64,7 @@ export function StudentDashboard() {
 
   const {
     loading, dtrRecords, accomplishments, documents, deployment, announcements, templates,
-    activeCompanies, intendedCompanyId, setTargetCompany,
+    activeCompanies, intendedCompanyId, evaluation, setTargetCompany,
     clockIn, clockOut, submitDocument, submitAccomplishment
   } = useStudentData();
 
@@ -147,6 +155,7 @@ export function StudentDashboard() {
         openDocUpload={(docName) => setDocUploadModal({ open: true, docName })} 
       />
     ),
+    evaluation: () => <EvaluationTab evaluation={evaluation} />,
     announcements: () => <AnnouncementsTab announcements={announcements} />,
   };
 
