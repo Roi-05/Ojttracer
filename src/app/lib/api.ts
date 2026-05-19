@@ -1,4 +1,4 @@
-const BASE = `http://localhost:3000`;
+const BASE = `/api`; // Vite proxies /api/* and /uploads/* to localhost:3000
 
 function getToken(): string {
   return localStorage.getItem("custom_auth_token") || "";

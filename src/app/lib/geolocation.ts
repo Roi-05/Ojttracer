@@ -48,16 +48,16 @@ export function checkGeofence(
 
 /**
  * Wraps the browser Geolocation API in a promise.
- * Resolves with { latitude, longitude } or rejects with an error message string.
+ * Resolves with { latitude, longitude, accuracy } or rejects with an error message string.
  */
-export function getCurrentPosition(): Promise<{ latitude: number; longitude: number }> {
+export function getCurrentPosition(): Promise<{ latitude: number; longitude: number; accuracy: number }> {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       reject('Geolocation is not supported by your browser.');
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      pos => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+      pos => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: Math.round(pos.coords.accuracy) }),
       err => {
         switch (err.code) {
           case err.PERMISSION_DENIED:

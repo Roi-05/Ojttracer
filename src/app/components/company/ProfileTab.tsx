@@ -35,6 +35,7 @@ export function ProfileTab({ companyInfo }: ProfileTabProps) {
       ? { lat: companyInfo.latitude, lng: companyInfo.longitude }
       : null
   );
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [geofenceRadius, setGeofenceRadius] = useState<number>(
     companyInfo.geofenceRadius || 200
   );
@@ -65,6 +66,22 @@ export function ProfileTab({ companyInfo }: ProfileTabProps) {
     try {
       const pos = await getCurrentPosition();
       setLocation({ lat: pos.latitude, lng: pos.longitude });
+      setGpsAccuracy(pos.accuracy);
+      
+      // Auto-fill address via reverse geocoding
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.latitude}&lon=${pos.longitude}&format=json`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.display_name) {
+            setProfileForm(p => ({ ...p, address: data.display_name }));
+            toast.success("Location captured and address auto-filled!");
+            return;
+          }
+        }
+      } catch (e) {
+        console.error("Reverse geocoding failed", e);
+      }
       toast.success("Location captured! Click \"Save Location\" to apply.");
     } catch (err: any) {
       toast.error(err as string);
@@ -182,6 +199,15 @@ export function ProfileTab({ companyInfo }: ProfileTabProps) {
 
                 {/* GPS Capture Panel */}
                 <div className="rounded-xl border border-border p-4 space-y-3 bg-muted/20">
+                  {/* Mobile device warning */}
+                  <div className="flex items-start gap-2 text-xs bg-amber-50 text-amber-800 px-3 py-2.5 rounded-lg border border-amber-200">
+                    <span className="text-base leading-none mt-0.5">📱</span>
+                    <div>
+                      <p className="font-semibold">Use a mobile phone for accurate results</p>
+                      <p className="mt-0.5 text-amber-700">Desktops and laptops use IP-based location which can be off by hundreds of kilometers. Open this page on your phone at the office for meter-level GPS accuracy.</p>
+                    </div>
+                  </div>
+
                   <div className="flex items-start justify-between gap-3 flex-wrap">
                     <div>
                       <p className="text-sm font-semibold flex items-center gap-1.5">
@@ -209,9 +235,39 @@ export function ProfileTab({ companyInfo }: ProfileTabProps) {
 
                   {/* Coordinates display */}
                   {location ? (
-                    <div className="flex items-center gap-2 text-xs bg-green-50 text-green-700 px-3 py-2 rounded-lg border border-green-200">
-                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-                      <span className="font-mono">{location.lat.toFixed(6)}° N, {location.lng.toFixed(6)}° E</span>
+                    <div className="space-y-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs bg-green-50 text-green-700 px-3 py-2 rounded-lg border border-green-200">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                          <span className="font-mono">{location.lat.toFixed(6)}° N, {location.lng.toFixed(6)}° E</span>
+                        </div>
+                        <a 
+                          href={`https://www.google.com/maps/search/?api=1&query=${location.lat},${location.lng}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-blue-700 hover:text-blue-800 hover:underline flex items-center gap-1 font-medium bg-blue-100/50 px-2 py-1 rounded"
+                        >
+                          <Navigation className="h-3 w-3 shrink-0" /> View on Map
+                        </a>
+                      </div>
+                      {/* Accuracy badge */}
+                      {gpsAccuracy !== null && (
+                        <div className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border ${
+                          gpsAccuracy <= 20
+                            ? 'bg-green-50 text-green-700 border-green-200'
+                            : gpsAccuracy <= 100
+                            ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                            : 'bg-red-50 text-red-700 border-red-200'
+                        }`}>
+                          <span className="font-bold">
+                            {gpsAccuracy <= 20 ? '✅' : gpsAccuracy <= 100 ? '⚠️' : '❌'}
+                          </span>
+                          GPS Accuracy: ±{gpsAccuracy}m —
+                          {gpsAccuracy <= 20 && ' Excellent (safe to save)'}
+                          {gpsAccuracy > 20 && gpsAccuracy <= 100 && ' Fair (consider recapturing on mobile)'}
+                          {gpsAccuracy > 100 && ' Poor — use a mobile phone for accurate location'}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <p className="text-xs text-muted-foreground italic px-1">

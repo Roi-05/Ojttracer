@@ -1,11 +1,92 @@
+# OJT Tracer (PampangaStateU-Link)
 
-  # PampangaStateU-Link UI Design (Latest) (Copy) (Copy)
+A comprehensive OJT Tracer system built with React, Node.js, and PostgreSQL.
 
-  This is a code bundle for PampangaStateU-Link UI Design (Latest) (Copy) (Copy). The original project is available at https://www.figma.com/design/9EgTxJmnC6Tb0PBTH65ZMd/PampangaStateU-Link-UI-Design--Latest---Copy---Copy-.
+## Prerequisites
 
-  ## Running the code
+Ensure you have the following installed on your machine:
+- **Node.js 20+** (https://nodejs.org)
+- **pnpm** (`npm install -g pnpm`)
+- **Docker & Docker Compose** (https://www.docker.com)
 
-  Run `npm i` to install the dependencies.
+## Local Development Setup
 
-  Run `npm run dev` to start the development server.
-  
+### 1. Clone & Install Dependencies
+
+```bash
+# Clone the repository
+git clone <your-repository-url>
+cd Ojttracer
+
+# Install frontend dependencies
+pnpm install
+
+# Install backend dependencies
+cd server
+npm install
+cd ..
+```
+
+### 2. Database Setup (Docker)
+
+This project uses a local PostgreSQL database and pgAdmin for visualization, managed via Docker Compose.
+
+```bash
+# Start the database and pgAdmin containers in the background
+docker-compose up -d
+```
+
+**Initialize the Schema:**
+Run the following command to apply the database schema to your local Postgres container:
+```bash
+docker exec -i ojttracer-postgres psql -U postgres -d ojttracer < schema.sql
+```
+
+### 3. Run the Backend
+
+```bash
+cd server
+node index.js
+```
+The backend will run on **http://localhost:3000**.
+
+### 4. Run the Frontend
+
+Open a new terminal window/tab in the project root:
+```bash
+pnpm dev
+```
+The frontend will run on **http://localhost:5173**.
+
+## Database Visualization (pgAdmin)
+
+1. Open **http://localhost:5050** in your browser.
+2. Login with:
+   - **Email:** `admin@admin.com`
+   - **Password:** `admin`
+3. Add a new server:
+   - **Name:** LocalDB
+   - **Host:** `ojttracer-postgres` (or `localhost`)
+   - **Username:** `postgres`
+   - **Password:** `postgrespassword`
+   - **Maintenance DB:** `ojttracer`
+
+## Project Structure
+
+```text
+├── server/                      # Node.js Express Backend
+│   ├── index.js                 # API Routes & Express Logic
+│   ├── db.js                    # Database connection
+│   ├── auth.js                  # JWT & Bcrypt Auth logic
+│   └── uploads/                 # Local file storage (DTR photos, etc.)
+├── src/                         # React Frontend
+│   ├── app/
+│   │   ├── contexts/            # Custom JWT auth state
+│   │   ├── lib/                 # API calls to Node.js server
+│   │   ├── pages/               # Dashboard pages
+│   │   └── components/          # Shared UI components
+│   └── styles/                  # Tailwind CSS
+├── docker-compose.yml           # Docker services configuration
+├── schema.sql                   # PostgreSQL schema
+└── vite.config.ts               # Vite configuration
+```
