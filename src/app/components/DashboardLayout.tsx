@@ -1,14 +1,14 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
 import { Button } from "./ui/button";
-import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import {
-  Bell, Search, Menu, X, LogOut, GraduationCap,
-  Moon, Sun, User, Settings, ChevronRight
+  Bell, Menu, X, LogOut, GraduationCap,
+  User, ChevronRight
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
+import { getAnnouncements } from "../lib/api";
 
 interface MenuItem {
   icon: ReactNode;
@@ -55,14 +55,53 @@ export function DashboardLayout({
     }
   };
 
-  const defaultNotifications = [
-    { title: "OJT Application Update", desc: "Your application to Tech Solutions Inc. has been reviewed.", time: "2h ago", read: false },
-    { title: "New Announcement", desc: "OJT Orientation Seminar scheduled for May 5, 2026.", time: "5h ago", read: false },
-    { title: "Document Approved", desc: "Your Endorsement Letter has been approved.", time: "1d ago", read: true },
-  ];
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [readIds, setReadIds] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("read_announcements") || "[]");
+    } catch {
+      return [];
+    }
+  });
 
-  const notifs = notifications.length > 0 ? notifications : defaultNotifications;
+  useEffect(() => {
+    let isMounted = true;
+    getAnnouncements()
+      .then((res) => {
+        if (isMounted && Array.isArray(res)) {
+          setAnnouncements(res);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load notifications:", err);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const notifs = announcements.map((ann) => ({
+    id: ann.id,
+    title: ann.title,
+    desc: ann.content,
+    time: ann.date || "",
+    read: readIds.includes(ann.id)
+  }));
   const unreadCount = notifs.filter(n => !n.read).length;
+
+  const handleMarkAsRead = (id: string) => {
+    if (!readIds.includes(id)) {
+      const newReadIds = [...readIds, id];
+      setReadIds(newReadIds);
+      localStorage.setItem("read_announcements", JSON.stringify(newReadIds));
+    }
+  };
+
+  const handleMarkAllRead = () => {
+    const allIds = announcements.map(ann => ann.id);
+    setReadIds(allIds);
+    localStorage.setItem("read_announcements", JSON.stringify(allIds));
+  };
 
   const roleColors: Record<string, string> = {
     student: "bg-blue-600",
@@ -100,13 +139,7 @@ export function DashboardLayout({
               </Link>
             </div>
 
-            {/* Center: Search */}
-            <div className="flex-1 max-w-md mx-4 hidden md:block">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search..." className="pl-9 bg-muted/50 border-0 h-9 text-sm" />
-              </div>
-            </div>
+            {/* Center: Search Removed */}
 
             {/* Right: Actions */}
             <div className="flex items-center gap-1.5">
@@ -127,23 +160,32 @@ export function DashboardLayout({
                   <>
                     <div className="fixed inset-0 z-[60]" onClick={() => setIsNotificationsOpen(false)} />
                     <div className="absolute right-0 top-full mt-2 w-80 bg-card border border-border rounded-xl shadow-xl z-[70]">
-                      <div className="p-4 border-b border-border flex items-center justify-between">
-                        <h3 className="font-semibold text-sm">Notifications</h3>
-                        <span className="text-xs text-primary cursor-pointer hover:underline">Mark all read</span>
-                      </div>
+                        <div className="p-4 border-b border-border flex items-center justify-between">
+                          <h3 className="font-semibold text-sm">Notifications</h3>
+                          <span 
+                            className="text-xs text-primary cursor-pointer hover:underline"
+                            onClick={handleMarkAllRead}
+                          >
+                            Mark all read
+                          </span>
+                        </div>
                       <div className="max-h-72 overflow-y-auto">
-                        {notifs.map((n, i) => (
-                          <div key={i} className={`p-4 hover:bg-muted/50 border-b border-border last:border-0 cursor-pointer transition-colors ${!n.read ? "bg-blue-50/50 dark:bg-blue-900/10" : ""}`}>
-                            <div className="flex gap-3">
-                              <div className={`h-2 w-2 rounded-full mt-1.5 flex-shrink-0 ${!n.read ? "bg-primary" : "bg-muted-foreground/30"}`} />
-                              <div>
-                                <p className="text-sm font-medium text-foreground">{n.title}</p>
-                                <p className="text-xs text-muted-foreground mt-0.5">{n.desc}</p>
-                                <p className="text-xs text-muted-foreground mt-1">{n.time}</p>
+                          {notifs.map((n, i) => (
+                            <div 
+                              key={i} 
+                              onClick={() => n.id && handleMarkAsRead(n.id)}
+                              className={`p-4 hover:bg-muted/50 border-b border-border last:border-0 cursor-pointer transition-colors ${!n.read ? "bg-blue-50/50 dark:bg-blue-900/10" : ""}`}
+                            >
+                              <div className="flex gap-3">
+                                <div className={`h-2 w-2 rounded-full mt-1.5 flex-shrink-0 ${!n.read ? "bg-primary" : "bg-muted-foreground/30"}`} />
+                                <div>
+                                  <p className="text-sm font-medium text-foreground">{n.title}</p>
+                                  <p className="text-xs text-muted-foreground mt-0.5">{n.desc}</p>
+                                  <p className="text-xs text-muted-foreground mt-1">{n.time}</p>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
                       </div>
                       <div className="p-3 text-center border-t border-border">
                         <button className="text-xs text-primary hover:underline" onClick={() => { onSectionChange("notifications"); setIsNotificationsOpen(false); }}>
@@ -155,13 +197,7 @@ export function DashboardLayout({
                 )}
               </div>
 
-              {/* Dark Mode */}
-              <button
-                className="p-2 rounded-lg hover:bg-muted transition-colors"
-                onClick={() => setIsDarkMode(!isDarkMode)}
-              >
-                {isDarkMode ? <Sun className="h-5 w-5 text-muted-foreground" /> : <Moon className="h-5 w-5 text-muted-foreground" />}
-              </button>
+               {/* Dark Mode Removed */}
 
               {/* Profile */}
               <div className="relative">
@@ -182,9 +218,6 @@ export function DashboardLayout({
                       <div className="p-2">
                         <button className="flex items-center w-full px-3 py-2 text-sm rounded-lg hover:bg-muted transition-colors gap-2" onClick={() => { onSectionChange("profile"); setIsProfileOpen(false); }}>
                           <User className="h-4 w-4 text-muted-foreground" /> Profile
-                        </button>
-                        <button className="flex items-center w-full px-3 py-2 text-sm rounded-lg hover:bg-muted transition-colors gap-2" onClick={() => { onSectionChange("settings"); setIsProfileOpen(false); }}>
-                          <Settings className="h-4 w-4 text-muted-foreground" /> Settings
                         </button>
                         <div className="border-t border-border my-1" />
                         <button className="flex items-center w-full px-3 py-2 text-sm rounded-lg hover:bg-red-50 text-red-600 transition-colors gap-2" onClick={() => { setIsProfileOpen(false); handleSignOut(); }}>
@@ -232,11 +265,20 @@ export function DashboardLayout({
                     <span className={isActive ? "text-sidebar-foreground" : "text-sidebar-foreground/60 group-hover:text-sidebar-accent-foreground"}>{item.icon}</span>
                     <span>{item.label}</span>
                   </div>
-                  {item.badge ? (
-                    <span className="bg-red-500 text-white text-[10px] rounded-full h-4 w-4 flex items-center justify-center font-semibold">{item.badge}</span>
-                  ) : isActive ? (
-                    <ChevronRight className="h-3.5 w-3.5 text-sidebar-foreground/70" />
-                  ) : null}
+                  {(() => {
+                    const badgeCount = item.value === "announcements" ? unreadCount : item.badge;
+                    if (badgeCount && badgeCount > 0) {
+                      return (
+                        <span className="bg-red-500 text-white text-[10px] rounded-full h-5 px-1.5 flex items-center justify-center font-semibold min-w-5">
+                          {badgeCount}
+                        </span>
+                      );
+                    }
+                    if (isActive) {
+                      return <ChevronRight className="h-3.5 w-3.5 text-sidebar-foreground/70" />;
+                    }
+                    return null;
+                  })()}
                 </button>
               );
             })}

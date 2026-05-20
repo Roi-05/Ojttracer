@@ -156,6 +156,17 @@ const updateCompanyLocation = async (req, res) => {
   }
 };
 
+const deleteCompany = async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    const { id } = req.params;
+    await db.query(`DELETE FROM public.profiles WHERE id = $1 AND role = 'company'`, [id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 module.exports = {
   getCompanies,
   verifyCompany,
@@ -163,5 +174,6 @@ module.exports = {
   uploadSignedMoa,
   getMoaTemplate,
   getInterns,
-  updateCompanyLocation
+  updateCompanyLocation,
+  deleteCompany
 };

@@ -10,5 +10,6 @@ router.put('/:id/location', authMiddleware, companyController.updateCompanyLocat
 router.put('/location/me', authMiddleware, companyController.updateCompanyLocation);
 router.post('/signed-moa', authMiddleware, companyController.uploadSignedMoa);
 router.get('/moa-template', authMiddleware, companyController.getMoaTemplate);
+router.delete('/:id', authMiddleware, companyController.deleteCompany);
 
 module.exports = router;

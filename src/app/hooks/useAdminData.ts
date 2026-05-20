@@ -230,6 +230,28 @@ export function useAdminData() {
     }
   };
 
+  const deleteAnnouncement = async (id: string | number) => {
+    try {
+      await api.deleteAnnouncement(String(id));
+      setAnnouncements(list => list.filter(a => String(a.id) !== String(id)));
+      toast.success("Announcement deleted successfully.");
+    } catch (err: any) {
+      toast.error(`Deletion failed: ${err.message}`);
+      throw err;
+    }
+  };
+
+  const deleteCompany = async (id: string | number) => {
+    try {
+      await api.deleteCompany(id);
+      setCompanies(list => list.filter(c => String(c.id) !== String(id)));
+      toast.success("Company deleted successfully.");
+    } catch (err: any) {
+      toast.error(`Deletion failed: ${err.message}`);
+      throw err;
+    }
+  };
+
   return {
     loading,
     students,
@@ -245,6 +267,8 @@ export function useAdminData() {
     uploadTemplate,
     reviewDocument,
     deployStudent,
+    deleteAnnouncement,
+    deleteCompany,
     reload: loadData
   };
 }

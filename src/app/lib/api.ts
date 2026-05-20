@@ -179,6 +179,10 @@ export async function getCompanies() {
   return apiFetch("/companies");
 }
 
+export async function deleteCompany(id: string | number) {
+  return apiFetch(`/companies/${id}`, { method: "DELETE" });
+}
+
 export async function verifyCompany(id: string | number, status: string = "active") {
   return apiFetch(`/companies/${id}/verify`, { method: "PUT", body: JSON.stringify({ status }) });
 }

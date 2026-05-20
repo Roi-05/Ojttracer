@@ -24,7 +24,8 @@ create table if not exists public.students (
   phone              text default '',
   address            text default '',
   skills             jsonb not null default '[]'::jsonb,
-  emergency_contact  text default ''
+  emergency_contact  text default '',
+  intended_company_id uuid references public.companies(user_id)
 );
 
 -- ── COMPANY-SPECIFIC FIELDS ────────────────────────────────────────────────
@@ -39,7 +40,11 @@ create table if not exists public.companies (
   phone             text default '',
   description       text default '',
   moa_status        text default 'pending',
-  accredited_until  text default ''
+  signed_moa_url    text,
+  accredited_until  text default '',
+  latitude          numeric(10, 7),
+  longitude         numeric(10, 7),
+  geofence_radius   int not null default 200
 );
 
 -- ── DAILY TIME RECORDS ─────────────────────────────────────────────────────

@@ -54,7 +54,7 @@ export function AdminDashboard() {
 
   const {
     students, companies, evaluations, dtrLogs, journalLogs, announcements, templates, studentSubmissions,
-    verifyCompany, updateMoaStatus, uploadTemplate, reviewDocument, deployStudent, reload
+    verifyCompany, updateMoaStatus, uploadTemplate, reviewDocument, deployStudent, deleteAnnouncement, deleteCompany, reload
   } = useAdminData();
 
   // Modals state
@@ -85,12 +85,12 @@ export function AdminDashboard() {
   const sectionMap: Record<string, () => JSX.Element> = {
     dashboard: () => <OverviewTab students={students} companies={companies} setActiveSection={setActiveSection} monthlyPlacementData={monthlyPlacementData} sectionDistribution={sectionDistribution} openReportsModal={() => setShowReportsModal(true)} />,
     students: () => <StudentsTab students={students} sections={SECTIONS} openImportModal={() => setShowImportModal(true)} />,
-    companies: () => <CompaniesTab companies={companies} openAddModal={() => setShowCompanyModal(true)} onManageMoa={(c) => setMoaModalCompany(c)} openUploadMoa={() => setShowMoaTemplateUpload(true)} />,
+    companies: () => <CompaniesTab companies={companies} onManageMoa={(c) => setMoaModalCompany(c)} openUploadMoa={() => setShowMoaTemplateUpload(true)} onDelete={deleteCompany} />,
     deployment: () => <DeploymentTab students={students} />,
     attendance: () => <AttendanceTab dtrLogs={dtrLogs} />,
     journals: () => <JournalsTab journalLogs={journalLogs} />,
     evaluations: () => <EvaluationsTab evaluations={evaluations} />,
-    announcements: () => <AnnouncementsTab announcements={announcements} openAddModal={() => setShowAnnouncementModal(true)} onDelete={(id) => {}} />, // TODO implement real delete
+    announcements: () => <AnnouncementsTab announcements={announcements} openAddModal={() => setShowAnnouncementModal(true)} onDelete={deleteAnnouncement} />,
     documents: () => <DocumentsTab 
       templates={templates} studentSubmissions={studentSubmissions} 
       openTemplateUpload={() => setShowTemplateUpload(true)} 
@@ -116,7 +116,7 @@ export function AdminDashboard() {
 
       <ImportStudentsModal open={showImportModal} onClose={() => setShowImportModal(false)} onImported={reload} />
       <AddCompanyModal open={showCompanyModal} onClose={() => setShowCompanyModal(false)} />
-      <AddAnnouncementModal open={showAnnouncementModal} onClose={() => setShowAnnouncementModal(false)} onAdded={(ann) => {}} />
+      <AddAnnouncementModal open={showAnnouncementModal} onClose={() => setShowAnnouncementModal(false)} onAdded={() => reload()} />
       <UploadTemplateModal open={showTemplateUpload} onClose={() => setShowTemplateUpload(false)} onSave={uploadTemplate} />
       <ViewSubmissionModal 
         viewSub={viewSub} onClose={() => setViewSubmissionId(null)} 

@@ -29,7 +29,7 @@ const menuItems = [
   { icon: <BookOpen className="h-4 w-4" />, label: "Journal", value: "journal" },
   { icon: <Upload className="h-4 w-4" />, label: "Documents", value: "documents" },
   { icon: <Star className="h-4 w-4" />, label: "My Evaluation", value: "evaluation" },
-  { icon: <Megaphone className="h-4 w-4" />, label: "Announcements", value: "announcements", badge: 2 },
+  { icon: <Megaphone className="h-4 w-4" />, label: "Announcements", value: "announcements" },
 ];
 
 const emptyStudentInfo = {
