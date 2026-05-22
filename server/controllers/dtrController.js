@@ -65,14 +65,23 @@ const getDtr = async (req, res) => {
 const getAdminDtr = async (req, res) => {
   try {
     const result = await db.query(`
-      SELECT d.*, TO_CHAR(d.date, 'YYYY-MM-DD') as date_str, p.name as student_name
+      SELECT d.*, TO_CHAR(d.date, 'YYYY-MM-DD') as date_str,
+             p.name as student_name, p.id as student_profile_id,
+             s.section, s.student_id as student_number,
+             s.first_name, s.last_name
       FROM public.dtr_records d
       JOIN public.profiles p ON p.id = d.student_id
+      LEFT JOIN public.students s ON s.user_id = d.student_id
       ORDER BY d.date DESC
-      LIMIT 200
+      LIMIT 1000
     `);
     res.json(result.rows.map(r => ({
-      studentId: r.student_id, studentName: r.student_name,
+      studentId: r.student_id,
+      studentName: r.last_name && r.first_name
+        ? `${r.last_name}, ${r.first_name}`
+        : r.student_name,
+      studentNumber: r.student_number || '—',
+      section: r.section || '—',
       date: r.date_str,
       day: r.day, timeIn: r.time_in, timeOut: r.time_out,
       hours: Number(r.hours), remarks: r.remarks,

@@ -14,7 +14,7 @@ export type AdminStudent = {
   status: string; intendedCompanyId?: string | null; performance: number;
 };
 export type AdminCompany = { id: string | number; name: string; industry: string; location: string; activeInterns: number; totalCapacity: number; moaStatus: string; moaExpiry: string; contactPerson: string; verified: boolean; hrContact?: string; hrEmail?: string; signedMoaUrl?: string | null };
-export type DTRLog = { student: string; date: string; timeIn: string; timeOut: string; hours: number; status: string };
+export type DTRLog = { student: string; studentId: string | number; studentNumber: string; section: string; date: string; day: string; timeIn: string; timeOut: string; hours: number; status: string };
 export type JournalLog = { student: string; section: string; week: string; title: string; submitted: string; status: string };
 export type Announcement = { id: string | number; title: string; content: string; date: string; category: string; priority: string };
 export type CompanyLocation = { name: string; address: string; lat: number; lng: number; industry: string; interns: number; x: number; y: number };
@@ -88,12 +88,16 @@ export function useAdminData() {
 
       if (dtrRes) {
         setDtrLogs((dtrRes || []).map((r: any) => ({
-          student: r.studentName || r.studentId || "—",
-          date: r.date || "—",
-          timeIn: r.timeIn || "—",
-          timeOut: r.timeOut || "—",
+          student: r.studentName || '—',
+          studentId: r.studentId,
+          studentNumber: r.studentNumber || '—',
+          section: r.section || '—',
+          date: r.date || '—',
+          day: r.day || '—',
+          timeIn: r.timeIn || '—',
+          timeOut: r.timeOut || '—',
           hours: Number(r.hours) || 0,
-          status: r.timeOut ? "regular" : r.timeIn ? "ongoing" : "rest",
+          status: r.timeOut ? 'regular' : r.timeIn ? 'ongoing' : 'rest',
         })));
       }
 

@@ -22,6 +22,17 @@ const makeStorage = (subfolder) => multer.diskStorage({
 const uploadTemplate = multer({ storage: makeStorage('templates'), limits: { fileSize: 20 * 1024 * 1024 } });
 const uploadDoc     = multer({ storage: makeStorage('documents'), limits: { fileSize: 20 * 1024 * 1024 } });
 
+const imageFilter = (req, file, cb) => {
+  const allowed = /^image\/(jpeg|jpg|png|webp|gif)$/i;
+  if (allowed.test(file.mimetype)) cb(null, true);
+  else cb(new Error('Only image files are allowed (jpg, png, webp, gif).'), false);
+};
+const uploadAvatar = multer({
+  storage: makeStorage('avatars'),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: imageFilter,
+});
+
 function saveBase64Image(dataUrl, folder, filename) {
   const baseDir = path.join(UPLOADS_DIR, folder);
   if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true });
@@ -37,6 +48,7 @@ module.exports = {
     UPLOADS_DIR,
     uploadTemplate,
     uploadDoc,
+    uploadAvatar,
     saveBase64Image,
     // In-memory upload for Excel imports (no disk write needed)
     uploadExcel: multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } }),

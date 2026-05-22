@@ -1,5 +1,8 @@
 const db = require('../db');
 const { loadProfile } = require('./authController');
+const { uploadAvatar } = require('../middleware/upload');
+const path = require('path');
+const fs = require('fs');
 
 const updateProfile = async (req, res) => {
   try {
@@ -16,7 +19,15 @@ const updateProfile = async (req, res) => {
       const vals = [];
       let i = 1;
       if (body.studentId !== undefined) { fields.push(`student_id=$${i++}`); vals.push(body.studentId); }
+      if (body.lastName !== undefined) { fields.push(`last_name=$${i++}`); vals.push(body.lastName); }
+      if (body.firstName !== undefined) { fields.push(`first_name=$${i++}`); vals.push(body.firstName); }
+      if (body.middleName !== undefined) { fields.push(`middle_name=$${i++}`); vals.push(body.middleName); }
+      if (body.course !== undefined) { fields.push(`course=$${i++}`); vals.push(body.course); }
+      if (body.year !== undefined) { fields.push(`year_level=$${i++}`); vals.push(body.year); }
       if (body.section !== undefined) { fields.push(`section=$${i++}`); vals.push(body.section); }
+      if (body.dateOfBirth !== undefined) { fields.push(`date_of_birth=$${i++}`); vals.push(body.dateOfBirth || null); }
+      if (body.civilStatus !== undefined) { fields.push(`civil_status=$${i++}`); vals.push(body.civilStatus); }
+      if (body.sex !== undefined) { fields.push(`sex=$${i++}`); vals.push(body.sex); }
       if (body.phone !== undefined) { fields.push(`phone=$${i++}`); vals.push(body.phone); }
       if (body.address !== undefined) { fields.push(`address=$${i++}`); vals.push(body.address); }
       if (body.skills !== undefined) { fields.push(`skills=$${i++}`); vals.push(JSON.stringify(body.skills)); }
@@ -43,6 +54,20 @@ const updateProfile = async (req, res) => {
   }
 };
 
+const uploadAvatarHandler = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No image file uploaded.' });
+    const fileUrl = `http://localhost:3000/uploads/avatars/${req.file.filename}`;
+    await db.query(`UPDATE public.profiles SET avatar_url = $1 WHERE id = $2`, [fileUrl, req.user.id]);
+    const updated = await loadProfile(req.user.id);
+    res.json({ success: true, avatarUrl: fileUrl, profile: updated });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 module.exports = {
-  updateProfile
+  updateProfile,
+  uploadAvatarHandler,
+  uploadAvatar,
 };

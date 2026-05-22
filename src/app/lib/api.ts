@@ -63,6 +63,12 @@ export async function updateProfile(data: Record<string, unknown>) {
   return apiFetch("/profile", { method: "PUT", body: JSON.stringify(data) });
 }
 
+export async function uploadAvatar(file: File) {
+  const fd = new FormData();
+  fd.append("avatar", file);
+  return apiFetch("/profile/avatar", { method: "POST", body: fd });
+}
+
 // ─── DTR ──────────────────────────────────────────────────────────────────
 export async function getDTR() {
   return apiFetch("/dtr");

@@ -61,12 +61,13 @@ export function StudentDashboard() {
     address: (user as any)?.address || emptyStudentInfo.address,
     skills: (user as any)?.skills || emptyStudentInfo.skills,
     emergencyContact: (user as any)?.emergencyContact || emptyStudentInfo.emergencyContact,
+    avatarUrl: (user as any)?.avatarUrl || null,
   };
 
   const {
     loading, dtrRecords, accomplishments, documents, deployment, announcements, templates,
     activeCompanies, intendedCompanyId, evaluation, setTargetCompany,
-    clockIn, clockOut, submitDocument, submitAccomplishment
+    clockIn, clockOut, submitDocument, submitAccomplishment, updateProfileData
   } = useStudentData();
 
   const [activeSection, setActiveSection] = useState("dashboard");
@@ -159,7 +160,7 @@ export function StudentDashboard() {
       accomplishmentList={accomplishments} studentDocs={documents} announcementData={announcements} 
       setActiveSection={setActiveSection} setShowAccomplishmentModal={setAccModalOpen} 
     />,
-    profile: () => <ProfileTab studentProfile={studentProfile} />,
+    profile: () => <ProfileTab studentProfile={studentProfile} updateProfileData={updateProfileData} />,
     deployment: () => <DeploymentTab effectiveDeployment={effectiveDeployment} pct={pct} />,
     attendance: () => activeDeployment.status !== "ongoing" ? (
       <div className="p-8 text-center bg-muted/5 border border-border rounded-xl mt-6">

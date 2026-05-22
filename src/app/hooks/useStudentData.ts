@@ -243,6 +243,17 @@ export function useStudentData() {
     }
   };
 
+  const updateProfileData = async (data: any) => {
+    try {
+      await api.updateProfile(data);
+      await refreshProfile();
+      toast.success('Profile updated successfully.');
+    } catch (err: any) {
+      toast.error(`Failed to update profile: ${err.message}`);
+      throw err;
+    }
+  };
+
   return {
     loading,
     dtrRecords,
@@ -258,6 +269,7 @@ export function useStudentData() {
     clockOut,
     submitDocument,
     submitAccomplishment,
-    setTargetCompany
+    setTargetCompany,
+    updateProfileData
   };
 }

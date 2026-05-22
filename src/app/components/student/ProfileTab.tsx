@@ -1,8 +1,12 @@
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { User, Plus } from "lucide-react";
+import { User, Plus, X, Camera, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import * as api from "../../lib/api";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface ProfileTabProps {
   studentProfile: {
@@ -22,7 +26,9 @@ interface ProfileTabProps {
     address: string;
     skills: string[];
     emergencyContact: string;
+    avatarUrl?: string | null;
   };
+  updateProfileData: (data: any) => Promise<void>;
 }
 
 function computeAge(dob: string | null | undefined): string {
@@ -35,20 +41,103 @@ function computeAge(dob: string | null | undefined): string {
   return String(a);
 }
 
-export function ProfileTab({ studentProfile }: ProfileTabProps) {
-  const dobDisplay = studentProfile.dateOfBirth
-    ? new Date(studentProfile.dateOfBirth).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
+
+export function ProfileTab({ studentProfile, updateProfileData }: ProfileTabProps) {
+  const { refreshProfile, user } = useAuth();
+  const [formData, setFormData] = useState(studentProfile);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>((user as any)?.avatarUrl || studentProfile.avatarUrl || null);
+
+  // Skills
+  const [newSkill, setNewSkill] = useState("");
+
+  // File input ref
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const dobDisplay = formData.dateOfBirth
+    ? new Date(formData.dateOfBirth).toISOString().split("T")[0]
     : "";
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await updateProfileData({ ...formData, skills: formData.skills });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handlePhotoClick = () => fileInputRef.current?.click();
+
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      toast.error("Only image files are allowed (JPG, PNG, WEBP, GIF).");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be smaller than 5 MB.");
+      e.target.value = "";
+      return;
+    }
+
+    // Show preview immediately
+    const reader = new FileReader();
+    reader.onload = (ev) => setAvatarPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+
+    setIsUploadingPhoto(true);
+    try {
+      const res = await api.uploadAvatar(file);
+      await refreshProfile();
+      setAvatarPreview(res.avatarUrl);
+      toast.success("Profile photo updated!");
+    } catch (err: any) {
+      toast.error(`Failed to upload photo: ${err.message}`);
+      setAvatarPreview((user as any)?.avatarUrl || studentProfile.avatarUrl || null);
+    } finally {
+      setIsUploadingPhoto(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleAddSkill = () => {
+    const skill = newSkill.trim();
+    if (!skill) return;
+    if (formData.skills.includes(skill)) {
+      toast.error("That skill is already in the list.");
+      return;
+    }
+    setFormData({ ...formData, skills: [...formData.skills, skill] });
+    setNewSkill("");
+  };
+
+  const handleRemoveSkill = (skill: string) => {
+    setFormData({ ...formData, skills: formData.skills.filter((s) => s !== skill) });
+  };
+
+  const initials = (formData.firstName || formData.name).charAt(0).toUpperCase();
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">My Profile</h1>
           <p className="text-muted-foreground mt-1">Your personal information on record</p>
         </div>
-        <Button className="bg-primary hover:bg-primary/90 text-white gap-2">
-          <User className="h-4 w-4" /> Save Changes
+        <Button
+          className="bg-primary hover:bg-primary/90 text-white gap-2"
+          onClick={handleSave}
+          disabled={isSaving}
+        >
+          {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <User className="h-4 w-4" />}
+          {isSaving ? "Saving..." : "Save Changes"}
         </Button>
       </div>
 
@@ -56,18 +145,49 @@ export function ProfileTab({ studentProfile }: ProfileTabProps) {
         {/* Avatar card */}
         <Card className="border-0 shadow-sm">
           <CardContent className="p-6 text-center">
-            <div className="h-24 w-24 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-3xl font-bold mx-auto mb-4">
-              {(studentProfile.firstName || studentProfile.name).charAt(0)}
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+              className="hidden"
+              onChange={handlePhotoChange}
+            />
+
+            {/* Avatar circle */}
+            <div className="relative inline-block mb-4">
+              <div className="h-24 w-24 rounded-full overflow-hidden bg-blue-100 text-blue-600 flex items-center justify-center text-3xl font-bold mx-auto">
+                {avatarPreview ? (
+                  <img src={avatarPreview} alt="Profile" className="h-full w-full object-cover" />
+                ) : (
+                  initials
+                )}
+              </div>
+              {isUploadingPhoto && (
+                <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center">
+                  <Loader2 className="h-6 w-6 text-white animate-spin" />
+                </div>
+              )}
             </div>
+
             <h3 className="font-semibold text-lg">
-              {studentProfile.lastName && studentProfile.firstName
-                ? `${studentProfile.firstName} ${studentProfile.middleName ? studentProfile.middleName.charAt(0) + ". " : ""}${studentProfile.lastName}`
-                : studentProfile.name}
+              {formData.lastName && formData.firstName
+                ? `${formData.firstName} ${formData.middleName ? formData.middleName.charAt(0) + ". " : ""}${formData.lastName}`
+                : formData.name}
             </h3>
-            <p className="text-muted-foreground text-sm">{studentProfile.course}</p>
-            <p className="text-muted-foreground text-sm">{studentProfile.year} • {studentProfile.section}</p>
-            <p className="text-xs text-muted-foreground mt-1">ID: {studentProfile.studentId}</p>
-            <button className="mt-4 text-sm text-primary hover:underline">Change Photo</button>
+            <p className="text-muted-foreground text-sm">{formData.course}</p>
+            <p className="text-muted-foreground text-sm">{formData.year} • {formData.section}</p>
+            <p className="text-xs text-muted-foreground mt-1">ID: {formData.studentId}</p>
+
+            <button
+              onClick={handlePhotoClick}
+              disabled={isUploadingPhoto}
+              className="mt-4 flex items-center gap-1.5 text-sm text-primary hover:underline mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Camera className="h-3.5 w-3.5" />
+              {isUploadingPhoto ? "Uploading..." : "Change Photo"}
+            </button>
+            <p className="text-xs text-muted-foreground mt-1">JPG, PNG, WEBP or GIF · max 5 MB</p>
           </CardContent>
         </Card>
 
@@ -81,15 +201,15 @@ export function ProfileTab({ studentProfile }: ProfileTabProps) {
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <Label className="text-sm text-muted-foreground">Last Name</Label>
-                <Input defaultValue={studentProfile.lastName || ""} className="mt-1.5" readOnly />
+                <Input value={formData.lastName || ""} onChange={e => setFormData({ ...formData, lastName: e.target.value })} className="mt-1.5" />
               </div>
               <div>
                 <Label className="text-sm text-muted-foreground">First Name</Label>
-                <Input defaultValue={studentProfile.firstName || ""} className="mt-1.5" readOnly />
+                <Input value={formData.firstName || ""} onChange={e => setFormData({ ...formData, firstName: e.target.value })} className="mt-1.5" />
               </div>
               <div>
                 <Label className="text-sm text-muted-foreground">Middle Name</Label>
-                <Input defaultValue={studentProfile.middleName || ""} className="mt-1.5" readOnly />
+                <Input value={formData.middleName || ""} onChange={e => setFormData({ ...formData, middleName: e.target.value })} className="mt-1.5" />
               </div>
             </div>
 
@@ -97,33 +217,33 @@ export function ProfileTab({ studentProfile }: ProfileTabProps) {
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <Label className="text-sm text-muted-foreground">Course</Label>
-                <Input defaultValue={studentProfile.course} className="mt-1.5" readOnly />
+                <Input value={formData.course} onChange={e => setFormData({ ...formData, course: e.target.value })} className="mt-1.5" />
               </div>
               <div>
                 <Label className="text-sm text-muted-foreground">Year Level</Label>
-                <Input defaultValue={studentProfile.year} className="mt-1.5" readOnly />
+                <Input value={formData.year} onChange={e => setFormData({ ...formData, year: e.target.value })} className="mt-1.5" />
               </div>
               <div>
                 <Label className="text-sm text-muted-foreground">Section</Label>
-                <Input defaultValue={studentProfile.section} className="mt-1.5" readOnly />
+                <Input value={formData.section} onChange={e => setFormData({ ...formData, section: e.target.value })} className="mt-1.5" />
               </div>
             </div>
 
             {/* Address */}
             <div>
               <Label className="text-sm text-muted-foreground">Address</Label>
-              <Input defaultValue={studentProfile.address} className="mt-1.5" />
+              <Input value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} className="mt-1.5" />
             </div>
 
             {/* DOB / Age */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-sm text-muted-foreground">Date of Birth</Label>
-                <Input defaultValue={dobDisplay} className="mt-1.5" readOnly />
+                <Input type="date" value={dobDisplay} onChange={e => setFormData({ ...formData, dateOfBirth: e.target.value })} className="mt-1.5" />
               </div>
               <div>
                 <Label className="text-sm text-muted-foreground">Age</Label>
-                <Input defaultValue={computeAge(studentProfile.dateOfBirth)} className="mt-1.5" readOnly />
+                <Input value={computeAge(formData.dateOfBirth)} className="mt-1.5" readOnly />
               </div>
             </div>
 
@@ -131,11 +251,11 @@ export function ProfileTab({ studentProfile }: ProfileTabProps) {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-sm text-muted-foreground">Civil Status</Label>
-                <Input defaultValue={studentProfile.civilStatus || ""} className="mt-1.5" readOnly />
+                <Input value={formData.civilStatus || ""} onChange={e => setFormData({ ...formData, civilStatus: e.target.value })} className="mt-1.5" />
               </div>
               <div>
                 <Label className="text-sm text-muted-foreground">Sex</Label>
-                <Input defaultValue={studentProfile.sex || ""} className="mt-1.5" readOnly />
+                <Input value={formData.sex || ""} onChange={e => setFormData({ ...formData, sex: e.target.value })} className="mt-1.5" />
               </div>
             </div>
 
@@ -143,39 +263,73 @@ export function ProfileTab({ studentProfile }: ProfileTabProps) {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-sm text-muted-foreground">Contact No.</Label>
-                <Input defaultValue={studentProfile.phone} className="mt-1.5" />
+                <Input value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="mt-1.5" />
               </div>
               <div>
                 <Label className="text-sm text-muted-foreground">PSU Email</Label>
-                <Input defaultValue={studentProfile.email} className="mt-1.5" readOnly />
+                <Input value={formData.email} className="mt-1.5" readOnly />
               </div>
             </div>
 
             <div>
               <Label className="text-sm text-muted-foreground">Emergency Contact</Label>
-              <Input defaultValue={studentProfile.emergencyContact} className="mt-1.5" />
+              <Input value={formData.emergencyContact} onChange={e => setFormData({ ...formData, emergencyContact: e.target.value })} className="mt-1.5" />
             </div>
           </CardContent>
         </Card>
 
         {/* Skills */}
         <Card className="lg:col-span-3 border-0 shadow-sm">
-          <CardHeader className="pb-3 flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Skills & Competencies</CardTitle>
-            <Button variant="outline" size="sm" className="gap-2 h-8 text-xs"><Plus className="h-3.5 w-3.5" /> Add Skill</Button>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Skills &amp; Competencies</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {/* Add skill input */}
+            <div className="flex gap-2">
+              <Input
+                placeholder="Type a skill and press Add or Enter..."
+                value={newSkill}
+                onChange={e => setNewSkill(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAddSkill(); } }}
+                className="flex-1"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 px-4"
+                onClick={handleAddSkill}
+                disabled={!newSkill.trim()}
+              >
+                <Plus className="h-3.5 w-3.5" /> Add
+              </Button>
+            </div>
+
+            {/* Skill tags */}
             <div className="flex flex-wrap gap-2">
-              {studentProfile.skills?.map((skill, i) => (
-                <span key={i} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                  {skill}
-                  <button className="text-blue-400 hover:text-blue-600">×</button>
-                </span>
-              ))}
-              {(!studentProfile.skills || studentProfile.skills.length === 0) && (
-                <p className="text-sm text-muted-foreground">No skills added yet.</p>
+              {formData.skills?.length > 0 ? (
+                formData.skills.map((skill, i) => (
+                  <span
+                    key={i}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-medium"
+                  >
+                    {skill}
+                    <button
+                      onClick={() => handleRemoveSkill(skill)}
+                      className="text-blue-400 hover:text-blue-700 transition-colors ml-0.5"
+                      title={`Remove ${skill}`}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </span>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">No skills added yet. Type a skill above and press Add.</p>
               )}
             </div>
+
+            <p className="text-xs text-muted-foreground">
+              Skills are saved when you click <strong>Save Changes</strong> above.
+            </p>
           </CardContent>
         </Card>
       </div>

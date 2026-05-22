@@ -130,6 +130,7 @@ export function JournalTab({
       supervisor: deployment.supervisor || "",
       supervisorContact: "", // could be added to deployment in future
       position: deployment.position || "",
+      avatarUrl: studentProfile.avatarUrl || null,
       months: monthsPayload,
     });
 
@@ -180,13 +181,8 @@ export function JournalTab({
             <Button variant="outline" className="mt-4" onClick={openAddModal}>Post your first entry</Button>
           </div>
         ) : sortedDesc.map(a => (
-          <Card key={a.id} className="border border-border shadow-sm overflow-hidden flex flex-col md:flex-row">
-            {a.picture && (
-              <div className="w-full md:w-48 h-32 md:h-auto bg-muted flex-shrink-0">
-                <img src={a.picture} alt="Proof" className="w-full h-full object-cover" />
-              </div>
-            )}
-            <CardContent className="p-5 flex-1 min-w-0">
+          <Card key={a.id} className="border border-border shadow-sm overflow-hidden">
+            <CardContent className="p-5">
               <div className="flex justify-between items-start mb-2 gap-4 flex-wrap">
                 <div>
                   <h3 className="font-bold text-lg">{formatDate(a.date)}</h3>
@@ -195,6 +191,13 @@ export function JournalTab({
                 <StatusBadge status={a.status} />
               </div>
               <p className="text-foreground text-sm leading-relaxed whitespace-pre-wrap">{a.details}</p>
+              {a.picture && (
+                <img
+                  src={a.picture}
+                  alt="evidence"
+                  className="mt-3 rounded-lg border border-border max-h-56 object-cover"
+                />
+              )}
             </CardContent>
           </Card>
         ))}

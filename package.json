@@ -49,6 +49,7 @@
     "country-state-city": "^3.2.1",
     "date-fns": "3.6.0",
     "docxtemplater": "^3.68.7",
+    "docxtemplater-image-module-free": "^1.1.1",
     "embla-carousel-react": "8.6.0",
     "file-saver": "^2.0.5",
     "input-otp": "1.4.2",

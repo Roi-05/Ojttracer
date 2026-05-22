@@ -7,7 +7,7 @@ async function loadProfile(userId) {
   const base = baseRes.rows[0];
   if (!base) return null;
 
-  const out = { id: base.id, email: base.email, name: base.name, role: base.role, createdAt: base.created_at };
+  const out = { id: base.id, email: base.email, name: base.name, role: base.role, avatarUrl: base.avatar_url || null, createdAt: base.created_at };
 
   if (base.role === 'student') {
     const sRes = await db.query(`SELECT * FROM public.students WHERE user_id = $1`, [userId]);

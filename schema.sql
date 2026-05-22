@@ -5,6 +5,7 @@ create table if not exists public.profiles (
   password_hash text not null,
   name        text not null,
   role        text not null check (role in ('student','company','admin')),
+  avatar_url  text,
   created_at  timestamptz not null default now()
 );
 

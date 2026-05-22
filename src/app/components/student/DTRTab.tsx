@@ -125,7 +125,6 @@ export function DTRTab({ dtrRecords, todayRecord, openCamera, geofenceStatus = "
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3 flex flex-row items-center justify-between">
           <CardTitle className="text-base">Daily Time Record</CardTitle>
-          <Button variant="outline" size="sm" className="gap-2 h-8 text-xs"><Download className="h-3.5 w-3.5" /> Export DTR</Button>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
