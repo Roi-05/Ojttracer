@@ -10,7 +10,7 @@ import { InternsTab } from "../components/company/InternsTab";
 import { AccomplishmentsTab } from "../components/company/AccomplishmentsTab";
 import { EvaluationsTab } from "../components/company/EvaluationsTab";
 import { MoaTab } from "../components/company/MoaTab";
-import { AttendanceTab } from "../components/admin/AttendanceTab";
+import { CompanyDtrTab } from "../components/company/CompanyDtrTab";
 
 import {
   LayoutDashboard, Building2, Users, Star, FileCheck, ShieldCheck, Clock
@@ -85,11 +85,7 @@ export function CompanyDashboard() {
     ),
     interns: () => <InternsTab interns={interns} />,
     attendance: () => (
-      <AttendanceTab
-        dtrLogs={dtrLogs}
-        title="Intern Attendance (DTR)"
-        subtitle="Daily time records for interns deployed to your company — expand a row to view full history"
-      />
+      <CompanyDtrTab dtrLogs={dtrLogs} interns={interns} />
     ),
     accomplishments: () => (
       <AccomplishmentsTab
