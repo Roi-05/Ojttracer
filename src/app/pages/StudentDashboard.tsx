@@ -190,7 +190,7 @@ export function StudentDashboard() {
       studentName={studentProfile.name}
       studentSection={`${studentProfile.course} ${studentProfile.year} ${studentProfile.section}`}
       studentProfile={studentProfile}
-      deployment={{ company: activeDeployment.company, position: activeDeployment.position, supervisor: activeDeployment.supervisor }}
+      deployment={{ company: activeDeployment.company, position: activeDeployment.position, supervisor: activeDeployment.supervisor, companyAddress: activeDeployment.companyAddress || activeDeployment.address || "", supervisorContact: activeDeployment.supervisorEmail || "" }}
     />,
     documents: () => (
       <DocumentsTab 

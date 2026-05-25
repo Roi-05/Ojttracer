@@ -20,6 +20,8 @@ interface JournalTabProps {
     company?: string;
     position?: string;
     supervisor?: string;
+    companyAddress?: string;
+    supervisorContact?: string;
   };
   studentProfile?: any;
 }
@@ -127,9 +129,9 @@ export function JournalTab({
       civilStatus: studentProfile.civilStatus || "",
       religion: studentProfile.religion || "",
       company: deployment.company || "",
-      companyAddress: "", // could be added to deployment in future
+      companyAddress: deployment.companyAddress || "",
       supervisor: deployment.supervisor || "",
-      supervisorContact: "", // could be added to deployment in future
+      supervisorContact: deployment.supervisorContact || "",
       position: deployment.position || "",
       avatarUrl: studentProfile.avatarUrl || null,
       fatherName: studentProfile.fatherName || "",
