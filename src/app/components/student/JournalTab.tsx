@@ -132,6 +132,15 @@ export function JournalTab({
       supervisorContact: "", // could be added to deployment in future
       position: deployment.position || "",
       avatarUrl: studentProfile.avatarUrl || null,
+      fatherName: studentProfile.fatherName || "",
+      fatherOccupation: studentProfile.fatherOccupation || "",
+      fatherPhone: studentProfile.fatherPhone || "",
+      motherName: studentProfile.motherName || "",
+      motherOccupation: studentProfile.motherOccupation || "",
+      motherPhone: studentProfile.motherPhone || "",
+      guardianName: studentProfile.guardianName || "",
+      guardianRelationship: studentProfile.guardianRelationship || "",
+      guardianPhone: studentProfile.guardianPhone || "",
       months: monthsPayload,
     });
 

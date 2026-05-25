@@ -38,6 +38,15 @@ export interface JournalInfo {
   supervisorContact: string;
   position: string;
   avatarUrl?: string | null;
+  fatherName?: string;
+  fatherOccupation?: string;
+  fatherPhone?: string;
+  motherName?: string;
+  motherOccupation?: string;
+  motherPhone?: string;
+  guardianName?: string;
+  guardianRelationship?: string;
+  guardianPhone?: string;
   months: JournalMonthGroup[];
 }
 
@@ -277,6 +286,15 @@ export async function generateJournalDOCX(info: JournalInfo): Promise<void> {
     supervisor: info.supervisor || "",
     supervisorContact: info.supervisorContact || "",
     position: info.position || "",
+    fatherName: info.fatherName || "",
+    fatherOccupation: info.fatherOccupation || "",
+    fatherPhone: info.fatherPhone || "",
+    motherName: info.motherName || "",
+    motherOccupation: info.motherOccupation || "",
+    motherPhone: info.motherPhone || "",
+    guardianName: info.guardianName || "",
+    guardianRelationship: info.guardianRelationship || "",
+    guardianPhone: info.guardianPhone || "",
     totalHours: globalTotalHours,
     // Note: the template tag for image must have % prefix (e.g. {%profilepicture2x2} and {%journalEntriesImages})
     profilepicture2x2: avatarBuffer ? "profilepicture2x2" : "",

@@ -63,6 +63,15 @@ export function StudentDashboard() {
     skills: (user as any)?.skills || emptyStudentInfo.skills,
     emergencyContact: (user as any)?.emergencyContact || emptyStudentInfo.emergencyContact,
     avatarUrl: (user as any)?.avatarUrl || null,
+    fatherName: (user as any)?.fatherName || "",
+    fatherOccupation: (user as any)?.fatherOccupation || "",
+    fatherPhone: (user as any)?.fatherPhone || "",
+    motherName: (user as any)?.motherName || "",
+    motherOccupation: (user as any)?.motherOccupation || "",
+    motherPhone: (user as any)?.motherPhone || "",
+    guardianName: (user as any)?.guardianName || "",
+    guardianRelationship: (user as any)?.guardianRelationship || "",
+    guardianPhone: (user as any)?.guardianPhone || "",
   };
 
   const {

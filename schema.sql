@@ -27,7 +27,16 @@ create table if not exists public.students (
   skills             jsonb not null default '[]'::jsonb,
   emergency_contact  text default '',
   intended_company_id uuid references public.companies(user_id),
-  intended_position   text default ''
+  intended_position   text default '',
+  father_name        text default '',
+  father_occupation  text default '',
+  father_phone       text default '',
+  mother_name        text default '',
+  mother_occupation  text default '',
+  mother_phone       text default '',
+  guardian_name      text default '',
+  guardian_relationship text default '',
+  guardian_phone     text default ''
 );
 
 -- ── COMPANY-SPECIFIC FIELDS ────────────────────────────────────────────────

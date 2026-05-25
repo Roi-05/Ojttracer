@@ -29,7 +29,16 @@ async function loadProfile(userId) {
       skills: s.skills,
       emergencyContact: s.emergency_contact,
       intendedCompanyId: s.intended_company_id,
-      intendedPosition: s.intended_position || ''
+      intendedPosition: s.intended_position || '',
+      fatherName: s.father_name || '',
+      fatherOccupation: s.father_occupation || '',
+      fatherPhone: s.father_phone || '',
+      motherName: s.mother_name || '',
+      motherOccupation: s.mother_occupation || '',
+      motherPhone: s.mother_phone || '',
+      guardianName: s.guardian_name || '',
+      guardianRelationship: s.guardian_relationship || '',
+      guardianPhone: s.guardian_phone || ''
     });
   } else if (base.role === 'company') {
     const cRes = await db.query(`SELECT * FROM public.companies WHERE user_id = $1`, [userId]);

@@ -33,6 +33,15 @@ const updateProfile = async (req, res) => {
       if (body.address !== undefined) { fields.push(`address=$${i++}`); vals.push(body.address); }
       if (body.skills !== undefined) { fields.push(`skills=$${i++}`); vals.push(JSON.stringify(body.skills)); }
       if (body.emergencyContact !== undefined) { fields.push(`emergency_contact=$${i++}`); vals.push(body.emergencyContact); }
+      if (body.fatherName !== undefined) { fields.push(`father_name=$${i++}`); vals.push(body.fatherName); }
+      if (body.fatherOccupation !== undefined) { fields.push(`father_occupation=$${i++}`); vals.push(body.fatherOccupation); }
+      if (body.fatherPhone !== undefined) { fields.push(`father_phone=$${i++}`); vals.push(body.fatherPhone); }
+      if (body.motherName !== undefined) { fields.push(`mother_name=$${i++}`); vals.push(body.motherName); }
+      if (body.motherOccupation !== undefined) { fields.push(`mother_occupation=$${i++}`); vals.push(body.motherOccupation); }
+      if (body.motherPhone !== undefined) { fields.push(`mother_phone=$${i++}`); vals.push(body.motherPhone); }
+      if (body.guardianName !== undefined) { fields.push(`guardian_name=$${i++}`); vals.push(body.guardianName); }
+      if (body.guardianRelationship !== undefined) { fields.push(`guardian_relationship=$${i++}`); vals.push(body.guardianRelationship); }
+      if (body.guardianPhone !== undefined) { fields.push(`guardian_phone=$${i++}`); vals.push(body.guardianPhone); }
       if (fields.length) { vals.push(req.user.id); await db.query(`UPDATE public.students SET ${fields.join(', ')} WHERE user_id=$${i}`, vals); }
     } else if (role === 'company') {
       const fields = [];

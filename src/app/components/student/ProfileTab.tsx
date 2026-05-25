@@ -28,6 +28,15 @@ interface ProfileTabProps {
     skills: string[];
     emergencyContact: string;
     avatarUrl?: string | null;
+    fatherName?: string;
+    fatherOccupation?: string;
+    fatherPhone?: string;
+    motherName?: string;
+    motherOccupation?: string;
+    motherPhone?: string;
+    guardianName?: string;
+    guardianRelationship?: string;
+    guardianPhone?: string;
   };
   updateProfileData: (data: any) => Promise<void>;
 }
@@ -281,6 +290,71 @@ export function ProfileTab({ studentProfile, updateProfileData }: ProfileTabProp
             <div>
               <Label className="text-sm text-muted-foreground">Emergency Contact</Label>
               <Input value={formData.emergencyContact} onChange={e => setFormData({ ...formData, emergencyContact: e.target.value })} className="mt-1.5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Parent / Guardian Information */}
+        <Card className="lg:col-span-3 border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Parent / Guardian Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Father's Info */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-primary">Father's Details</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Father's Name</Label>
+                  <Input value={formData.fatherName || ""} onChange={e => setFormData({ ...formData, fatherName: e.target.value })} className="mt-1.5" />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Occupation</Label>
+                  <Input value={formData.fatherOccupation || ""} onChange={e => setFormData({ ...formData, fatherOccupation: e.target.value })} className="mt-1.5" />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Contact No.</Label>
+                  <Input value={formData.fatherPhone || ""} onChange={e => setFormData({ ...formData, fatherPhone: e.target.value })} className="mt-1.5" />
+                </div>
+              </div>
+            </div>
+
+            {/* Mother's Info */}
+            <div className="space-y-3 pt-3 border-t border-border">
+              <h4 className="text-sm font-semibold text-primary">Mother's Details</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Mother's Name</Label>
+                  <Input value={formData.motherName || ""} onChange={e => setFormData({ ...formData, motherName: e.target.value })} className="mt-1.5" />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Occupation</Label>
+                  <Input value={formData.motherOccupation || ""} onChange={e => setFormData({ ...formData, motherOccupation: e.target.value })} className="mt-1.5" />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Contact No.</Label>
+                  <Input value={formData.motherPhone || ""} onChange={e => setFormData({ ...formData, motherPhone: e.target.value })} className="mt-1.5" />
+                </div>
+              </div>
+            </div>
+
+            {/* Guardian's Info */}
+            <div className="space-y-3 pt-3 border-t border-border">
+              <h4 className="text-sm font-semibold text-primary">Guardian's Details</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Guardian's Name</Label>
+                  <Input value={formData.guardianName || ""} onChange={e => setFormData({ ...formData, guardianName: e.target.value })} className="mt-1.5" />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Relationship with Student Intern</Label>
+                  <Input value={formData.guardianRelationship || ""} onChange={e => setFormData({ ...formData, guardianRelationship: e.target.value })} className="mt-1.5" />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Contact Number/s</Label>
+                  <Input value={formData.guardianPhone || ""} onChange={e => setFormData({ ...formData, guardianPhone: e.target.value })} className="mt-1.5" />
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

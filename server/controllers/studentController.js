@@ -45,6 +45,8 @@ const getStudents = async (req, res) => {
       SELECT p.*, s.student_id, s.last_name, s.first_name, s.middle_name,
              s.section, s.course, s.year_level, s.date_of_birth, s.civil_status, s.sex,
              s.phone, s.address, s.skills, s.emergency_contact, s.intended_company_id, s.intended_position,
+             s.father_name, s.father_occupation, s.father_phone, s.mother_name, s.mother_occupation, s.mother_phone,
+             s.guardian_name, s.guardian_relationship, s.guardian_phone,
              d.company_name, d.position, d.required_hours, d.status as deployment_status,
              e.overall_score
       FROM public.profiles p
@@ -73,6 +75,15 @@ const getStudents = async (req, res) => {
       emergencyContact: r.emergency_contact,
       intendedCompanyId: r.intended_company_id,
       intendedPosition: r.intended_position || '',
+      fatherName: r.father_name || '',
+      fatherOccupation: r.father_occupation || '',
+      fatherPhone: r.father_phone || '',
+      motherName: r.mother_name || '',
+      motherOccupation: r.mother_occupation || '',
+      motherPhone: r.mother_phone || '',
+      guardianName: r.guardian_name || '',
+      guardianRelationship: r.guardian_relationship || '',
+      guardianPhone: r.guardian_phone || '',
       performance: parseFloat(r.overall_score) || 0,
       deployment: r.company_name ? {
         company: r.company_name,
