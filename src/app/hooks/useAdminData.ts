@@ -13,11 +13,11 @@ export type AdminStudent = {
   company: string; position: string; hoursCompleted: number; requiredHours: number;
   status: string; intendedCompanyId?: string | null; performance: number;
 };
-export type AdminCompany = { id: string | number; name: string; industry: string; location: string; activeInterns: number; totalCapacity: number; moaStatus: string; moaExpiry: string; contactPerson: string; verified: boolean; hrContact?: string; hrEmail?: string; signedMoaUrl?: string | null };
+export type AdminCompany = { id: string | number; name: string; industry: string; location: string; activeInterns: number; totalCapacity: number; moaStatus: string; moaExpiry: string; contactPerson: string; verified: boolean; hrContact?: string; hrEmail?: string; signedMoaUrl?: string | null; latitude?: number | null; longitude?: number | null; geofenceRadius?: number };
 export type DTRLog = { student: string; studentId: string | number; studentNumber: string; section: string; date: string; day: string; timeIn: string; timeOut: string; hours: number; status: string };
 export type JournalLog = { student: string; section: string; week: string; title: string; submitted: string; status: string };
 export type Announcement = { id: string | number; title: string; content: string; date: string; category: string; priority: string };
-export type CompanyLocation = { name: string; address: string; lat: number; lng: number; industry: string; interns: number; x: number; y: number };
+export type CompanyLocation = { name: string; address: string; lat: number; lng: number; industry: string; interns: number; x: number; y: number; geofenceRadius?: number };
 export type AdminTemplate = { name: string; file: string | null; size: string; uploaded: string; docSlug: string | null };
 export type AdminDocEntry = { name: string; status: string; file: string | null; uploaded: string };
 export type AdminSubmission = { studentId: string | number; name: string; studentNo: string; course: string; section: string; deployed: boolean; assignedCompany: string | null; docs: AdminDocEntry[] };
@@ -70,13 +70,28 @@ export function useAdminData() {
       }
 
       if (compRes) {
-        setCompanies((compRes || []).map((c: any) => ({
-          id: c.id, name: c.companyName || c.name, industry: c.industry || "—",
-          location: c.companyAddress || "—", activeInterns: 0, totalCapacity: 0,
-          moaStatus: c.moaStatus || "pending", moaExpiry: c.accreditedUntil || "—",
-          contactPerson: c.hrContact || c.name, verified: c.moaStatus === "active",
-          hrContact: c.hrContact, hrEmail: c.hrEmail, signedMoaUrl: c.signedMoaUrl || null,
-        })));
+        setCompanies((compRes || []).map((c: any) => {
+          const compName = c.companyName || c.name;
+          const internsCount = (stuRes || []).filter((s: any) => s.deployment?.company === compName).length;
+          return {
+            id: c.id,
+            name: compName,
+            industry: c.industry || "—",
+            location: c.companyAddress || "—",
+            activeInterns: internsCount,
+            totalCapacity: 0,
+            moaStatus: c.moaStatus || "pending",
+            moaExpiry: c.accreditedUntil || "—",
+            contactPerson: c.hrContact || c.name,
+            verified: c.moaStatus === "active",
+            hrContact: c.hrContact,
+            hrEmail: c.hrEmail,
+            signedMoaUrl: c.signedMoaUrl || null,
+            latitude: c.latitude != null ? parseFloat(c.latitude) : null,
+            longitude: c.longitude != null ? parseFloat(c.longitude) : null,
+            geofenceRadius: c.geofenceRadius || 200
+          };
+        }));
       }
 
       if (annRes) {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { useAuth } from "../contexts/AuthContext";
 import { useAdminData, CompanyLocation } from "../hooks/useAdminData";
@@ -43,7 +43,6 @@ const menuItems = [
 
 const SECTIONS = ["4A", "4B", "4C", "4D"];
 const COLORS = ["#2563EB", "#16A34A", "#EA580C", "#7C3AED", "#DC2626"];
-const companyLocations: CompanyLocation[] = []; // Empty for now, API can supply this later
 const monthlyPlacementData: any[] = [];
 const hoursProgressData: any[] = [];
 
@@ -56,6 +55,39 @@ export function AdminDashboard() {
     students, companies, evaluations, dtrLogs, journalLogs, announcements, templates, studentSubmissions,
     verifyCompany, updateMoaStatus, uploadTemplate, reviewDocument, deployStudent, deleteAnnouncement, deleteCompany, reload
   } = useAdminData();
+
+  const companyLocations = useMemo(() => {
+    return companies
+      .filter(c => c.latitude != null && c.longitude != null)
+      .map(c => {
+        const lat = c.latitude!;
+        const lng = c.longitude!;
+        
+        // Standard geographic bounds for Pampanga:
+        // Lat: 14.85 to 15.22
+        // Lng: 120.45 to 120.85
+        const minLat = 14.85;
+        const maxLat = 15.22;
+        const minLng = 120.45;
+        const maxLng = 120.85;
+        
+        // Convert to percentage coordinates (clamped to 5% - 95% to avoid borders)
+        const x = Math.min(95, Math.max(5, ((lng - minLng) / (maxLng - minLng)) * 100));
+        const y = Math.min(95, Math.max(5, 100 - (((lat - minLat) / (maxLat - minLat)) * 100)));
+        
+        return {
+          name: c.name,
+          address: c.location,
+          lat,
+          lng,
+          industry: c.industry,
+          interns: c.activeInterns,
+          x,
+          y,
+          geofenceRadius: c.geofenceRadius
+        };
+      });
+  }, [companies]);
 
   // Modals state
   const [showImportModal, setShowImportModal] = useState(false);
