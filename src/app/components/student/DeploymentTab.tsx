@@ -3,11 +3,23 @@ import { MapPin, Building2 } from "lucide-react";
 import { StatusBadge } from "./shared";
 
 interface DeploymentTabProps {
-  effectiveDeployment: any;
+  effectiveDeployment: {
+    company: string;
+    position: string;
+    companyAddress?: string;
+    supervisor: string;
+    supervisorEmail: string;
+    startDate: string;
+    endDate: string;
+    requiredHours: number;
+    completedHours: number;
+    status: string;
+  };
   pct: number;
 }
 
 export function DeploymentTab({ effectiveDeployment, pct }: DeploymentTabProps) {
+  const companyAddress = (effectiveDeployment.companyAddress || "").trim();
   return (
     <div className="space-y-6">
       <div>
@@ -30,7 +42,10 @@ export function DeploymentTab({ effectiveDeployment, pct }: DeploymentTabProps) 
               </div>
               <div>
                 <h3 className="font-bold text-lg">{effectiveDeployment.company}</h3>
-                <p className="text-muted-foreground text-sm flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{effectiveDeployment.address}</p>
+                <p className="text-muted-foreground text-sm flex items-start gap-1 mt-0.5">
+                  <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  <span>{companyAddress || "—"}</span>
+                </p>
                 <p className="text-sm text-blue-600 font-medium mt-1">{effectiveDeployment.position}</p>
               </div>
             </div>

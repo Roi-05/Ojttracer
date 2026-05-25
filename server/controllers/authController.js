@@ -1,13 +1,14 @@
 const bcrypt = require('bcrypt');
 const db = require('../db');
 const { generateToken } = require('../auth');
+const { normalizeUploadUrl } = require('../utils/uploadUrl');
 
 async function loadProfile(userId) {
   const baseRes = await db.query(`SELECT * FROM public.profiles WHERE id = $1`, [userId]);
   const base = baseRes.rows[0];
   if (!base) return null;
 
-  const out = { id: base.id, email: base.email, name: base.name, role: base.role, avatarUrl: base.avatar_url || null, createdAt: base.created_at };
+  const out = { id: base.id, email: base.email, name: base.name, role: base.role, avatarUrl: normalizeUploadUrl(base.avatar_url), createdAt: base.created_at };
 
   if (base.role === 'student') {
     const sRes = await db.query(`SELECT * FROM public.students WHERE user_id = $1`, [userId]);
@@ -27,7 +28,8 @@ async function loadProfile(userId) {
       address: s.address,
       skills: s.skills,
       emergencyContact: s.emergency_contact,
-      intendedCompanyId: s.intended_company_id
+      intendedCompanyId: s.intended_company_id,
+      intendedPosition: s.intended_position || ''
     });
   } else if (base.role === 'company') {
     const cRes = await db.query(`SELECT * FROM public.companies WHERE user_id = $1`, [userId]);

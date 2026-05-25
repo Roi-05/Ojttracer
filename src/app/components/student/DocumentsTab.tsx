@@ -1,28 +1,75 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
 import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
 import { FileText, FileCheck, Eye, Download, Upload, Building2 } from "lucide-react";
+import * as api from "../../lib/api";
 import { StudentDocument, Template } from "../../hooks/useStudentData";
 import { StatusBadge } from "./shared";
+
+interface ActiveCompany {
+  id: string;
+  name: string;
+  industry?: string;
+  signedMoaUrl?: string | null;
+}
 
 interface DocumentsTabProps {
   studentDocs: StudentDocument[];
   templateData: Template[];
-  activeCompanies: any[];
+  activeCompanies: ActiveCompany[];
   intendedCompanyId: string | null;
-  setTargetCompany: (companyId: string) => Promise<void>;
+  intendedPosition: string;
+  setTargetCompany: (companyId: string, position: string) => Promise<void>;
   openDocUpload: (docName: string) => void;
 }
 
-export function DocumentsTab({ studentDocs, templateData, activeCompanies, intendedCompanyId, setTargetCompany, openDocUpload }: DocumentsTabProps) {
+export function DocumentsTab({ studentDocs, templateData, activeCompanies, intendedCompanyId, intendedPosition, setTargetCompany, openDocUpload }: DocumentsTabProps) {
   const [selectedCompanyId, setSelectedCompanyId] = useState(intendedCompanyId || "");
+  const [jobRole, setJobRole] = useState(intendedPosition || "");
   const [savingCompany, setSavingCompany] = useState(false);
-  
+  const [signedMoaUrl, setSignedMoaUrl] = useState<string | null>(null);
+  const [loadingMoa, setLoadingMoa] = useState(false);
+
+  useEffect(() => {
+    setSelectedCompanyId(intendedCompanyId || "");
+    setJobRole(intendedPosition || "");
+  }, [intendedCompanyId, intendedPosition]);
+
+  const selectedCompany = activeCompanies.find(c => String(c.id) === String(selectedCompanyId));
+
+  useEffect(() => {
+    if (!selectedCompanyId) {
+      setSignedMoaUrl(null);
+      return;
+    }
+    const fromList = activeCompanies.find(c => String(c.id) === String(selectedCompanyId));
+    if (fromList?.signedMoaUrl) {
+      setSignedMoaUrl(fromList.signedMoaUrl);
+      return;
+    }
+    let cancelled = false;
+    setLoadingMoa(true);
+    api.getActiveCompanyMoa(selectedCompanyId)
+      .then((res) => { if (!cancelled) setSignedMoaUrl(res?.signedMoaUrl || null); })
+      .catch(() => { if (!cancelled) setSignedMoaUrl(null); })
+      .finally(() => { if (!cancelled) setLoadingMoa(false); });
+    return () => { cancelled = true; };
+  }, [selectedCompanyId, activeCompanies]);
+
+  const hasUnsavedChanges =
+    selectedCompanyId !== (intendedCompanyId || "") ||
+    jobRole.trim() !== (intendedPosition || "").trim();
+
   const handleSaveCompany = async () => {
-    if (!selectedCompanyId) return;
+    if (!selectedCompanyId || !jobRole.trim()) return;
     setSavingCompany(true);
-    await setTargetCompany(selectedCompanyId);
-    setSavingCompany(false);
+    try {
+      await setTargetCompany(selectedCompanyId, jobRole.trim());
+    } finally {
+      setSavingCompany(false);
+    }
   };
   const submittedCount = studentDocs.filter(d => d.status !== "missing").length;
   const approvedCount = studentDocs.filter(d => d.status === "approved").length;
@@ -59,10 +106,10 @@ export function DocumentsTab({ studentDocs, templateData, activeCompanies, inten
           </CardTitle>
           <CardDescription>Select the accredited partner company you intend to deploy to.</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex gap-3">
+        <CardContent className="space-y-4">
+          <div className="flex gap-3 flex-wrap">
             <select 
-              className="flex-1 border border-border rounded-lg p-2 text-sm bg-card"
+              className="flex-1 min-w-[200px] border border-border rounded-lg p-2 text-sm bg-card"
               value={selectedCompanyId}
               onChange={e => setSelectedCompanyId(e.target.value)}
             >
@@ -73,15 +120,54 @@ export function DocumentsTab({ studentDocs, templateData, activeCompanies, inten
             </select>
             <Button 
               className="bg-blue-600 hover:bg-blue-700 text-white" 
-              disabled={!selectedCompanyId || selectedCompanyId === intendedCompanyId || savingCompany}
+              disabled={!selectedCompanyId || !jobRole.trim() || !hasUnsavedChanges || savingCompany}
               onClick={handleSaveCompany}
             >
               {savingCompany ? "Saving..." : "Save Selection"}
             </Button>
           </div>
+
+          <div>
+            <Label htmlFor="intended-job-role">Intended Job Role</Label>
+            <Input
+              id="intended-job-role"
+              className="mt-1.5"
+              placeholder="e.g. Web Developer Intern, QA Intern"
+              value={jobRole}
+              onChange={e => setJobRole(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground mt-1">Enter the position or role you expect to hold at your target company.</p>
+          </div>
+
+          {selectedCompanyId && signedMoaUrl ? (
+            <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border bg-card">
+              <div className="min-w-0">
+                <p className="text-sm font-medium">Signed MOA — {selectedCompany?.name || "Selected company"}</p>
+                <p className="text-xs text-muted-foreground">Download the accredited company&apos;s signed memorandum of agreement.</p>
+              </div>
+              <div className="flex gap-1.5 flex-shrink-0">
+                <Button variant="ghost" size="sm" className="h-8 gap-1" asChild>
+                  <a href={signedMoaUrl} target="_blank" rel="noreferrer">
+                    <Eye className="h-3.5 w-3.5" /> View
+                  </a>
+                </Button>
+                <Button variant="outline" size="sm" className="h-8 gap-1" asChild>
+                  <a href={signedMoaUrl} download>
+                    <Download className="h-3.5 w-3.5" /> Download MOA
+                  </a>
+                </Button>
+              </div>
+            </div>
+          ) : selectedCompanyId && loadingMoa ? (
+            <p className="text-xs text-muted-foreground">Loading signed MOA…</p>
+          ) : selectedCompanyId ? (
+            <p className="text-xs text-muted-foreground">No signed MOA is available for this company yet.</p>
+          ) : null}
+
           {intendedCompanyId && (
-            <p className="text-xs text-green-700 mt-2 flex items-center gap-1">
-              <FileCheck className="h-3.5 w-3.5" /> Target company saved. Coordinator will be notified upon document completion.
+            <p className="text-xs text-green-700 flex items-center gap-1">
+              <FileCheck className="h-3.5 w-3.5" />
+              Target company{intendedPosition ? ` and role (${intendedPosition})` : ""} saved. Coordinator will be notified upon document completion.
             </p>
           )}
         </CardContent>

@@ -6,6 +6,8 @@ import { DTRLog } from "../../hooks/useAdminData";
 
 interface AttendanceTabProps {
   dtrLogs: DTRLog[];
+  title?: string;
+  subtitle?: string;
 }
 
 function formatTime(t: string) {
@@ -36,7 +38,11 @@ type StudentGroup = {
   logs: DTRLog[];
 };
 
-export function AttendanceTab({ dtrLogs }: AttendanceTabProps) {
+export function AttendanceTab({
+  dtrLogs,
+  title = "Attendance Monitoring",
+  subtitle = "Student DTR records grouped by individual — expand to view full history",
+}: AttendanceTabProps) {
   const [search, setSearch] = useState("");
   const [sectionFilter, setSectionFilter] = useState("All");
   const [expandedIds, setExpandedIds] = useState<Set<string | number>>(new Set());
@@ -96,8 +102,8 @@ export function AttendanceTab({ dtrLogs }: AttendanceTabProps) {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold">Attendance Monitoring</h1>
-        <p className="text-muted-foreground mt-1">Student DTR records grouped by individual — expand to view full history</p>
+        <h1 className="text-2xl font-bold">{title}</h1>
+        <p className="text-muted-foreground mt-1">{subtitle}</p>
       </div>
 
       {/* Summary stats */}

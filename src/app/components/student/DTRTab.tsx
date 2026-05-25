@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui
 import { Button } from "../ui/button";
 import { Camera, CameraOff, Download, Loader2, CheckCircle2, XCircle, MapPin, AlertTriangle } from "lucide-react";
 import { DTRRecord } from "../../hooks/useStudentData";
+import { resolveUploadUrl } from "../../lib/uploads";
 import { formatDate, TODAY_LABEL, TODAY_DAY } from "./shared";
 
 type GeofenceStatus = "idle" | "checking" | "allowed" | "denied" | "out_of_range" | "no_gps";
@@ -70,7 +71,7 @@ export function DTRTab({ dtrRecords, todayRecord, openCamera, geofenceStatus = "
               <div className="flex items-center gap-3 mb-3">
                 <div className="h-16 w-16 rounded-lg overflow-hidden bg-muted flex items-center justify-center border border-border">
                   {todayRecord?.timeInPhoto
-                    ? <img src={todayRecord.timeInPhoto} alt="Time In" className="h-full w-full object-cover" />
+                    ? <img src={resolveUploadUrl(todayRecord.timeInPhoto)!} alt="Time In" className="h-full w-full object-cover" />
                     : <CameraOff className="h-6 w-6 text-muted-foreground" />}
                 </div>
                 <div>
@@ -99,7 +100,7 @@ export function DTRTab({ dtrRecords, todayRecord, openCamera, geofenceStatus = "
               <div className="flex items-center gap-3 mb-3">
                 <div className="h-16 w-16 rounded-lg overflow-hidden bg-muted flex items-center justify-center border border-border">
                   {todayRecord?.timeOutPhoto
-                    ? <img src={todayRecord.timeOutPhoto} alt="Time Out" className="h-full w-full object-cover" />
+                    ? <img src={resolveUploadUrl(todayRecord.timeOutPhoto)!} alt="Time Out" className="h-full w-full object-cover" />
                     : <CameraOff className="h-6 w-6 text-muted-foreground" />}
                 </div>
                 <div>
@@ -149,13 +150,13 @@ export function DTRTab({ dtrRecords, todayRecord, openCamera, geofenceStatus = "
                     <td className="py-2.5 px-3 font-medium">{e.timeIn ?? "—"}</td>
                     <td className="py-2.5 px-3">
                       {e.timeInPhoto
-                        ? <img src={e.timeInPhoto} alt="" className="h-8 w-8 rounded object-cover border border-border" />
+                        ? <img src={resolveUploadUrl(e.timeInPhoto)!} alt="" className="h-8 w-8 rounded object-cover border border-border" />
                         : <span className="text-muted-foreground text-xs">—</span>}
                     </td>
                     <td className="py-2.5 px-3 font-medium">{e.timeOut ?? "—"}</td>
                     <td className="py-2.5 px-3">
                       {e.timeOutPhoto
-                        ? <img src={e.timeOutPhoto} alt="" className="h-8 w-8 rounded object-cover border border-border" />
+                        ? <img src={resolveUploadUrl(e.timeOutPhoto)!} alt="" className="h-8 w-8 rounded object-cover border border-border" />
                         : <span className="text-muted-foreground text-xs">—</span>}
                     </td>
                     <td className="py-2.5 px-3">{e.hours > 0 ? `${e.hours}h` : "—"}</td>

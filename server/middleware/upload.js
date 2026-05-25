@@ -1,6 +1,7 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { publicUploadPath } = require('../utils/uploadUrl');
 
 const UPLOADS_DIR = path.join(__dirname, '../uploads');
 if (!fs.existsSync(UPLOADS_DIR)) {
@@ -41,7 +42,7 @@ function saveBase64Image(dataUrl, folder, filename) {
   const buffer = Buffer.from(base64, 'base64');
   const filepath = path.join(baseDir, filename);
   fs.writeFileSync(filepath, buffer);
-  return `http://localhost:3000/uploads/${folder}/${filename}`;
+  return publicUploadPath(folder, filename);
 }
 
 module.exports = {

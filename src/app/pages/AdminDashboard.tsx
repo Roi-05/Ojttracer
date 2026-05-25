@@ -53,7 +53,7 @@ export function AdminDashboard() {
 
   const {
     students, companies, evaluations, dtrLogs, journalLogs, announcements, templates, studentSubmissions,
-    verifyCompany, updateMoaStatus, uploadTemplate, reviewDocument, deployStudent, deleteAnnouncement, deleteCompany, reload
+    verifyCompany, updateMoaStatus, uploadTemplate, reviewDocument, deployStudent, deleteAnnouncement, deleteCompany, deleteTemplate, reload
   } = useAdminData();
 
   const companyLocations = useMemo(() => {
@@ -93,7 +93,7 @@ export function AdminDashboard() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
-  const [showTemplateUpload, setShowTemplateUpload] = useState(false);
+  const [templateUploadModal, setTemplateUploadModal] = useState<{ open: boolean; templateName: string }>({ open: false, templateName: "" });
   const [viewSubmissionId, setViewSubmissionId] = useState<string | number | null>(null);
   const [showDeployModal, setShowDeployModal] = useState<{ open: boolean, studentId: string | number }>({ open: false, studentId: "" });
   const [moaModalCompany, setMoaModalCompany] = useState<any | null>(null);
@@ -125,8 +125,8 @@ export function AdminDashboard() {
     announcements: () => <AnnouncementsTab announcements={announcements} openAddModal={() => setShowAnnouncementModal(true)} onDelete={deleteAnnouncement} />,
     documents: () => <DocumentsTab 
       templates={templates} studentSubmissions={studentSubmissions} 
-      openTemplateUpload={() => setShowTemplateUpload(true)} 
-      deleteTemplate={(name, slug) => {}} // TODO implement real template delete
+      openTemplateUpload={(name) => setTemplateUploadModal({ open: true, templateName: name })} 
+      deleteTemplate={deleteTemplate}
       openReviewSubmission={(id) => setViewSubmissionId(id)} 
       openDeployModal={(id) => setShowDeployModal({ open: true, studentId: id })} 
     />,
@@ -149,7 +149,12 @@ export function AdminDashboard() {
       <ImportStudentsModal open={showImportModal} onClose={() => setShowImportModal(false)} onImported={reload} />
       <AddCompanyModal open={showCompanyModal} onClose={() => setShowCompanyModal(false)} />
       <AddAnnouncementModal open={showAnnouncementModal} onClose={() => setShowAnnouncementModal(false)} onAdded={() => reload()} />
-      <UploadTemplateModal open={showTemplateUpload} onClose={() => setShowTemplateUpload(false)} onSave={uploadTemplate} />
+      <UploadTemplateModal
+        open={templateUploadModal.open}
+        initialName={templateUploadModal.templateName}
+        onClose={() => setTemplateUploadModal(prev => ({ ...prev, open: false }))}
+        onSave={uploadTemplate}
+      />
       <ViewSubmissionModal 
         viewSub={viewSub} onClose={() => setViewSubmissionId(null)} 
         onApproveDoc={reviewDocument} onRejectDoc={reviewDocument} 
@@ -160,6 +165,7 @@ export function AdminDashboard() {
         open={showDeployModal.open} studentId={showDeployModal.studentId} 
         companyList={companies} 
         intendedCompanyId={students.find(s => s.id === showDeployModal.studentId)?.intendedCompanyId}
+        intendedPosition={students.find(s => s.id === showDeployModal.studentId)?.intendedPosition}
         onClose={() => setShowDeployModal({ open: false, studentId: "" })} 
         onDeploy={deployStudent} 
       />

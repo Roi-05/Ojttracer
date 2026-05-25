@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import * as api from "../lib/api";
+import { resolveUploadUrl } from "../lib/uploads";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -72,6 +73,7 @@ export function useStudentData() {
   );
   const [activeCompanies, setActiveCompanies] = useState<any[]>([]);
   const [intendedCompanyId, setIntendedCompanyId] = useState<string | null>(null);
+  const [intendedPosition, setIntendedPosition] = useState<string>("");
   const [evaluation, setEvaluation] = useState<any>(null);
   
   const [loading, setLoading] = useState(true);
@@ -91,19 +93,34 @@ export function useStudentData() {
           api.getDeployment().catch(() => null),
           api.getAnnouncements().catch(() => []),
           api.getTemplates().catch(() => []),
-          api.getActiveCompanies().catch(() => []),
+          api.getCompanies().catch(() => []),
           api.getEvaluation((user as any)?.id).catch(() => null)
         ]);
 
         if (!isMounted) return;
 
         setIntendedCompanyId((user as any)?.intendedCompanyId || null);
-        if (compRes) setActiveCompanies(compRes);
+        setIntendedPosition((user as any)?.intendedPosition || "");
+        if (compRes) {
+          setActiveCompanies(
+            (compRes || [])
+              .filter((c: { moaStatus?: string }) => c.moaStatus === "active")
+              .map((c: { id: string; companyName?: string; name?: string; industry?: string; companyAddress?: string; description?: string; signedMoaUrl?: string | null }) => ({
+                id: c.id,
+                name: c.companyName || c.name || "",
+                industry: c.industry || "",
+                description: c.description || "",
+                address: c.companyAddress || "",
+                signedMoaUrl: c.signedMoaUrl || null,
+              }))
+          );
+        }
 
         if (dtrRes?.length) {
           setDtrRecords(dtrRes.map((r: any) => ({
             date: r.date, day: r.day || "", timeIn: r.timeIn || null, timeOut: r.timeOut || null,
-            timeInPhoto: r.timeInPhotoUrl || null, timeOutPhoto: r.timeOutPhotoUrl || null,
+            timeInPhoto: resolveUploadUrl(r.timeInPhotoUrl),
+            timeOutPhoto: resolveUploadUrl(r.timeOutPhotoUrl),
             hours: parseFloat(r.hours) || 0, remarks: r.remarks || "Regular",
           })));
         }
@@ -111,7 +128,7 @@ export function useStudentData() {
         if (accRes?.length) {
           setAccomplishments(accRes.map((r: any) => ({
             id: r.id, date: r.date, hours: parseFloat(r.hours) || 0, details: r.details,
-            picture: r.photoUrl || null, status: r.status,
+            picture: resolveUploadUrl(r.photoUrl), status: r.status,
           })));
         }
 
@@ -231,14 +248,15 @@ export function useStudentData() {
     }
   };
 
-  const setTargetCompany = async (companyId: string) => {
+  const setTargetCompany = async (companyId: string, position: string) => {
     try {
-      await api.setIntendedCompany(companyId);
+      await api.setIntendedCompany(companyId, position.trim());
       setIntendedCompanyId(companyId);
+      setIntendedPosition(position.trim());
       await refreshProfile();
-      toast.success('Target company updated successfully.');
+      toast.success('Target company and job role saved.');
     } catch (err: any) {
-      toast.error(`Failed to set target company: ${err.message}`);
+      toast.error(`Failed to save: ${err.message}`);
       throw err;
     }
   };
@@ -264,6 +282,7 @@ export function useStudentData() {
     templates,
     activeCompanies,
     intendedCompanyId,
+    intendedPosition,
     evaluation,
     clockIn,
     clockOut,

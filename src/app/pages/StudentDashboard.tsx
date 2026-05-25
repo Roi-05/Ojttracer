@@ -38,8 +38,9 @@ const emptyStudentInfo = {
 };
 
 const emptyDeploymentInfo = {
-  company: "", supervisor: "", supervisorEmail: "", address: "",
+  company: "", supervisor: "", supervisorEmail: "", address: "", companyAddress: "",
   startDate: "", endDate: "", requiredHours: 486, completedHours: 0, position: "", status: "pending",
+  companyLat: null as number | null, companyLng: null as number | null, geofenceRadius: 200,
 };
 
 export function StudentDashboard() {
@@ -66,7 +67,7 @@ export function StudentDashboard() {
 
   const {
     loading, dtrRecords, accomplishments, documents, deployment, announcements, templates,
-    activeCompanies, intendedCompanyId, evaluation, setTargetCompany,
+    activeCompanies, intendedCompanyId, intendedPosition, evaluation, setTargetCompany,
     clockIn, clockOut, submitDocument, submitAccomplishment, updateProfileData
   } = useStudentData();
 
@@ -188,6 +189,7 @@ export function StudentDashboard() {
         templateData={templates} 
         activeCompanies={activeCompanies}
         intendedCompanyId={intendedCompanyId}
+        intendedPosition={intendedPosition}
         setTargetCompany={setTargetCompany}
         openDocUpload={(docName) => setDocUploadModal({ open: true, docName })} 
       />
@@ -203,6 +205,7 @@ export function StudentDashboard() {
       onSectionChange={setActiveSection}
       userRole="student"
       userName={studentProfile.name}
+      avatarUrl={studentProfile.avatarUrl}
     >
       <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
         {sectionMap[activeSection] ? sectionMap[activeSection]() : <div>Section not found</div>}

@@ -78,6 +78,10 @@ export async function getAdminDTR() {
   return apiFetch("/admin/dtr");
 }
 
+export async function getCompanyDTR() {
+  return apiFetch("/company/dtr");
+}
+
 export async function getDTRByStudent(studentId: string) {
   return apiFetch(`/dtr/${studentId}`);
 }
@@ -165,8 +169,12 @@ export async function getActiveCompanies() {
   return apiFetch("/students/active-companies");
 }
 
-export async function setIntendedCompany(companyId: string | null) {
-  return apiFetch("/students/intended-company", { method: "PUT", body: JSON.stringify({ companyId }) });
+export async function getActiveCompanyMoa(companyId: string) {
+  return apiFetch(`/students/active-companies/${companyId}`);
+}
+
+export async function setIntendedCompany(companyId: string | null, position?: string) {
+  return apiFetch("/students/intended-company", { method: "PUT", body: JSON.stringify({ companyId, position }) });
 }
 
 export async function deployStudent(studentId: string, payload: {

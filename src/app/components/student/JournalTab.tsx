@@ -8,6 +8,7 @@ import { DailyAccomplishment } from "../../hooks/useStudentData";
 import { formatDate, monthLabel, StatusBadge } from "./shared";
 import { toast } from "sonner";
 import { generateJournalDOCX } from "../../lib/generateJournal";
+import { resolveUploadUrl } from "../../lib/uploads";
 
 interface JournalTabProps {
   accomplishmentList: DailyAccomplishment[];
@@ -193,7 +194,7 @@ export function JournalTab({
               <p className="text-foreground text-sm leading-relaxed whitespace-pre-wrap">{a.details}</p>
               {a.picture && (
                 <img
-                  src={a.picture}
+                  src={resolveUploadUrl(a.picture)!}
                   alt="evidence"
                   className="mt-3 rounded-lg border border-border max-h-56 object-cover"
                 />

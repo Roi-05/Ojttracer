@@ -1,4 +1,5 @@
 const db = require('../db');
+const { publicUploadPath, normalizeUploadUrl } = require('../utils/uploadUrl');
 const path = require('path');
 const fs = require('fs');
 const { UPLOADS_DIR } = require('../middleware/upload');
@@ -22,7 +23,7 @@ const uploadTemplate = async (req, res) => {
     let fileSize = '—';
 
     if (req.file) {
-      fileUrl = `http://localhost:3000/uploads/templates/${req.file.filename}`;
+      fileUrl = publicUploadPath('templates', req.file.filename);
       fileSize = `${(req.file.size / 1024).toFixed(0)} KB`;
     } else if (req.body.fileData) {
       const ext = req.body.fileName ? path.extname(req.body.fileName) : '.pdf';
@@ -32,13 +33,13 @@ const uploadTemplate = async (req, res) => {
       const base64 = req.body.fileData.includes(',') ? req.body.fileData.split(',')[1] : req.body.fileData;
       const buf = Buffer.from(base64, 'base64');
       fs.writeFileSync(path.join(tplDir, fname), buf);
-      fileUrl = `http://localhost:3000/uploads/templates/${fname}`;
+      fileUrl = publicUploadPath('templates', fname);
       fileSize = `${(buf.length / 1024).toFixed(0)} KB`;
     } else {
       return res.status(400).json({ error: 'No file provided' });
     }
 
-    const slug = docName.replace(/\\s+/g, '_').toLowerCase();
+    const slug = docName.replace(/\s+/g, '_').toLowerCase();
     const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     await db.query(
       `INSERT INTO public.templates (doc_slug, name, file_url, size, uploaded_date)
@@ -59,8 +60,8 @@ const deleteTemplate = async (req, res) => {
     const result = await db.query(`DELETE FROM public.templates WHERE doc_slug=$1 RETURNING file_url`, [req.params.slug]);
     const row = result.rows[0];
     if (row?.file_url) {
-      const local = row.file_url.replace('http://localhost:3000/uploads/', '');
-      const fullPath = path.join(UPLOADS_DIR, local);
+      const rel = normalizeUploadUrl(row.file_url)?.replace(/^\/uploads\//, '') || '';
+      const fullPath = path.join(UPLOADS_DIR, rel);
       if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
     }
     res.json({ success: true });

@@ -3,6 +3,7 @@ import { Button } from "../ui/button";
 import { CheckCircle, XCircle } from "lucide-react";
 import { InternAccomplishment } from "../../hooks/useCompanyData";
 import { StatusBadge } from "../student/shared";
+import { resolveUploadUrl } from "../../lib/uploads";
 
 interface AccomplishmentsTabProps {
   accomplishments: InternAccomplishment[];
@@ -65,7 +66,7 @@ export function AccomplishmentsTab({ accomplishments, filterStatus, setFilterSta
                     <StatusBadge status={a.status} />
                   </div>
                   <p className="text-sm text-foreground leading-relaxed">{a.details}</p>
-                  {a.picture && <img src={a.picture} alt="evidence" className="mt-3 rounded-lg border border-border max-h-56 object-cover" />}
+                  {a.picture && <img src={resolveUploadUrl(a.picture)!} alt="evidence" className="mt-3 rounded-lg border border-border max-h-56 object-cover" />}
                 </div>
                 {a.status === "pending" && (
                   <div className="flex gap-2 flex-shrink-0">

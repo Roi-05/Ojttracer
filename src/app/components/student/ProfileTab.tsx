@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -6,6 +6,7 @@ import { Label } from "../ui/label";
 import { User, Plus, X, Camera, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import * as api from "../../lib/api";
+import { resolveUploadUrl } from "../../lib/uploads";
 import { useAuth } from "../../contexts/AuthContext";
 
 interface ProfileTabProps {
@@ -48,7 +49,13 @@ export function ProfileTab({ studentProfile, updateProfileData }: ProfileTabProp
   const [formData, setFormData] = useState(studentProfile);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>((user as any)?.avatarUrl || studentProfile.avatarUrl || null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(
+    resolveUploadUrl(user?.avatarUrl ?? studentProfile.avatarUrl)
+  );
+
+  useEffect(() => {
+    setAvatarPreview(resolveUploadUrl(user?.avatarUrl ?? studentProfile.avatarUrl));
+  }, [user?.avatarUrl, studentProfile.avatarUrl]);
 
   // Skills
   const [newSkill, setNewSkill] = useState("");
@@ -95,11 +102,11 @@ export function ProfileTab({ studentProfile, updateProfileData }: ProfileTabProp
     try {
       const res = await api.uploadAvatar(file);
       await refreshProfile();
-      setAvatarPreview(res.avatarUrl);
+      setAvatarPreview(resolveUploadUrl(res.avatarUrl));
       toast.success("Profile photo updated!");
     } catch (err: any) {
       toast.error(`Failed to upload photo: ${err.message}`);
-      setAvatarPreview((user as any)?.avatarUrl || studentProfile.avatarUrl || null);
+      setAvatarPreview(resolveUploadUrl(user?.avatarUrl ?? studentProfile.avatarUrl));
     } finally {
       setIsUploadingPhoto(false);
       e.target.value = "";

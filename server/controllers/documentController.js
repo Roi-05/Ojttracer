@@ -1,4 +1,5 @@
 const db = require('../db');
+const { publicUploadPath } = require('../utils/uploadUrl');
 const path = require('path');
 const fs = require('fs');
 const { UPLOADS_DIR } = require('../middleware/upload');
@@ -55,7 +56,7 @@ const submitDocument = async (req, res) => {
 
     if (req.file) {
       // Actual file upload via multipart
-      fileUrl = `http://localhost:3000/uploads/documents/${req.file.filename}`;
+      fileUrl = publicUploadPath('documents', req.file.filename);
       fileName = req.file.originalname;
     } else if (req.body.fileData) {
       // Base64 fallback
@@ -65,7 +66,7 @@ const submitDocument = async (req, res) => {
       if (!fs.existsSync(docDir)) fs.mkdirSync(docDir, { recursive: true });
       const base64 = req.body.fileData.includes(',') ? req.body.fileData.split(',')[1] : req.body.fileData;
       fs.writeFileSync(path.join(docDir, fname), Buffer.from(base64, 'base64'));
-      fileUrl = `http://localhost:3000/uploads/documents/${fname}`;
+      fileUrl = publicUploadPath('documents', fname);
       fileName = req.body.fileName || fname;
     } else {
       return res.status(400).json({ error: 'No file provided' });

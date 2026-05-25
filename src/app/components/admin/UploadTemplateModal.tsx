@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -7,12 +7,21 @@ import { REQUIRED_DOC_NAMES } from "../../hooks/useStudentData";
 
 interface UploadTemplateModalProps {
   open: boolean;
+  initialName?: string;
   onClose: () => void;
   onSave: (name: string, file: File) => Promise<void>;
 }
 
-export function UploadTemplateModal({ open, onClose, onSave }: UploadTemplateModalProps) {
+export function UploadTemplateModal({ open, initialName, onClose, onSave }: UploadTemplateModalProps) {
   const [templateForm, setTemplateForm] = useState<{ name: string; file: File | null }>({ name: REQUIRED_DOC_NAMES[0], file: null });
+
+  useEffect(() => {
+    if (!open) return;
+    const name = initialName && REQUIRED_DOC_NAMES.includes(initialName)
+      ? initialName
+      : REQUIRED_DOC_NAMES[0];
+    setTemplateForm({ name, file: null });
+  }, [open, initialName]);
 
   const handleSave = async () => {
     if (templateForm.file) {

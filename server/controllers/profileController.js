@@ -1,6 +1,7 @@
 const db = require('../db');
 const { loadProfile } = require('./authController');
 const { uploadAvatar } = require('../middleware/upload');
+const { publicUploadPath } = require('../utils/uploadUrl');
 const path = require('path');
 const fs = require('fs');
 
@@ -57,7 +58,7 @@ const updateProfile = async (req, res) => {
 const uploadAvatarHandler = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No image file uploaded.' });
-    const fileUrl = `http://localhost:3000/uploads/avatars/${req.file.filename}`;
+    const fileUrl = publicUploadPath('avatars', req.file.filename);
     await db.query(`UPDATE public.profiles SET avatar_url = $1 WHERE id = $2`, [fileUrl, req.user.id]);
     const updated = await loadProfile(req.user.id);
     res.json({ success: true, avatarUrl: fileUrl, profile: updated });

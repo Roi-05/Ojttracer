@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import * as api from "../lib/api";
+import { resolveUploadUrl } from "../lib/uploads";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
+import type { DTRLog } from "./useAdminData";
 
 export type Intern = {
   id: string | number;
@@ -49,6 +51,7 @@ export function useCompanyData() {
   const { user, refreshProfile } = useAuth();
   
   const [interns, setInterns] = useState<Intern[]>([]);
+  const [dtrLogs, setDtrLogs] = useState<DTRLog[]>([]);
   const [accomplishments, setAccomplishments] = useState<InternAccomplishment[]>([]);
   const [moaTemplateUrl, setMoaTemplateUrl] = useState<string | null>(null);
   const [signedMoaUrl, setSignedMoaUrl] = useState<string | null>(null);
@@ -79,10 +82,11 @@ export function useCompanyData() {
     const loadData = async () => {
       try {
         setLoading(true);
-        const [internsRes, accRes, moaTplRes] = await Promise.all([
+        const [internsRes, accRes, moaTplRes, dtrRes] = await Promise.all([
           api.getInterns().catch(() => []),
           api.getAccomplishments().catch(() => []),
-          api.getMoaTemplate().catch(() => ({ fileUrl: null }))
+          api.getMoaTemplate().catch(() => ({ fileUrl: null })),
+          api.getCompanyDTR().catch(() => []),
         ]);
 
         if (!isMounted) return;
@@ -105,10 +109,25 @@ export function useCompanyData() {
           })));
         }
 
+        if (dtrRes) {
+          setDtrLogs((dtrRes || []).map((r: any) => ({
+            student: r.studentName || "—",
+            studentId: r.studentId,
+            studentNumber: r.studentNumber || "—",
+            section: r.section || "—",
+            date: r.date || "—",
+            day: r.day || "—",
+            timeIn: r.timeIn || "—",
+            timeOut: r.timeOut || "—",
+            hours: Number(r.hours) || 0,
+            status: r.timeOut ? "regular" : r.timeIn ? "ongoing" : "rest",
+          })));
+        }
+
         if (accRes) {
           setAccomplishments((accRes || []).map((a: any) => ({
             id: a.id, internId: a.internId || a.studentId, internName: a.internName || a.studentName || "—",
-            date: a.date, hours: a.hours, details: a.details, picture: a.photoUrl || null, status: a.status,
+            date: a.date, hours: a.hours, details: a.details, picture: resolveUploadUrl(a.photoUrl), status: a.status,
           })));
         }
 
@@ -199,6 +218,7 @@ export function useCompanyData() {
     loading,
     companyInfo,
     interns,
+    dtrLogs,
     accomplishments,
     moaTemplateUrl,
     signedMoaUrl,

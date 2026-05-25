@@ -12,11 +12,12 @@ interface DeployStudentModalProps {
   studentId: string | number;
   companyList: AdminCompany[];
   intendedCompanyId?: string | null;
+  intendedPosition?: string;
   onClose: () => void;
   onDeploy: (studentId: string | number, payload: any) => Promise<void>;
 }
 
-export function DeployStudentModal({ open, studentId, companyList, intendedCompanyId, onClose, onDeploy }: DeployStudentModalProps) {
+export function DeployStudentModal({ open, studentId, companyList, intendedCompanyId, intendedPosition, onClose, onDeploy }: DeployStudentModalProps) {
   const [deployForm, setDeployForm] = useState({
     company: "", position: "", startDate: "", endDate: "",
     requiredHours: 486
@@ -28,11 +29,11 @@ export function DeployStudentModal({ open, studentId, companyList, intendedCompa
       const intended = intendedCompanyId ? companyList.find(c => c.id === intendedCompanyId) : null;
       setDeployForm({
         company: intended ? intended.name : "", 
-        position: "", startDate: "", endDate: "",
+        position: intendedPosition || "", startDate: "", endDate: "",
         requiredHours: 486
       });
     }
-  }, [open, intendedCompanyId, companyList]);
+  }, [open, intendedCompanyId, intendedPosition, companyList]);
 
   const selectedCompany = companyList.find(c => c.name === deployForm.company);
 

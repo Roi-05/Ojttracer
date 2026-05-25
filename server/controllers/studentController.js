@@ -3,20 +3,28 @@ const db = require('../db');
 const getDeployment = async (req, res) => {
   try {
     const result = await db.query(`
-      SELECT d.*, c.latitude, c.longitude, c.geofence_radius
+      SELECT d.*, c.company_address, c.latitude, c.longitude, c.geofence_radius
       FROM public.deployments d
       LEFT JOIN public.companies c ON c.user_id = d.company_id
       WHERE d.student_id = $1
     `, [req.user.id]);
     const d = result.rows[0];
     if (!d) return res.json(null);
+
+    const pick = (v) => {
+      const s = (v || '').trim();
+      return s && s !== '—' ? s : '';
+    };
+    const companyAddress = pick(d.company_address) || pick(d.address) || '';
+
     res.json({
       studentId: d.student_id,
       companyId: d.company_id,
       company: d.company_name || '',
       supervisor: d.supervisor || '',
       supervisorEmail: d.supervisor_email || '',
-      address: d.address || '',
+      address: companyAddress,
+      companyAddress,
       startDate: d.start_date || '',
       endDate: d.end_date || '',
       requiredHours: d.required_hours || 486,
@@ -36,7 +44,7 @@ const getStudents = async (req, res) => {
     const result = await db.query(`
       SELECT p.*, s.student_id, s.last_name, s.first_name, s.middle_name,
              s.section, s.course, s.year_level, s.date_of_birth, s.civil_status, s.sex,
-             s.phone, s.address, s.skills, s.emergency_contact, s.intended_company_id,
+             s.phone, s.address, s.skills, s.emergency_contact, s.intended_company_id, s.intended_position,
              d.company_name, d.position, d.required_hours, d.status as deployment_status,
              e.overall_score
       FROM public.profiles p
@@ -64,6 +72,7 @@ const getStudents = async (req, res) => {
       skills: r.skills,
       emergencyContact: r.emergency_contact,
       intendedCompanyId: r.intended_company_id,
+      intendedPosition: r.intended_position || '',
       performance: parseFloat(r.overall_score) || 0,
       deployment: r.company_name ? {
         company: r.company_name,
@@ -96,10 +105,31 @@ const deployStudent = async (req, res) => {
   }
 };
 
+const getActiveCompany = async (req, res) => {
+  try {
+    const { companyId } = req.params;
+    const result = await db.query(`
+      SELECT p.id, p.name, c.company_name, c.signed_moa_url, c.moa_status
+      FROM public.profiles p
+      JOIN public.companies c ON c.user_id = p.id
+      WHERE p.id = $1 AND p.role = 'company' AND c.moa_status = 'active'
+    `, [companyId]);
+    const row = result.rows[0];
+    if (!row) return res.status(404).json({ error: 'Accredited company not found' });
+    res.json({
+      id: row.id,
+      name: row.company_name || row.name,
+      signedMoaUrl: row.signed_moa_url || null,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 const getActiveCompanies = async (req, res) => {
   try {
     const result = await db.query(`
-      SELECT p.id, p.name, c.company_name, c.industry, c.description, c.company_address
+      SELECT p.id, p.name, c.company_name, c.industry, c.description, c.company_address, c.signed_moa_url
       FROM public.profiles p
       JOIN public.companies c ON c.user_id = p.id
       WHERE p.role = 'company' AND c.moa_status = 'active'
@@ -109,7 +139,8 @@ const getActiveCompanies = async (req, res) => {
       name: c.company_name || c.name,
       industry: c.industry || '',
       description: c.description || '',
-      address: c.company_address || ''
+      address: c.company_address || '',
+      signedMoaUrl: c.signed_moa_url || null,
     })));
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -118,12 +149,21 @@ const getActiveCompanies = async (req, res) => {
 
 const setIntendedCompany = async (req, res) => {
   try {
-    const { companyId } = req.body;
+    const { companyId, position } = req.body;
+    if (companyId) {
+      const companyRes = await db.query(
+        `SELECT c.moa_status FROM public.companies c WHERE c.user_id = $1`,
+        [companyId]
+      );
+      if (!companyRes.rows[0] || companyRes.rows[0].moa_status !== 'active') {
+        return res.status(400).json({ error: 'Selected company is not accredited yet.' });
+      }
+    }
     await db.query(
-      `UPDATE public.students SET intended_company_id = $1 WHERE user_id = $2`,
-      [companyId || null, req.user.id]
+      `UPDATE public.students SET intended_company_id = $1, intended_position = $2 WHERE user_id = $3`,
+      [companyId || null, position ?? '', req.user.id]
     );
-    res.json({ success: true, intendedCompanyId: companyId });
+    res.json({ success: true, intendedCompanyId: companyId, intendedPosition: position ?? '' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -133,6 +173,7 @@ module.exports = {
   getDeployment,
   getStudents,
   deployStudent,
+  getActiveCompany,
   getActiveCompanies,
   setIntendedCompany
 };

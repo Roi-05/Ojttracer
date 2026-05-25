@@ -1,4 +1,5 @@
 const db = require('../db');
+const { publicUploadPath } = require('../utils/uploadUrl');
 const path = require('path');
 const fs = require('fs');
 const { UPLOADS_DIR, saveBase64Image } = require('../middleware/upload');
@@ -81,7 +82,7 @@ const uploadSignedMoa = async (req, res) => {
     if (!fs.existsSync(moaDir)) fs.mkdirSync(moaDir, { recursive: true });
     const base64 = fileData.includes(',') ? fileData.split(',')[1] : fileData;
     fs.writeFileSync(path.join(moaDir, fname), Buffer.from(base64, 'base64'));
-    const fileUrl = `http://localhost:3000/uploads/moa/${fname}`;
+    const fileUrl = publicUploadPath('moa', fname);
 
     await db.query(
       `UPDATE public.companies SET signed_moa_url = $1, moa_status = 'submitted' WHERE user_id = $2`,

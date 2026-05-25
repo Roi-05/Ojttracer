@@ -1,5 +1,18 @@
 const db = require('../db');
 const { saveBase64Image } = require('../middleware/upload');
+const { normalizeUploadUrl } = require('../utils/uploadUrl');
+
+function mapAccomplishment(r, extra = {}) {
+  return {
+    id: r.id,
+    date: r.date,
+    hours: r.hours,
+    details: r.details,
+    photoUrl: normalizeUploadUrl(r.photo_url),
+    status: r.status,
+    ...extra,
+  };
+}
 
 const createAccomplishment = async (req, res) => {
   try {
@@ -31,7 +44,7 @@ const getAccomplishments = async (req, res) => {
   try {
     if (req.user.role === 'admin') {
       const result = await db.query(`SELECT a.*, p.name as student_name FROM public.accomplishments a JOIN public.profiles p ON p.id = a.student_id ORDER BY a.created_at DESC`);
-      return res.json(result.rows.map(r => ({ id: r.id, studentId: r.student_id, studentName: r.student_name, date: r.date, hours: r.hours, details: r.details, photoUrl: r.photo_url, status: r.status, createdAt: r.created_at })));
+      return res.json(result.rows.map(r => mapAccomplishment(r, { studentId: r.student_id, studentName: r.student_name, createdAt: r.created_at })));
     }
     if (req.user.role === 'company') {
       const result = await db.query(`
@@ -42,10 +55,10 @@ const getAccomplishments = async (req, res) => {
         WHERE d.company_id = $1
         ORDER BY a.created_at DESC
       `, [req.user.id]);
-      return res.json(result.rows.map(r => ({ id: r.id, studentId: r.student_id, studentName: r.student_name, date: r.date, hours: r.hours, details: r.details, photoUrl: r.photo_url, status: r.status, createdAt: r.created_at })));
+      return res.json(result.rows.map(r => mapAccomplishment(r, { studentId: r.student_id, studentName: r.student_name, createdAt: r.created_at })));
     }
     const result = await db.query(`SELECT * FROM public.accomplishments WHERE student_id = $1 ORDER BY date DESC`, [req.user.id]);
-    res.json(result.rows.map(r => ({ id: r.id, date: r.date, hours: r.hours, details: r.details, photoUrl: r.photo_url, status: r.status })));
+    res.json(result.rows.map(r => mapAccomplishment(r)));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

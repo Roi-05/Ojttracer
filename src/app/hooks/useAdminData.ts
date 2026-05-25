@@ -11,7 +11,7 @@ export type AdminStudent = {
   dateOfBirth: string | null; civilStatus: string; sex: string;
   email: string; phone: string; address: string;
   company: string; position: string; hoursCompleted: number; requiredHours: number;
-  status: string; intendedCompanyId?: string | null; performance: number;
+  status: string; intendedCompanyId?: string | null; intendedPosition?: string; performance: number;
 };
 export type AdminCompany = { id: string | number; name: string; industry: string; location: string; activeInterns: number; totalCapacity: number; moaStatus: string; moaExpiry: string; contactPerson: string; verified: boolean; hrContact?: string; hrEmail?: string; signedMoaUrl?: string | null; latitude?: number | null; longitude?: number | null; geofenceRadius?: number };
 export type DTRLog = { student: string; studentId: string | number; studentNumber: string; section: string; date: string; day: string; timeIn: string; timeOut: string; hours: number; status: string };
@@ -65,6 +65,7 @@ export function useAdminData() {
           hoursCompleted: 0, requiredHours: s.deployment?.requiredHours || 486,
           status: s.deployment ? (s.deployment.status || 'ongoing') : 'pending',
           intendedCompanyId: s.intendedCompanyId || null,
+          intendedPosition: s.intendedPosition || '',
           performance: parseFloat(s.performance) || 0,
         })));
       }
@@ -204,8 +205,9 @@ export function useAdminData() {
     try {
       setTemplates(list => list.map(t => t.name === name ? { ...t, uploaded: "Uploading…" } : t));
       const result = await api.uploadTemplate(name, file);
+      const slug = name.replace(/\s+/g, "_").toLowerCase();
       setTemplates(list => list.map(t => t.name === name
-        ? { ...t, file: result.fileUrl || t.file, size: result.fileSize || "—", uploaded: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) }
+        ? { ...t, file: result.fileUrl || t.file, size: result.fileSize || "—", uploaded: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }), docSlug: slug }
         : t));
       toast.success(`${name} template uploaded.`);
     } catch (err: any) {
@@ -271,6 +273,24 @@ export function useAdminData() {
     }
   };
 
+  const deleteTemplate = async (name: string, docSlug: string | null) => {
+    const slug = docSlug ?? name.replace(/\s+/g, "_").toLowerCase();
+    const prev = templates.find(t => t.name === name);
+    try {
+      setTemplates(list => list.map(t => t.name === name
+        ? { ...t, file: null, size: "—", uploaded: "—", docSlug: null }
+        : t));
+      await api.deleteTemplate(slug);
+      toast.success(`${name} template removed.`);
+    } catch (err: any) {
+      if (prev) {
+        setTemplates(list => list.map(t => t.name === name ? prev : t));
+      }
+      toast.error(`Deletion failed: ${err.message}`);
+      throw err;
+    }
+  };
+
   return {
     loading,
     students,
@@ -288,6 +308,7 @@ export function useAdminData() {
     deployStudent,
     deleteAnnouncement,
     deleteCompany,
+    deleteTemplate,
     reload: loadData
   };
 }

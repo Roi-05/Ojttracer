@@ -10,9 +10,10 @@ import { InternsTab } from "../components/company/InternsTab";
 import { AccomplishmentsTab } from "../components/company/AccomplishmentsTab";
 import { EvaluationsTab } from "../components/company/EvaluationsTab";
 import { MoaTab } from "../components/company/MoaTab";
+import { AttendanceTab } from "../components/admin/AttendanceTab";
 
 import {
-  LayoutDashboard, Building2, Users, Star, FileCheck, ShieldCheck
+  LayoutDashboard, Building2, Users, Star, FileCheck, ShieldCheck, Clock
 } from "lucide-react";
 
 const menuItems = [
@@ -20,6 +21,7 @@ const menuItems = [
   { icon: <Building2 className="h-4 w-4" />, label: "Company Profile", value: "profile" },
   { icon: <ShieldCheck className="h-4 w-4" />, label: "Accreditation", value: "accreditation" },
   { icon: <Users className="h-4 w-4" />, label: "My Interns", value: "interns" },
+  { icon: <Clock className="h-4 w-4" />, label: "Attendance (DTR)", value: "attendance" },
   { icon: <FileCheck className="h-4 w-4" />, label: "Accomplishments", value: "accomplishments" },
   { icon: <Star className="h-4 w-4" />, label: "Evaluations", value: "evaluations" },
 ];
@@ -35,6 +37,7 @@ export function CompanyDashboard() {
   const {
     companyInfo,
     interns,
+    dtrLogs,
     accomplishments,
     moaTemplateUrl,
     signedMoaUrl,
@@ -81,6 +84,13 @@ export function CompanyDashboard() {
       />
     ),
     interns: () => <InternsTab interns={interns} />,
+    attendance: () => (
+      <AttendanceTab
+        dtrLogs={dtrLogs}
+        title="Intern Attendance (DTR)"
+        subtitle="Daily time records for interns deployed to your company — expand a row to view full history"
+      />
+    ),
     accomplishments: () => (
       <AccomplishmentsTab
         accomplishments={accomplishments}

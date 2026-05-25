@@ -9,6 +9,9 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
 import { getAnnouncements } from "../lib/api";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { cn } from "./ui/utils";
+import { resolveUploadUrl } from "../lib/uploads";
 
 interface MenuItem {
   icon: ReactNode;
@@ -25,6 +28,29 @@ interface DashboardLayoutProps {
   activeSection: string;
   onSectionChange: (section: string) => void;
   notifications?: { title: string; desc: string; time: string; read: boolean }[];
+  avatarUrl?: string | null;
+}
+
+function UserAvatar({
+  name,
+  avatarUrl,
+  roleBg,
+  className,
+}: {
+  name: string;
+  avatarUrl?: string | null;
+  roleBg: string;
+  className?: string;
+}) {
+  const initials = name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+  return (
+    <Avatar className={cn(className, "overflow-hidden")}>
+      {avatarUrl ? <AvatarImage src={avatarUrl} alt={name} className="object-cover" /> : null}
+      <AvatarFallback className={cn(roleBg, "text-white font-semibold")}>
+        {initials}
+      </AvatarFallback>
+    </Avatar>
+  );
 }
 
 export function DashboardLayout({
@@ -35,11 +61,13 @@ export function DashboardLayout({
   activeSection,
   onSectionChange,
   notifications = [],
+  avatarUrl: avatarUrlProp,
 }: DashboardLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
+  const avatarUrl = resolveUploadUrl(avatarUrlProp ?? user?.avatarUrl ?? null);
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -110,8 +138,6 @@ export function DashboardLayout({
   };
 
   const roleBg = roleColors[userRole.toLowerCase()] || "bg-blue-600";
-
-  const initials = userName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 
   return (
     <div>
@@ -201,10 +227,10 @@ export function DashboardLayout({
               {/* Profile */}
               <div className="relative">
                 <button
-                  className={`h-9 w-9 rounded-full ${roleBg} text-white text-sm font-semibold flex items-center justify-center hover:opacity-90 transition-opacity`}
+                  className="rounded-full hover:opacity-90 transition-opacity"
                   onClick={(e) => { e.stopPropagation(); setIsProfileOpen(!isProfileOpen); setIsNotificationsOpen(false); }}
                 >
-                  {initials}
+                  <UserAvatar name={userName} avatarUrl={avatarUrl} roleBg={roleBg} className="h-9 w-9" />
                 </button>
                 {isProfileOpen && (
                   <>
@@ -236,9 +262,7 @@ export function DashboardLayout({
           {/* User Info */}
           <div className="p-4 border-b border-sidebar-border">
             <div className="flex items-center gap-3">
-              <div className={`h-10 w-10 rounded-full ${roleBg} text-white font-semibold flex items-center justify-center text-sm`}>
-                {initials}
-              </div>
+              <UserAvatar name={userName} avatarUrl={avatarUrl} roleBg={roleBg} className="h-10 w-10 text-sm" />
               <div className="min-w-0">
                 <p className="font-semibold text-sm text-white truncate">{userName}</p>
                 <p className="text-xs text-sidebar-foreground/60 capitalize">{userRole}</p>

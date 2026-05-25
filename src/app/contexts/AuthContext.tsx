@@ -6,6 +6,7 @@ export interface UserProfile {
   email: string;
   name: string;
   role: "student" | "company" | "admin";
+  avatarUrl?: string | null;
   // Student fields
   studentId?: string;
   section?: string;
@@ -14,6 +15,7 @@ export interface UserProfile {
   skills?: string[];
   emergencyContact?: string;
   intendedCompanyId?: string;
+  intendedPosition?: string;
   // Company fields
   companyName?: string;
   industry?: string;

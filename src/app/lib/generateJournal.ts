@@ -2,6 +2,7 @@ import Docxtemplater from "docxtemplater";
 import ImageModule from "docxtemplater-image-module-free";
 import PizZip from "pizzip";
 import { saveAs } from "file-saver";
+import { resolveUploadUrl } from "./uploads";
 
 interface JournalEntry {
   id: string | number;
@@ -89,7 +90,7 @@ const FALLBACK_1X1_PNG = base64ToArrayBuffer(
  */
 async function fetchImageAsArrayBuffer(url: string): Promise<ArrayBuffer | null> {
   try {
-    const proxyUrl = url.replace(/^https?:\/\/localhost:\d+/, "");
+    const proxyUrl = resolveUploadUrl(url) || url;
     const res = await fetch(proxyUrl);
     if (!res.ok) return null;
     return await res.arrayBuffer();
@@ -109,8 +110,7 @@ async function createImagesGrid(imageUrls: string[]): Promise<{ buffer: ArrayBuf
     imageUrls.map(url => new Promise<HTMLImageElement>((resolve) => {
       const img = new Image();
       img.crossOrigin = "anonymous";
-      const proxyUrl = url.replace(/^https?:\/\/localhost:\d+/, "");
-      img.src = proxyUrl;
+      img.src = resolveUploadUrl(url) || url;
       img.onload = () => resolve(img);
       img.onerror = () => {
         const dummy = new Image();
