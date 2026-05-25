@@ -34,7 +34,7 @@ const menuItems = [
 
 const emptyStudentInfo = {
   name: "", studentId: "", course: "BSIT", year: "4th Year", section: "",
-  email: "", phone: "", address: "", skills: [] as string[], emergencyContact: "",
+  email: "", phone: "", address: "", skills: [] as string[], religion: "",
 };
 
 const emptyDeploymentInfo = {
@@ -61,7 +61,7 @@ export function StudentDashboard() {
     phone: (user as any)?.phone || emptyStudentInfo.phone,
     address: (user as any)?.address || emptyStudentInfo.address,
     skills: (user as any)?.skills || emptyStudentInfo.skills,
-    emergencyContact: (user as any)?.emergencyContact || emptyStudentInfo.emergencyContact,
+    religion: (user as any)?.religion || "",
     avatarUrl: (user as any)?.avatarUrl || null,
     fatherName: (user as any)?.fatherName || "",
     fatherOccupation: (user as any)?.fatherOccupation || "",

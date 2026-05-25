@@ -165,12 +165,20 @@ export function JournalTab({
             onClick={handleDownloadJournal}
             disabled={approved === 0}
           >
-            <Download className="h-4 w-4" /> Download Journal
+            <Download className="h-4 w-4" /> Generate Journal
           </Button>
           <Button className="bg-primary hover:bg-primary/90 text-white gap-2" onClick={openAddModal}>
             <Plus className="h-4 w-4" /> Post Daily Entry
           </Button>
         </div>
+      </div>
+
+      {/* Profile completeness note */}
+      <div className="flex items-start gap-2.5 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+        <span className="mt-0.5 text-base">ℹ️</span>
+        <span>
+          <strong>Note:</strong> Please complete your <strong>Profile Information</strong> (name, date of birth, address, religion, parent/guardian details, etc.) for a complete and accurate journal document when generated.
+        </span>
       </div>
 
       {/* Stats */}

@@ -44,7 +44,7 @@ const getStudents = async (req, res) => {
     const result = await db.query(`
       SELECT p.*, s.student_id, s.last_name, s.first_name, s.middle_name,
              s.section, s.course, s.year_level, s.date_of_birth, s.civil_status, s.sex,
-             s.phone, s.address, s.skills, s.emergency_contact, s.intended_company_id, s.intended_position,
+             s.phone, s.address, s.skills, s.religion, s.intended_company_id, s.intended_position,
              s.father_name, s.father_occupation, s.father_phone, s.mother_name, s.mother_occupation, s.mother_phone,
              s.guardian_name, s.guardian_relationship, s.guardian_phone,
              d.company_name, d.position, d.required_hours, d.status as deployment_status,
@@ -72,7 +72,7 @@ const getStudents = async (req, res) => {
       phone: r.phone,
       address: r.address,
       skills: r.skills,
-      emergencyContact: r.emergency_contact,
+      religion: r.religion || '',
       intendedCompanyId: r.intended_company_id,
       intendedPosition: r.intended_position || '',
       fatherName: r.father_name || '',

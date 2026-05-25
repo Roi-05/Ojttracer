@@ -32,7 +32,7 @@ const updateProfile = async (req, res) => {
       if (body.phone !== undefined) { fields.push(`phone=$${i++}`); vals.push(body.phone); }
       if (body.address !== undefined) { fields.push(`address=$${i++}`); vals.push(body.address); }
       if (body.skills !== undefined) { fields.push(`skills=$${i++}`); vals.push(JSON.stringify(body.skills)); }
-      if (body.emergencyContact !== undefined) { fields.push(`emergency_contact=$${i++}`); vals.push(body.emergencyContact); }
+      if (body.religion !== undefined) { fields.push(`religion=$${i++}`); vals.push(body.religion); }
       if (body.fatherName !== undefined) { fields.push(`father_name=$${i++}`); vals.push(body.fatherName); }
       if (body.fatherOccupation !== undefined) { fields.push(`father_occupation=$${i++}`); vals.push(body.fatherOccupation); }
       if (body.fatherPhone !== undefined) { fields.push(`father_phone=$${i++}`); vals.push(body.fatherPhone); }

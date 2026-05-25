@@ -27,7 +27,7 @@ async function loadProfile(userId) {
       phone: s.phone,
       address: s.address,
       skills: s.skills,
-      emergencyContact: s.emergency_contact,
+      religion: s.religion || '',
       intendedCompanyId: s.intended_company_id,
       intendedPosition: s.intended_position || '',
       fatherName: s.father_name || '',

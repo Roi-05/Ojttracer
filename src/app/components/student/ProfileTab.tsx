@@ -26,7 +26,7 @@ interface ProfileTabProps {
     phone: string;
     address: string;
     skills: string[];
-    emergencyContact: string;
+    religion?: string;
     avatarUrl?: string | null;
     fatherName?: string;
     fatherOccupation?: string;
@@ -288,8 +288,8 @@ export function ProfileTab({ studentProfile, updateProfileData }: ProfileTabProp
             </div>
 
             <div>
-              <Label className="text-sm text-muted-foreground">Emergency Contact</Label>
-              <Input value={formData.emergencyContact} onChange={e => setFormData({ ...formData, emergencyContact: e.target.value })} className="mt-1.5" />
+              <Label className="text-sm text-muted-foreground">Religion</Label>
+              <Input value={formData.religion || ""} onChange={e => setFormData({ ...formData, religion: e.target.value })} className="mt-1.5" />
             </div>
           </CardContent>
         </Card>
