@@ -37,7 +37,6 @@ export function DashboardLayout({
   notifications = [],
 }: DashboardLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const { signOut } = useAuth();
@@ -115,7 +114,7 @@ export function DashboardLayout({
   const initials = userName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 
   return (
-    <div className={isDarkMode ? "dark" : ""}>
+    <div>
       <div className="min-h-screen bg-background">
         {/* Top Navbar */}
         <nav className="bg-card border-b border-border fixed top-0 left-0 right-0 z-40 h-16 shadow-sm">

@@ -17,8 +17,18 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading, signIn } = useAuth();
-  const [selectedRole, setSelectedRole] = useState("student");
+  
+  const isAdminRoute = location.pathname === "/admin/login";
+  const [selectedRole, setSelectedRole] = useState(isAdminRoute ? "admin" : "student");
   const [isRegistering, setIsRegistering] = useState(location.pathname === "/register");
+
+  // Sync selectedRole with route path
+  useEffect(() => {
+    setSelectedRole(isAdminRoute ? "admin" : "student");
+    if (isAdminRoute) {
+      setIsRegistering(false);
+    }
+  }, [isAdminRoute]);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -76,66 +86,78 @@ export function LoginPage() {
 
         <Card className="shadow-2xl">
           <CardHeader className="text-center">
-            <CardTitle>{isRegistering ? "Create Account" : "Welcome Back"}</CardTitle>
+            <CardTitle>
+              {isAdminRoute ? "Admin Portal" : isRegistering ? "Create Account" : "Welcome Back"}
+            </CardTitle>
             <CardDescription>
-              {isRegistering
+              {isAdminRoute
+                ? "Sign in as an administrator to manage the system"
+                : isRegistering
                 ? "Select your role and register to get started"
                 : "Select your role and login to continue"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value={selectedRole} onValueChange={(val) => {
-              setSelectedRole(val);
-              if (val === 'admin') setIsRegistering(false);
-            }} className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-8">
-                <TabsTrigger value="student" className="flex items-center gap-2">
-                  <GraduationCap className="h-4 w-4" />
-                  <span className="hidden sm:inline">Student</span>
-                </TabsTrigger>
-                <TabsTrigger value="company" className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  <span className="hidden sm:inline">Company</span>
-                </TabsTrigger>
-                <TabsTrigger value="admin" className="flex items-center gap-2">
-                  <Shield className="h-4 w-4" />
-                  <span className="hidden sm:inline">Admin</span>
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="student">
-                <div className="mb-4 flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-xl p-3.5">
-                  <GraduationCap className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                  <p className="text-sm text-blue-700">Student accounts are created by the OJT Coordinator. Your login credentials will be sent to your PSU email. Contact the coordinator if you need help.</p>
+            {isAdminRoute ? (
+              <div className="space-y-4">
+                <div className="mb-4 flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl p-3.5">
+                  <Shield className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-700">
+                    This is a restricted administration portal. Authorized access only.
+                  </p>
                 </div>
                 <LoginForm
-                  role="student"
+                  role="admin"
                   onLogin={handleLogin}
                   onRegister={handleRegister}
                   isRegistering={false}
                   setIsRegistering={() => {}}
                   hideRegisterLink
                 />
-              </TabsContent>
-              <TabsContent value="company">
-                <LoginForm
-                  role="company"
-                  onLogin={handleLogin}
-                  onRegister={handleRegister}
-                  isRegistering={isRegistering}
-                  setIsRegistering={setIsRegistering}
-                />
-              </TabsContent>
-              <TabsContent value="admin">
-                <LoginForm
-                  role="admin"
-                  onLogin={handleLogin}
-                  onRegister={handleRegister}
-                  isRegistering={isRegistering}
-                  setIsRegistering={setIsRegistering}
-                />
-              </TabsContent>
-            </Tabs>
+              </div>
+            ) : (
+              <Tabs value={selectedRole} onValueChange={(val) => {
+                setSelectedRole(val);
+                if (val === 'admin') setIsRegistering(false);
+              }} className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-8">
+                  <TabsTrigger value="student" className="flex items-center gap-2">
+                    <GraduationCap className="h-4 w-4" />
+                    <span className="hidden sm:inline">Student</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="company" className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    <span className="hidden sm:inline">Company</span>
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="student">
+                  <div className="mb-4 flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-xl p-3.5">
+                    <GraduationCap className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                    <p className="text-sm text-blue-700">
+                      Student accounts are created by the OJT Coordinator. Your login credentials will be sent to your PSU email. Contact the coordinator if you need help.
+                    </p>
+                  </div>
+                  <LoginForm
+                    role="student"
+                    onLogin={handleLogin}
+                    onRegister={handleRegister}
+                    isRegistering={false}
+                    setIsRegistering={() => {}}
+                    hideRegisterLink
+                  />
+                </TabsContent>
+                <TabsContent value="company">
+                  <LoginForm
+                    role="company"
+                    onLogin={handleLogin}
+                    onRegister={handleRegister}
+                    isRegistering={isRegistering}
+                    setIsRegistering={setIsRegistering}
+                  />
+                </TabsContent>
+              </Tabs>
+            )}
           </CardContent>
         </Card>
 

@@ -18,6 +18,7 @@ export const router = createBrowserRouter([
       { path: "/", Component: LandingPage },
       { path: "/login", Component: LoginPage },
       { path: "/register", Component: LoginPage },
+      { path: "/admin/login", Component: LoginPage },
       {
         element: <ProtectedRoute allowedRoles={["student"]} />,
         children: [{ path: "/student/dashboard", Component: StudentDashboard }],

@@ -4,14 +4,8 @@ import { GraduationCap, Building2, Users, TrendingUp, Moon, Sun, ArrowRight, Che
 import { useState } from "react";
 
 export function LandingPage() {
-  const [isDarkMode, setIsDarkMode] = useState(false);
-
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-  };
-
   return (
-    <div className={isDarkMode ? "dark" : ""}>
+    <div>
       <div className="min-h-screen bg-background">
       {/* Navigation Bar */}
       <nav className="bg-card/80 backdrop-blur-md sticky top-0 z-50 border-b border-border">
@@ -35,17 +29,6 @@ export function LandingPage() {
               <a href="#about" className="text-foreground/70 hover:text-primary transition-colors font-medium">
                 About
               </a>
-              <button
-                onClick={toggleDarkMode}
-                className="p-2 rounded-lg hover:bg-muted transition-colors"
-                aria-label="Toggle dark mode"
-              >
-                {isDarkMode ? (
-                  <Sun className="h-5 w-5 text-foreground" />
-                ) : (
-                  <Moon className="h-5 w-5 text-foreground" />
-                )}
-              </button>
               <Link to="/login">
                 <Button variant="outline" className="border-border text-foreground hover:bg-muted">
                   Login
