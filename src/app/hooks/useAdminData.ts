@@ -78,7 +78,7 @@ export function useAdminData() {
           dateOfBirth: s.dateOfBirth || null, civilStatus: s.civilStatus || '', sex: s.sex || '',
           phone: s.phone || '', address: s.address || '',
           company: s.deployment?.company || '—', position: s.deployment?.position || '—',
-          hoursCompleted: 0, requiredHours: s.deployment?.requiredHours || 486,
+          hoursCompleted: s.completedHours || 0, requiredHours: s.deployment?.requiredHours || 486,
           status: s.deployment ? (s.deployment.status || 'ongoing') : 'pending',
           intendedCompanyId: s.intendedCompanyId || null,
           intendedPosition: s.intendedPosition || '',
@@ -120,6 +120,7 @@ export function useAdminData() {
 
       if (dtrRes) {
         setDtrLogs((dtrRes || []).map((r: any) => ({
+          id: r.id,
           student: r.studentName || '—',
           studentId: r.studentId,
           studentNumber: r.studentNumber || '—',
@@ -128,8 +129,12 @@ export function useAdminData() {
           day: r.day || '—',
           timeIn: r.timeIn || '—',
           timeOut: r.timeOut || '—',
+          timeInPhotoUrl: r.timeInPhotoUrl,
+          timeOutPhotoUrl: r.timeOutPhotoUrl,
           hours: Number(r.hours) || 0,
           status: r.timeOut ? 'regular' : r.timeIn ? 'ongoing' : 'rest',
+          verificationStatus: r.verificationStatus || 'pending',
+          reviewNote: r.reviewNote || '',
         })));
       }
 

@@ -48,11 +48,18 @@ const getStudents = async (req, res) => {
              s.father_name, s.father_occupation, s.father_phone, s.mother_name, s.mother_occupation, s.mother_phone,
              s.guardian_name, s.guardian_relationship, s.guardian_phone,
              d.company_name, d.position, d.required_hours, d.status as deployment_status,
-             e.overall_score
+             e.overall_score,
+             COALESCE(dtr_sum.total_hours, 0) AS completed_hours
       FROM public.profiles p
       LEFT JOIN public.students s ON s.user_id = p.id
       LEFT JOIN public.deployments d ON d.student_id = p.id
       LEFT JOIN public.evaluations e ON e.student_id = p.id
+      LEFT JOIN (
+        SELECT student_id, SUM(hours) AS total_hours
+        FROM public.dtr_records
+        WHERE status = 'approved'
+        GROUP BY student_id
+      ) dtr_sum ON dtr_sum.student_id = p.id
       WHERE p.role = 'student'
     `, []);
     res.json(result.rows.map(r => ({
@@ -85,6 +92,7 @@ const getStudents = async (req, res) => {
       guardianRelationship: r.guardian_relationship || '',
       guardianPhone: r.guardian_phone || '',
       performance: parseFloat(r.overall_score) || 0,
+      completedHours: parseFloat(r.completed_hours) || 0,
       deployment: r.company_name ? {
         company: r.company_name,
         position: r.position,

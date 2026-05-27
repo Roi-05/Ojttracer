@@ -22,10 +22,22 @@ function formatTime(t: string) {
   return `${h}:${m} ${ampm}`;
 }
 
-function statusBadge(status: string) {
-  if (status === "regular") return <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">Complete</span>;
-  if (status === "ongoing") return <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">No Timeout</span>;
-  return <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Rest Day</span>;
+function verificationBadge(log: DTRLog) {
+  const vs = log.verificationStatus || 'pending';
+  if (log.status === 'ongoing') {
+    return <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">No Timeout</span>;
+  }
+  if (log.timeIn === '—' || !log.timeIn) {
+    return <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Rest Day</span>;
+  }
+  if (vs === 'approved') {
+    return <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">Verified ✓</span>;
+  }
+  if (vs === 'rejected') {
+    return <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">Rejected</span>;
+  }
+  // pending and complete (has time_out)
+  return <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-600 animate-pulse">Pending Review</span>;
 }
 
 type StudentGroup = {
@@ -166,8 +178,10 @@ export function AttendanceTab({
           </Card>
         ) : filtered.map(g => {
           const isOpen = expandedIds.has(g.studentId);
-          const complete = g.logs.filter(l => l.status === "regular").length;
-          const incomplete = g.logs.filter(l => l.status === "ongoing").length;
+          const complete = g.logs.filter(l => l.verificationStatus === 'approved').length;
+          const incomplete = g.logs.filter(l => l.status === 'ongoing').length;
+          const rejected = g.logs.filter(l => l.verificationStatus === 'rejected').length;
+          const pending = g.logs.filter(l => l.status === 'regular' && (l.verificationStatus === 'pending' || !l.verificationStatus)).length;
 
           return (
             <Card key={g.studentId} className="border-0 shadow-sm overflow-hidden">
@@ -189,7 +203,9 @@ export function AttendanceTab({
                     <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{g.totalHours.toFixed(1)}h logged</span>
                     <span>{g.logs.length} day{g.logs.length !== 1 ? "s" : ""} on record</span>
                     {incomplete > 0 && <span className="text-yellow-600 font-medium">{incomplete} missing timeout</span>}
-                    {complete > 0 && <span className="text-green-600 font-medium">{complete} complete</span>}
+                    {rejected > 0 && <span className="text-rose-600 font-medium">{rejected} rejected</span>}
+                    {pending > 0 && <span className="text-blue-600 font-medium">{pending} pending review</span>}
+                    {complete > 0 && <span className="text-green-600 font-medium">{complete} verified</span>}
                     <span className="text-muted-foreground/60">Last: {g.lastActive}</span>
                   </div>
                 </div>
@@ -210,7 +226,7 @@ export function AttendanceTab({
                           <th className="text-left py-2.5 px-4 font-medium text-muted-foreground text-xs">Time In</th>
                           <th className="text-left py-2.5 px-4 font-medium text-muted-foreground text-xs">Time Out</th>
                           <th className="text-left py-2.5 px-4 font-medium text-muted-foreground text-xs">Hours</th>
-                          <th className="text-left py-2.5 px-4 font-medium text-muted-foreground text-xs">Status</th>
+                          <th className="text-left py-2.5 px-4 font-medium text-muted-foreground text-xs">Verification</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -221,7 +237,7 @@ export function AttendanceTab({
                             <td className="py-2.5 px-4 text-xs font-mono">{formatTime(log.timeIn)}</td>
                             <td className="py-2.5 px-4 text-xs font-mono">{formatTime(log.timeOut)}</td>
                             <td className="py-2.5 px-4 text-xs">{log.hours > 0 ? `${log.hours.toFixed(2)}h` : "—"}</td>
-                            <td className="py-2.5 px-4">{statusBadge(log.status)}</td>
+                            <td className="py-2.5 px-4">{verificationBadge(log)}</td>
                           </tr>
                         ))}
                       </tbody>
