@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import { toast } from "sonner";
 
 interface AddAccomplishmentModalProps {
   open: boolean;
@@ -47,6 +48,10 @@ export function AddAccomplishmentModal({ open, onClose, onSubmit }: AddAccomplis
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.date || !form.hours || !form.details) return;
+    if (form.date > TODAY_ISO) {
+      toast.error("You cannot post a journal entry for a future date.");
+      return;
+    }
     onSubmit(form.date, parseFloat(form.hours), form.details, form.picture);
   };
 
@@ -62,6 +67,7 @@ export function AddAccomplishmentModal({ open, onClose, onSubmit }: AddAccomplis
                 type="date" 
                 className="mt-1.5" 
                 value={form.date} 
+                max={TODAY_ISO}
                 onChange={e => setForm({ ...form, date: e.target.value })} 
                 required 
               />
