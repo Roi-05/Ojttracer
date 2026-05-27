@@ -140,6 +140,7 @@ export function DTRTab({ dtrRecords, todayRecord, openCamera, geofenceStatus = "
                   <th className="text-left py-2.5 px-3 text-muted-foreground font-medium">Out Photo</th>
                   <th className="text-left py-2.5 px-3 text-muted-foreground font-medium">Hours</th>
                   <th className="text-left py-2.5 px-3 text-muted-foreground font-medium">Remarks</th>
+                  <th className="text-left py-2.5 px-3 text-muted-foreground font-medium">Verification</th>
                 </tr>
               </thead>
               <tbody>
@@ -159,13 +160,41 @@ export function DTRTab({ dtrRecords, todayRecord, openCamera, geofenceStatus = "
                         ? <img src={resolveUploadUrl(e.timeOutPhoto)!} alt="" className="h-8 w-8 rounded object-cover border border-border" />
                         : <span className="text-muted-foreground text-xs">—</span>}
                     </td>
-                    <td className="py-2.5 px-3">{e.hours > 0 ? `${e.hours}h` : "—"}</td>
+                    <td className="py-2.5 px-3">{e.hours > 0 ? `${e.hours.toFixed(2)}h` : "—"}</td>
                     <td className="py-2.5 px-3">
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
                         e.remarks === "Regular" ? "bg-green-100 text-green-700" :
                         e.remarks === "Late" ? "bg-orange-100 text-orange-700" :
                         "bg-gray-100 text-gray-500"
                       }`}>{e.remarks}</span>
+                    </td>
+                    <td className="py-2.5 px-3">
+                      {e.status === "approved" && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200">
+                          Approved
+                        </span>
+                      )}
+                      {e.status === "rejected" && (
+                        <div className="space-y-1">
+                          <span className="inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+                            Rejected
+                          </span>
+                          {e.reviewNote && (
+                            <p className="text-[10px] text-rose-600 italic max-w-[160px] leading-tight block break-words" title={e.reviewNote}>
+                              "{e.reviewNote}"
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {e.status === "pending" && (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          e.timeOut 
+                            ? "bg-amber-50 text-amber-600 border border-amber-200/60 animate-pulse" 
+                            : "bg-blue-50 text-blue-600 border border-blue-200/60"
+                        }`}>
+                          {e.timeOut ? "Pending Review" : "Active"}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}

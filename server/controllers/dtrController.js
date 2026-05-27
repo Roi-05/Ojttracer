@@ -4,6 +4,7 @@ const { normalizeUploadUrl } = require('../utils/uploadUrl');
 
 function mapDtrRow(r) {
   return {
+    id: r.id,
     date: r.date_str,
     day: r.day,
     timeIn: r.time_in,
@@ -12,6 +13,8 @@ function mapDtrRow(r) {
     timeOutPhotoUrl: normalizeUploadUrl(r.time_out_photo_url),
     hours: Number(r.hours),
     remarks: r.remarks,
+    status: r.status || 'pending',
+    reviewNote: r.review_note || '',
   };
 }
 
@@ -91,6 +94,7 @@ const getAdminDtr = async (req, res) => {
       LIMIT 1000
     `);
     res.json(result.rows.map(r => ({
+      id: r.id,
       studentId: r.student_id,
       studentName: r.last_name && r.first_name
         ? `${r.last_name}, ${r.first_name}`
@@ -98,8 +102,15 @@ const getAdminDtr = async (req, res) => {
       studentNumber: r.student_number || '—',
       section: r.section || '—',
       date: r.date_str,
-      day: r.day, timeIn: r.time_in, timeOut: r.time_out,
-      hours: Number(r.hours), remarks: r.remarks,
+      day: r.day,
+      timeIn: r.time_in,
+      timeOut: r.time_out,
+      timeInPhotoUrl: normalizeUploadUrl(r.time_in_photo_url),
+      timeOutPhotoUrl: normalizeUploadUrl(r.time_out_photo_url),
+      hours: Number(r.hours),
+      remarks: r.remarks,
+      verificationStatus: r.status || 'pending',
+      reviewNote: r.review_note || '',
     })));
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -122,6 +133,7 @@ const getCompanyDtr = async (req, res) => {
       LIMIT 1000
     `, [req.user.id]);
     res.json(result.rows.map(r => ({
+      id: r.id,
       studentId: r.student_id,
       studentName: r.last_name && r.first_name
         ? `${r.last_name}, ${r.first_name}`
@@ -129,9 +141,31 @@ const getCompanyDtr = async (req, res) => {
       studentNumber: r.student_number || '—',
       section: r.section || '—',
       date: r.date_str,
-      day: r.day, timeIn: r.time_in, timeOut: r.time_out,
-      hours: Number(r.hours), remarks: r.remarks,
+      day: r.day,
+      timeIn: r.time_in,
+      timeOut: r.time_out,
+      timeInPhotoUrl: normalizeUploadUrl(r.time_in_photo_url),
+      timeOutPhotoUrl: normalizeUploadUrl(r.time_out_photo_url),
+      hours: Number(r.hours),
+      remarks: r.remarks,
+      verificationStatus: r.status || 'pending',
+      reviewNote: r.review_note || '',
     })));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const reviewDtr = async (req, res) => {
+  try {
+    if (req.user.role !== 'company') return res.status(403).json({ error: 'Company only' });
+    const { id } = req.params;
+    const { status, note } = req.body;
+    await db.query(
+      `UPDATE public.dtr_records SET status = $1, review_note = $2 WHERE id = $3`,
+      [status, note || '', id]
+    );
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -142,4 +176,5 @@ module.exports = {
   getDtr,
   getAdminDtr,
   getCompanyDtr,
+  reviewDtr,
 };

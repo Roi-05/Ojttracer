@@ -56,6 +56,9 @@ export function useCompanyData() {
   const [moaTemplateUrl, setMoaTemplateUrl] = useState<string | null>(null);
   const [signedMoaUrl, setSignedMoaUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const refreshData = () => setRefreshKey(prev => prev + 1);
 
   const companyInfo = {
     name: (user as any)?.companyName || user?.name || emptyCompanyInfo.name,
@@ -111,6 +114,7 @@ export function useCompanyData() {
 
         if (dtrRes) {
           setDtrLogs((dtrRes || []).map((r: any) => ({
+            id: r.id,
             student: r.studentName || "—",
             studentId: r.studentId,
             studentNumber: r.studentNumber || "—",
@@ -119,8 +123,12 @@ export function useCompanyData() {
             day: r.day || "—",
             timeIn: r.timeIn || "—",
             timeOut: r.timeOut || "—",
+            timeInPhotoUrl: r.timeInPhotoUrl,
+            timeOutPhotoUrl: r.timeOutPhotoUrl,
             hours: Number(r.hours) || 0,
             status: r.timeOut ? "regular" : r.timeIn ? "ongoing" : "rest",
+            verificationStatus: r.verificationStatus || "pending",
+            reviewNote: r.reviewNote || "",
           })));
         }
 
@@ -140,7 +148,7 @@ export function useCompanyData() {
 
     loadData();
     return () => { isMounted = false; };
-  }, [user]);
+  }, [user, refreshKey]);
 
   const updateCompanyProfile = async (profileData: any) => {
     try {
@@ -190,6 +198,24 @@ export function useCompanyData() {
     }
   };
 
+  const reviewDTR = async (id: string | number, status: "approved" | "rejected", note?: string) => {
+    // Optimistic update
+    setDtrLogs(list => list.map(log => log.id === id ? { ...log, verificationStatus: status, reviewNote: note || "" } : log));
+    try {
+      await api.reviewDTR(id, status, note);
+      if (status === "approved") {
+        toast.success("DTR record verified & approved!");
+      } else {
+        toast.error("DTR record rejected.");
+      }
+      refreshData(); // Reload all info (including completion hours in interns list!)
+    } catch (e: any) {
+      refreshData();
+      toast.error(`Save failed: ${e.message}`);
+      throw e;
+    }
+  };
+
   const submitEvaluation = async (internId: string | number, internName: string, scores: Record<string, number>, comments: string) => {
     try {
       const res = await api.submitEvaluation({ studentId: String(internId), studentName: internName, scores, comments });
@@ -226,6 +252,7 @@ export function useCompanyData() {
     uploadSignedMoa,
     approveAccomplishment,
     rejectAccomplishment,
+    reviewDTR,
     submitEvaluation,
     getEvaluation
   };

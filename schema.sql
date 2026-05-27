@@ -70,6 +70,8 @@ create table if not exists public.dtr_records (
   time_out_photo_url  text,
   hours               numeric not null default 0,
   remarks             text not null default 'Regular',
+  status              text default 'pending',
+  review_note         text default '',
   unique (student_id, date)
 );
 create index if not exists idx_dtr_student_date on public.dtr_records(student_id, date desc);

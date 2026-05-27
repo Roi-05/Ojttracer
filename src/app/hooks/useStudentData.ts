@@ -13,6 +13,8 @@ export type DTRRecord = {
   timeOutPhoto: string | null;
   hours: number;
   remarks: string;
+  status?: "pending" | "approved" | "rejected";
+  reviewNote?: string;
 };
 
 export type DailyAccomplishment = {
@@ -122,6 +124,8 @@ export function useStudentData() {
             timeInPhoto: resolveUploadUrl(r.timeInPhotoUrl),
             timeOutPhoto: resolveUploadUrl(r.timeOutPhotoUrl),
             hours: parseFloat(r.hours) || 0, remarks: r.remarks || "Regular",
+            status: r.status || "pending",
+            reviewNote: r.reviewNote || "",
           })));
         }
 

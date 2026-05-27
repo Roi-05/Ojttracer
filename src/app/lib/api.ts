@@ -90,6 +90,10 @@ export async function clockDTR(payload: { date: string; mode: "in" | "out"; time
   return apiFetch("/dtr/clock", { method: "POST", body: JSON.stringify(payload) });
 }
 
+export async function reviewDTR(id: string | number, status: "approved" | "rejected", note?: string) {
+  return apiFetch(`/company/dtr/${id}/review`, { method: "POST", body: JSON.stringify({ status, note }) });
+}
+
 // ─── Accomplishments ────────────────────────────────────────────────────
 export async function getAccomplishments(studentId?: string) {
   const q = studentId ? `?studentId=${studentId}` : "";

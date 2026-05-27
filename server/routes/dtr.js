@@ -7,5 +7,6 @@ router.post('/dtr/clock', authMiddleware, dtrController.clockDtr);
 router.get('/dtr', authMiddleware, dtrController.getDtr);
 router.get('/admin/dtr', authMiddleware, dtrController.getAdminDtr);
 router.get('/company/dtr', authMiddleware, dtrController.getCompanyDtr);
+router.post('/company/dtr/:id/review', authMiddleware, dtrController.reviewDtr);
 
 module.exports = router;

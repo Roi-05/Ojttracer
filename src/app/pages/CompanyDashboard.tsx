@@ -44,6 +44,7 @@ export function CompanyDashboard() {
     uploadSignedMoa,
     approveAccomplishment,
     rejectAccomplishment,
+    reviewDTR,
     submitEvaluation,
     getEvaluation,
   } = useCompanyData();
@@ -85,7 +86,7 @@ export function CompanyDashboard() {
     ),
     interns: () => <InternsTab interns={interns} />,
     attendance: () => (
-      <CompanyDtrTab dtrLogs={dtrLogs} interns={interns} />
+      <CompanyDtrTab dtrLogs={dtrLogs} interns={interns} onReviewDtr={reviewDTR} />
     ),
     accomplishments: () => (
       <AccomplishmentsTab

@@ -14,7 +14,23 @@ export type AdminStudent = {
   status: string; intendedCompanyId?: string | null; intendedPosition?: string; performance: number;
 };
 export type AdminCompany = { id: string | number; name: string; industry: string; location: string; activeInterns: number; totalCapacity: number; moaStatus: string; moaExpiry: string; contactPerson: string; verified: boolean; hrContact?: string; hrEmail?: string; signedMoaUrl?: string | null; latitude?: number | null; longitude?: number | null; geofenceRadius?: number };
-export type DTRLog = { student: string; studentId: string | number; studentNumber: string; section: string; date: string; day: string; timeIn: string; timeOut: string; hours: number; status: string };
+export type DTRLog = {
+  id?: string | number;
+  student: string;
+  studentId: string | number;
+  studentNumber: string;
+  section: string;
+  date: string;
+  day: string;
+  timeIn: string;
+  timeOut: string;
+  timeInPhotoUrl?: string;
+  timeOutPhotoUrl?: string;
+  hours: number;
+  status: string;
+  verificationStatus?: "pending" | "approved" | "rejected";
+  reviewNote?: string;
+};
 export type JournalLog = { student: string; section: string; week: string; title: string; submitted: string; status: string };
 export type Announcement = { id: string | number; title: string; content: string; date: string; category: string; priority: string };
 export type CompanyLocation = { name: string; address: string; lat: number; lng: number; industry: string; interns: number; x: number; y: number; geofenceRadius?: number };
