@@ -25,7 +25,7 @@ export function DashboardTab({ companyInfo, interns, setActiveSection }: Dashboa
         {[
           { label: "Active Interns", value: activeInterns.toString(), icon: <Users className="h-5 w-5" />, color: "text-blue-600 bg-blue-100", sub: "currently deployed" },
           { label: "Completed OJTs", value: completedInterns.toString(), icon: <CheckCircle className="h-5 w-5" />, color: "text-green-600 bg-green-100", sub: "this semester" },
-          { label: "Total Interns (All Time)", value: "24", icon: <TrendingUp className="h-5 w-5" />, color: "text-purple-600 bg-purple-100", sub: "since 2022" },
+          { label: "Total Interns (All Time)", value: interns.length.toString(), icon: <TrendingUp className="h-5 w-5" />, color: "text-purple-600 bg-purple-100", sub: "deployed to company" },
         ].map((s, i) => (
           <Card key={i} className="border-0 shadow-sm">
             <CardContent className="p-5">
