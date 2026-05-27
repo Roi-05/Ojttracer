@@ -91,7 +91,7 @@ export function StudentDashboard() {
   // Derived state
   const todayRecord = dtrRecords.find(r => r.date === TODAY_ISO) || null;
   const activeDeployment = deployment || emptyDeploymentInfo;
-  const completedHours = dtrRecords.reduce((s, r) => s + (r.hours || 0), 0);
+  const completedHours = dtrRecords.filter(r => r.status === "approved").reduce((s, r) => s + (r.hours || 0), 0);
   const effectiveDeployment = { ...activeDeployment, completedHours: Math.round(completedHours * 10) / 10 };
   const pct = effectiveDeployment.requiredHours ? Math.round((effectiveDeployment.completedHours / effectiveDeployment.requiredHours) * 100) : 0;
 

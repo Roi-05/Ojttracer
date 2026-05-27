@@ -82,7 +82,7 @@ export function AttendanceTab({
         });
       }
       const g = map.get(key)!;
-      g.totalHours += log.hours;
+      g.totalHours += log.verificationStatus === "approved" ? log.hours : 0;
       g.logs.push(log);
       if (log.date > g.lastActive) g.lastActive = log.date;
     }

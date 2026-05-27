@@ -110,7 +110,7 @@ const getInterns = async (req, res) => {
     const result = await db.query(`
       SELECT p.id, p.name, 
              d.position, d.supervisor, d.start_date, d.end_date, d.required_hours, d.status,
-             (SELECT COALESCE(SUM(hours), 0) FROM public.dtr_records WHERE student_id = p.id) as completed_hours,
+             (SELECT COALESCE(SUM(hours), 0) FROM public.dtr_records WHERE student_id = p.id AND status = 'approved') as completed_hours,
              e.overall_score
       FROM public.deployments d 
       JOIN public.profiles p ON p.id = d.student_id 
