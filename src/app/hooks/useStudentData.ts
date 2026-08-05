@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import * as api from "../lib/api";
 import { resolveUploadUrl } from "../lib/uploads";
 import { useAuth } from "../contexts/AuthContext";
+import { getOrCreateDeviceToken, getDeviceName } from "../lib/device";
 import { toast } from "sonner";
 
 export type DTRRecord = {
@@ -77,6 +78,15 @@ export function useStudentData() {
   const [intendedCompanyId, setIntendedCompanyId] = useState<string | null>(null);
   const [intendedPosition, setIntendedPosition] = useState<string>("");
   const [evaluation, setEvaluation] = useState<any>(null);
+  const [deviceInfo, setDeviceInfo] = useState<{
+    registeredDeviceToken: string | null;
+    registeredDeviceName: string | null;
+    deviceRegisteredAt: string | null;
+  }>({
+    registeredDeviceToken: null,
+    registeredDeviceName: null,
+    deviceRegisteredAt: null,
+  });
   
   const [loading, setLoading] = useState(true);
 
@@ -88,7 +98,7 @@ export function useStudentData() {
     const loadAllData = async () => {
       try {
         setLoading(true);
-        const [dtrRes, accRes, docRes, depRes, annRes, tplRes, compRes, evalRes] = await Promise.all([
+        const [dtrRes, accRes, docRes, depRes, annRes, tplRes, compRes, evalRes, deviceRes] = await Promise.all([
           api.getDTR().catch(() => []),
           api.getAccomplishments().catch(() => []),
           api.getDocuments().catch(() => []),
@@ -96,10 +106,19 @@ export function useStudentData() {
           api.getAnnouncements().catch(() => []),
           api.getTemplates().catch(() => []),
           api.getCompanies().catch(() => []),
-          api.getEvaluation((user as any)?.id).catch(() => null)
+          api.getEvaluation((user as any)?.id).catch(() => null),
+          api.getDeviceStatus().catch(() => null)
         ]);
 
         if (!isMounted) return;
+
+        if (deviceRes) {
+          setDeviceInfo({
+            registeredDeviceToken: deviceRes.registeredDeviceToken || null,
+            registeredDeviceName: deviceRes.registeredDeviceName || null,
+            deviceRegisteredAt: deviceRes.deviceRegisteredAt || null,
+          });
+        }
 
         setIntendedCompanyId((user as any)?.intendedCompanyId || null);
         setIntendedPosition((user as any)?.intendedPosition || "");
@@ -177,8 +196,27 @@ export function useStudentData() {
     return () => { isMounted = false; };
   }, [user]);
 
+  const registerCurrentDevice = async () => {
+    try {
+      const token = getOrCreateDeviceToken();
+      const name = getDeviceName();
+      const res = await api.registerDevice(token, name);
+      setDeviceInfo({
+        registeredDeviceToken: res.registeredDeviceToken,
+        registeredDeviceName: res.registeredDeviceName,
+        deviceRegisteredAt: res.deviceRegisteredAt,
+      });
+      toast.success(`Device registered: ${res.registeredDeviceName}`);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to register device");
+      throw err;
+    }
+  };
+
   const clockIn = async (date: string, time: string, photo: string | null, day: string) => {
     try {
+      const deviceToken = getOrCreateDeviceToken();
+      await api.clockDTR({ date, mode: "in", time, photo, day, deviceToken });
       setDtrRecords(records => {
         const existing = records.find(r => r.date === date);
         if (existing) {
@@ -191,22 +229,22 @@ export function useStudentData() {
           hours: 0, remarks: "Regular",
         }, ...records];
       });
-      await api.clockDTR({ date, mode: "in", time, photo, day });
-    } catch (err) {
-      toast.error("Clock recorded locally but failed to save to server.");
+    } catch (err: any) {
+      toast.error(err?.message || "Clock In failed.");
       throw err;
     }
   };
 
   const clockOut = async (date: string, time: string, photo: string | null, hours: number) => {
     try {
+      const deviceToken = getOrCreateDeviceToken();
+      await api.clockDTR({ date, mode: "out", time, photo, deviceToken });
       setDtrRecords(records => records.map(r => {
         if (r.date !== date || !r.timeIn) return r;
         return { ...r, timeOut: time, timeOutPhoto: photo, hours };
       }));
-      await api.clockDTR({ date, mode: "out", time, photo });
-    } catch (err) {
-      toast.error("Clock recorded locally but failed to save to server.");
+    } catch (err: any) {
+      toast.error(err?.message || "Clock Out failed.");
       throw err;
     }
   };
@@ -288,6 +326,8 @@ export function useStudentData() {
     intendedCompanyId,
     intendedPosition,
     evaluation,
+    deviceInfo,
+    registerCurrentDevice,
     clockIn,
     clockOut,
     submitDocument,

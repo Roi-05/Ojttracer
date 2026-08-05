@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { Search, Upload, Phone, MapPin, Mail, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Upload, Phone, MapPin, Mail, ChevronDown, ChevronUp, Smartphone, RefreshCw } from "lucide-react";
 import { AdminStudent } from "../../hooks/useAdminData";
 import { StatusBadge } from "../student/shared";
 
@@ -10,6 +10,7 @@ interface StudentsTabProps {
   students: AdminStudent[];
   sections: string[];
   openImportModal: () => void;
+  onResetDevice?: (id: string | number, name: string) => Promise<void>;
 }
 
 function age(dob: string | null): string {
@@ -22,7 +23,7 @@ function age(dob: string | null): string {
   return String(a);
 }
 
-function StudentRow({ s }: { s: AdminStudent }) {
+function StudentRow({ s, onResetDevice }: { s: AdminStudent; onResetDevice?: (id: string | number, name: string) => Promise<void> }) {
   const [expanded, setExpanded] = useState(false);
   const initials = [s.firstName.charAt(0), s.lastName.charAt(0)].filter(Boolean).join("") || s.name.charAt(0);
   const displayName = s.lastName && s.firstName
@@ -102,6 +103,36 @@ function StudentRow({ s }: { s: AdminStudent }) {
                 <p className="text-blue-600 break-all">{s.email || "—"}</p>
               </div>
             </div>
+            <div className="flex items-start gap-1.5 sm:col-span-2 lg:col-span-3 pt-2 border-t border-border/40 mt-1">
+              <Smartphone className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+              <div className="flex-1 flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Registered DTR Device</p>
+                  <p className="text-sm font-medium">
+                    {s.registeredDeviceName ? (
+                      <span className="text-emerald-700 font-semibold">{s.registeredDeviceName}</span>
+                    ) : (
+                      <span className="text-muted-foreground italic">No device registered</span>
+                    )}
+                  </p>
+                </div>
+                {s.registeredDeviceName && onResetDevice && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50 gap-1.5"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`Reset registered device for ${s.name}? They will be able to register a new phone on their next DTR entry.`)) {
+                        onResetDevice(s.id, s.name);
+                      }
+                    }}
+                  >
+                    <RefreshCw className="h-3 w-3" /> Reset Device
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -109,7 +140,7 @@ function StudentRow({ s }: { s: AdminStudent }) {
   );
 }
 
-export function StudentsTab({ students, sections, openImportModal }: StudentsTabProps) {
+export function StudentsTab({ students, sections, openImportModal, onResetDevice }: StudentsTabProps) {
   const [search, setSearch] = useState("");
   const [sectionFilter, setSectionFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -168,7 +199,7 @@ export function StudentsTab({ students, sections, openImportModal }: StudentsTab
               {students.length === 0 ? "No students yet. Use \"Import Students\" to add them." : "No students match your search."}
             </div>
           ) : (
-            filtered.map(s => <StudentRow key={s.id} s={s} />)
+            filtered.map(s => <StudentRow key={s.id} s={s} onResetDevice={onResetDevice} />)
           )}
         </CardContent>
       </Card>

@@ -53,7 +53,7 @@ export function AdminDashboard() {
 
   const {
     students, companies, evaluations, dtrLogs, journalLogs, announcements, templates, studentSubmissions,
-    verifyCompany, updateMoaStatus, uploadTemplate, reviewDocument, deployStudent, deleteAnnouncement, deleteCompany, deleteTemplate, reload
+    verifyCompany, updateMoaStatus, uploadTemplate, reviewDocument, deployStudent, resetStudentDevice, deleteAnnouncement, deleteCompany, deleteTemplate, reload
   } = useAdminData();
 
   const companyLocations = useMemo(() => {
@@ -116,7 +116,7 @@ export function AdminDashboard() {
 
   const sectionMap: Record<string, () => JSX.Element> = {
     dashboard: () => <OverviewTab students={students} companies={companies} setActiveSection={setActiveSection} monthlyPlacementData={monthlyPlacementData} sectionDistribution={sectionDistribution} openReportsModal={() => setShowReportsModal(true)} />,
-    students: () => <StudentsTab students={students} sections={SECTIONS} openImportModal={() => setShowImportModal(true)} />,
+    students: () => <StudentsTab students={students} sections={SECTIONS} openImportModal={() => setShowImportModal(true)} onResetDevice={resetStudentDevice} />,
     companies: () => <CompaniesTab companies={companies} onManageMoa={(c) => setMoaModalCompany(c)} openUploadMoa={() => setShowMoaTemplateUpload(true)} onDelete={deleteCompany} />,
     deployment: () => <DeploymentTab students={students} />,
     attendance: () => <AttendanceTab dtrLogs={dtrLogs} />,

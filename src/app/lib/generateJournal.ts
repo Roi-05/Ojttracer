@@ -195,7 +195,7 @@ async function createImagesGrid(imageUrls: string[]): Promise<{ buffer: ArrayBuf
   });
 }
 
-export async function generateJournalDOCX(info: JournalInfo): Promise<void> {
+export async function buildJournalDOCXBlob(info: JournalInfo): Promise<Blob> {
   const formattedMonths = info.months.map(mGroup => {
     const totalHours = mGroup.entries.reduce((sum, e) => sum + Number(e.hours), 0);
     const formattedEntries = mGroup.entries.map(e => ({
@@ -328,13 +328,17 @@ export async function generateJournalDOCX(info: JournalInfo): Promise<void> {
       mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     });
 
-    // Trigger download
-    const safeName = (info.studentName || "Student").replace(/\s+/g, "_");
-    const filename = `Journal_${safeName}_All.docx`;
-
-    saveAs(out, filename);
+    return out as Blob;
   } catch (error) {
-    console.error("Error generating DOCX:", error);
+    console.error("Error building DOCX blob:", error);
     throw error;
   }
 }
+
+export async function generateJournalDOCX(info: JournalInfo): Promise<void> {
+  const blob = await buildJournalDOCXBlob(info);
+  const safeName = (info.studentName || "Student").replace(/\s+/g, "_");
+  const filename = `Journal_${safeName}_All.docx`;
+  saveAs(blob, filename);
+}
+

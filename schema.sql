@@ -36,7 +36,10 @@ create table if not exists public.students (
   mother_phone       text default '',
   guardian_name      text default '',
   guardian_relationship text default '',
-  guardian_phone     text default ''
+  guardian_phone     text default '',
+  registered_device_token text default null,
+  registered_device_name text default null,
+  device_registered_at timestamptz default null
 );
 
 -- ── COMPANY-SPECIFIC FIELDS ────────────────────────────────────────────────

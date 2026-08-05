@@ -77,6 +77,7 @@ export function StudentDashboard() {
   const {
     loading, dtrRecords, accomplishments, documents, deployment, announcements, templates,
     activeCompanies, intendedCompanyId, intendedPosition, evaluation, setTargetCompany,
+    deviceInfo, registerCurrentDevice,
     clockIn, clockOut, submitDocument, submitAccomplishment, updateProfileData
   } = useStudentData();
 
@@ -177,7 +178,7 @@ export function StudentDashboard() {
         <p className="font-medium text-lg">Deployment Not Active</p>
         <p className="text-sm text-muted-foreground mt-1">You must have an ongoing deployment to view and manage your Daily Time Record.</p>
       </div>
-    ) : <DTRTab dtrRecords={dtrRecords} todayRecord={todayRecord} openCamera={openDTRCamera} geofenceStatus={geofenceStatus} />,
+    ) : <DTRTab dtrRecords={dtrRecords} todayRecord={todayRecord} openCamera={openDTRCamera} geofenceStatus={geofenceStatus} deviceInfo={deviceInfo} onRegisterDevice={registerCurrentDevice} />,
     journal: () => activeDeployment.status !== "ongoing" ? (
       <div className="p-8 text-center bg-muted/5 border border-border rounded-xl mt-6">
         <p className="font-medium text-lg">Deployment Not Active</p>

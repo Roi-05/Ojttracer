@@ -3,11 +3,12 @@ import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Label } from "../ui/label";
-import { BookOpen, FileText, ChevronDown, Download, Plus } from "lucide-react";
+import { BookOpen, FileText, ChevronDown, Download, Plus, FileSpreadsheet } from "lucide-react";
 import { DailyAccomplishment } from "../../hooks/useStudentData";
 import { formatDate, monthLabel, StatusBadge } from "./shared";
 import { toast } from "sonner";
 import { generateJournalDOCX } from "../../lib/generateJournal";
+import { generateJournalPDF } from "../../lib/generateJournalPDF";
 import { resolveUploadUrl } from "../../lib/uploads";
 
 interface JournalTabProps {
@@ -87,7 +88,7 @@ export function JournalTab({
   const sortedDesc = [...accomplishmentList].sort((a, b) => b.date.localeCompare(a.date));
   const approved = accomplishmentList.filter(a => a.status === "approved").length;
 
-  const handleDownloadJournal = async () => {
+  const getJournalPayload = () => {
     // Group all valid entries by month
     const entriesByMonth: Record<string, DailyAccomplishment[]> = {};
     const validEntries = accomplishmentList
@@ -114,7 +115,7 @@ export function JournalTab({
       ageStr = String(Math.abs(ageDt.getUTCFullYear() - 1970));
     }
 
-    const promise = generateJournalDOCX({
+    return {
       studentName: studentProfile.name || studentName,
       studentId: studentProfile.studentId || studentId,
       firstName: studentProfile.firstName || "",
@@ -144,12 +145,26 @@ export function JournalTab({
       guardianRelationship: studentProfile.guardianRelationship || "",
       guardianPhone: studentProfile.guardianPhone || "",
       months: monthsPayload,
-    });
+    };
+  };
 
+  const handleDownloadPDF = async () => {
+    const payload = getJournalPayload();
+    const promise = generateJournalPDF(payload);
     toast.promise(promise, {
-      loading: 'Generating Document...',
-      success: 'Journal downloaded successfully!',
-      error: 'Failed to generate document. Please try again.',
+      loading: 'Compiling PDF Journal...',
+      success: 'Journal PDF downloaded successfully!',
+      error: 'Failed to compile PDF. Please try again.',
+    });
+  };
+
+  const handleDownloadDOCX = async () => {
+    const payload = getJournalPayload();
+    const promise = generateJournalDOCX(payload);
+    toast.promise(promise, {
+      loading: 'Generating Word Document...',
+      success: 'Journal (.docx) downloaded successfully!',
+      error: 'Failed to generate Word document. Please try again.',
     });
   };
 
@@ -160,16 +175,25 @@ export function JournalTab({
           <h1 className="text-2xl font-bold">Journal</h1>
           <p className="text-muted-foreground mt-1">Post your daily accomplishments — your supervisor will review and approve.</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center">
           <Button
-            variant="outline"
-            className="gap-2 border-primary text-primary hover:bg-primary/10"
-            onClick={handleDownloadJournal}
+            className="gap-2 bg-primary hover:bg-primary/90 text-white shadow-sm"
+            onClick={handleDownloadPDF}
             disabled={approved === 0}
           >
-            <Download className="h-4 w-4" /> Generate Journal
+            <Download className="h-4 w-4" /> Generate Journal (PDF)
           </Button>
-          <Button className="bg-primary hover:bg-primary/90 text-white gap-2" onClick={openAddModal}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 border-border text-muted-foreground hover:text-foreground"
+            onClick={handleDownloadDOCX}
+            disabled={approved === 0}
+            title="Download editable Word document (.docx)"
+          >
+            <FileText className="h-3.5 w-3.5" /> Word (.docx)
+          </Button>
+          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2" onClick={openAddModal}>
             <Plus className="h-4 w-4" /> Post Daily Entry
           </Button>
         </div>

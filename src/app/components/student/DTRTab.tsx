@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
 import { Button } from "../ui/button";
-import { Camera, CameraOff, Download, Loader2, CheckCircle2, XCircle, MapPin, AlertTriangle } from "lucide-react";
+import { Camera, CameraOff, Download, Loader2, CheckCircle2, XCircle, MapPin, AlertTriangle, Smartphone, ShieldCheck, ShieldAlert } from "lucide-react";
 import { DTRRecord } from "../../hooks/useStudentData";
 import { resolveUploadUrl } from "../../lib/uploads";
 import { formatDate, TODAY_LABEL, TODAY_DAY } from "./shared";
+import { getOrCreateDeviceToken, getDeviceName } from "../../lib/device";
 
 type GeofenceStatus = "idle" | "checking" | "allowed" | "denied" | "out_of_range" | "no_gps";
 
@@ -12,19 +14,104 @@ interface DTRTabProps {
   todayRecord: DTRRecord | null;
   openCamera: (mode: "in" | "out") => void;
   geofenceStatus?: GeofenceStatus;
+  deviceInfo?: {
+    registeredDeviceToken: string | null;
+    registeredDeviceName: string | null;
+    deviceRegisteredAt: string | null;
+  };
+  onRegisterDevice?: () => Promise<void>;
 }
 
-export function DTRTab({ dtrRecords, todayRecord, openCamera, geofenceStatus = "idle" }: DTRTabProps) {
+export function DTRTab({ dtrRecords, todayRecord, openCamera, geofenceStatus = "idle", deviceInfo, onRegisterDevice }: DTRTabProps) {
+  const [registering, setRegistering] = useState(false);
   const hasTimeIn = !!todayRecord?.timeIn;
   const hasTimeOut = !!todayRecord?.timeOut;
   const sortedRecords = [...dtrRecords].sort((a, b) => b.date.localeCompare(a.date));
+
+  const localToken = getOrCreateDeviceToken();
+  const currentDeviceName = getDeviceName();
+  const isDeviceRegistered = !!deviceInfo?.registeredDeviceToken;
+  const isCurrentDeviceBound = isDeviceRegistered && deviceInfo.registeredDeviceToken === localToken;
+
+  const handleRegister = async () => {
+    if (!onRegisterDevice) return;
+    try {
+      setRegistering(true);
+      await onRegisterDevice();
+    } finally {
+      setRegistering(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Attendance (DTR)</h1>
-        <p className="text-muted-foreground mt-1">Daily Time Record — clock in and out with a selfie</p>
+        <p className="text-muted-foreground mt-1">Daily Time Record — clock in and out with a selfie on your registered phone</p>
       </div>
+
+      {/* Device Registration Banner */}
+      {!isDeviceRegistered ? (
+        <Card className="border-amber-200 bg-amber-50/70 shadow-sm">
+          <CardContent className="pt-5 pb-5">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-full bg-amber-100 border border-amber-300 flex items-center justify-center shrink-0">
+                  <ShieldAlert className="h-5 w-5 text-amber-700" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-amber-900 text-sm sm:text-base">Phone Registration Required</h3>
+                  <p className="text-xs text-amber-800 mt-0.5 max-w-xl">
+                    To log your DTR, you must bind this device to your student account. Once registered, attendance can only be logged from this phone.
+                  </p>
+                  <p className="text-[11px] font-medium text-amber-700 mt-1">
+                    Current Device: <span className="underline">{currentDeviceName}</span>
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={handleRegister}
+                disabled={registering}
+                className="bg-amber-600 hover:bg-amber-700 text-white gap-2 shrink-0 font-medium text-xs sm:text-sm h-10 shadow-sm"
+              >
+                {registering ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
+                {registering ? "Registering Device…" : "Register This Phone"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : !isCurrentDeviceBound ? (
+        <Card className="border-red-200 bg-red-50/70 shadow-sm">
+          <CardContent className="pt-5 pb-5">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-red-100 border border-red-300 flex items-center justify-center shrink-0">
+                <XCircle className="h-5 w-5 text-red-700" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-red-900 text-sm sm:text-base">Unregistered Phone Detected</h3>
+                <p className="text-xs text-red-800 mt-0.5">
+                  Your account is registered to another device (<span className="font-semibold">{deviceInfo?.registeredDeviceName || "Registered Device"}</span>). DTR access is locked on this browser.
+                </p>
+                <p className="text-[11px] text-red-700 mt-1 italic">
+                  Changed phones? Contact your OJT Coordinator or Administrator to reset your device registration.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="flex items-center justify-between px-4 py-2.5 rounded-lg bg-emerald-50/80 border border-emerald-200/80 text-emerald-800 text-xs sm:text-sm shadow-2xs">
+          <div className="flex items-center gap-2.5">
+            <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+            <span>
+              Registered Device: <strong className="font-medium text-emerald-900">{deviceInfo?.registeredDeviceName}</strong>
+            </span>
+          </div>
+          <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
+            <Smartphone className="h-3 w-3" /> Bound & Verified
+          </span>
+        </div>
+      )}
 
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
@@ -81,7 +168,7 @@ export function DTRTab({ dtrRecords, todayRecord, openCamera, geofenceStatus = "
               </div>
               <Button
                 className="w-full h-10 bg-green-600 hover:bg-green-700 text-white gap-2"
-                disabled={hasTimeIn}
+                disabled={hasTimeIn || !isCurrentDeviceBound}
                 onClick={() => openCamera("in")}
               >
                 <Camera className="h-4 w-4" /> {hasTimeIn ? "Already Timed In" : "Time In"}
@@ -110,7 +197,7 @@ export function DTRTab({ dtrRecords, todayRecord, openCamera, geofenceStatus = "
               </div>
               <Button
                 className="w-full h-10 bg-red-500 hover:bg-red-600 text-white gap-2"
-                disabled={!hasTimeIn || hasTimeOut}
+                disabled={!hasTimeIn || hasTimeOut || !isCurrentDeviceBound}
                 onClick={() => openCamera("out")}
               >
                 <Camera className="h-4 w-4" /> {hasTimeOut ? "Already Timed Out" : "Time Out"}

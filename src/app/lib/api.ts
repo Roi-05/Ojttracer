@@ -86,8 +86,20 @@ export async function getDTRByStudent(studentId: string) {
   return apiFetch(`/dtr/${studentId}`);
 }
 
-export async function clockDTR(payload: { date: string; mode: "in" | "out"; time: string; photo?: string | null; day?: string }) {
+export async function clockDTR(payload: { date: string; mode: "in" | "out"; time: string; photo?: string | null; day?: string; deviceToken?: string }) {
   return apiFetch("/dtr/clock", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export async function getDeviceStatus() {
+  return apiFetch("/students/device-status");
+}
+
+export async function registerDevice(deviceToken: string, deviceName: string) {
+  return apiFetch("/students/register-device", { method: "POST", body: JSON.stringify({ deviceToken, deviceName }) });
+}
+
+export async function resetStudentDevice(studentId: string) {
+  return apiFetch(`/students/${studentId}/reset-device`, { method: "POST" });
 }
 
 export async function reviewDTR(id: string | number, status: "approved" | "rejected", note?: string) {

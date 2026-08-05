@@ -20,7 +20,27 @@ function mapDtrRow(r) {
 
 const clockDtr = async (req, res) => {
   try {
-    const { date, mode, time, photo, day } = req.body;
+    const { date, mode, time, photo, day, deviceToken } = req.body;
+
+    // Verify Student Device Registration
+    const studentRes = await db.query(
+      `SELECT registered_device_token FROM public.students WHERE user_id = $1`,
+      [req.user.id]
+    );
+    const registeredToken = studentRes.rows[0]?.registered_device_token;
+
+    if (!registeredToken) {
+      return res.status(403).json({
+        error: 'Device registration required. Please click "Register This Device" in the Attendance (DTR) tab before clocking in.'
+      });
+    }
+
+    if (!deviceToken || deviceToken !== registeredToken) {
+      return res.status(403).json({
+        error: 'Access Denied: Unregistered device. DTR can only be logged from your registered phone/device.'
+      });
+    }
+
     const existRes = await db.query(`SELECT * FROM public.dtr_records WHERE student_id = $1 AND date = $2`, [req.user.id, date]);
     const existing = existRes.rows[0];
 

@@ -12,6 +12,7 @@ export type AdminStudent = {
   email: string; phone: string; address: string;
   company: string; position: string; hoursCompleted: number; requiredHours: number;
   status: string; intendedCompanyId?: string | null; intendedPosition?: string; performance: number;
+  registeredDeviceName?: string | null; deviceRegisteredAt?: string | null;
 };
 export type AdminCompany = { id: string | number; name: string; industry: string; location: string; activeInterns: number; totalCapacity: number; moaStatus: string; moaExpiry: string; contactPerson: string; verified: boolean; hrContact?: string; hrEmail?: string; signedMoaUrl?: string | null; latitude?: number | null; longitude?: number | null; geofenceRadius?: number };
 export type DTRLog = {
@@ -82,6 +83,8 @@ export function useAdminData() {
           status: s.deployment ? (s.deployment.status || 'ongoing') : 'pending',
           intendedCompanyId: s.intendedCompanyId || null,
           intendedPosition: s.intendedPosition || '',
+          registeredDeviceName: s.registeredDeviceName || null,
+          deviceRegisteredAt: s.deviceRegisteredAt || null,
           performance: parseFloat(s.performance) || 0,
         })));
       }
@@ -312,6 +315,19 @@ export function useAdminData() {
     }
   };
 
+  const resetStudentDevice = async (studentId: string | number, name: string) => {
+    try {
+      await api.resetStudentDevice(String(studentId));
+      setStudents(list => list.map(s => String(s.id) === String(studentId)
+        ? { ...s, registeredDeviceName: null, deviceRegisteredAt: null }
+        : s));
+      toast.success(`Registered device for ${name} has been reset.`);
+    } catch (err: any) {
+      toast.error(`Reset failed: ${err.message}`);
+      throw err;
+    }
+  };
+
   return {
     loading,
     students,
@@ -327,6 +343,7 @@ export function useAdminData() {
     uploadTemplate,
     reviewDocument,
     deployStudent,
+    resetStudentDevice,
     deleteAnnouncement,
     deleteCompany,
     deleteTemplate,
