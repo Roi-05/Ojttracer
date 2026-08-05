@@ -4,6 +4,8 @@ import { Upload, FileText, Eye, Download, Trash2, Briefcase } from "lucide-react
 import { AdminTemplate, AdminSubmission } from "../../hooks/useAdminData";
 import { REQUIRED_DOC_NAMES } from "../../hooks/useStudentData";
 import { StatusBadge } from "../student/shared";
+import { DocumentViewerModal } from "../shared/DocumentViewerModal";
+import { useState } from "react";
 
 interface DocumentsTabProps {
   templates: AdminTemplate[];
@@ -23,6 +25,7 @@ export function DocumentsTab({
   openDeployModal
 }: DocumentsTabProps) {
   const totalDocs = REQUIRED_DOC_NAMES.length;
+  const [viewer, setViewer] = useState<{ url: string; title: string } | null>(null);
 
   return (
     <div className="space-y-6">
@@ -54,8 +57,8 @@ export function DocumentsTab({
                 </div>
                 {t.file ? (
                   <div className="flex gap-1.5">
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
-                      <a href={t.file} target="_blank" rel="noreferrer"><Eye className="h-3.5 w-3.5" /></a>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setViewer({ url: t.file!, title: t.name })}>
+                      <Eye className="h-3.5 w-3.5" />
                     </Button>
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
                       <a href={t.file} download><Download className="h-3.5 w-3.5" /></a>
@@ -143,6 +146,13 @@ export function DocumentsTab({
           </div>
         </CardContent>
       </Card>
+
+      <DocumentViewerModal
+        open={!!viewer}
+        onClose={() => setViewer(null)}
+        fileUrl={viewer?.url ?? null}
+        title={viewer?.title}
+      />
     </div>
   );
 }

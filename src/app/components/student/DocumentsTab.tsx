@@ -7,6 +7,7 @@ import { FileText, FileCheck, Eye, Download, Upload, Building2 } from "lucide-re
 import * as api from "../../lib/api";
 import { StudentDocument, Template } from "../../hooks/useStudentData";
 import { StatusBadge } from "./shared";
+import { DocumentViewerModal } from "../shared/DocumentViewerModal";
 
 interface ActiveCompany {
   id: string;
@@ -31,6 +32,7 @@ export function DocumentsTab({ studentDocs, templateData, activeCompanies, inten
   const [savingCompany, setSavingCompany] = useState(false);
   const [signedMoaUrl, setSignedMoaUrl] = useState<string | null>(null);
   const [loadingMoa, setLoadingMoa] = useState(false);
+  const [viewer, setViewer] = useState<{ url: string; title: string } | null>(null);
 
   useEffect(() => {
     setSelectedCompanyId(intendedCompanyId || "");
@@ -146,13 +148,11 @@ export function DocumentsTab({ studentDocs, templateData, activeCompanies, inten
                 <p className="text-xs text-muted-foreground">Download the accredited company&apos;s signed memorandum of agreement.</p>
               </div>
               <div className="flex gap-1.5 flex-shrink-0">
-                <Button variant="ghost" size="sm" className="h-8 gap-1" asChild>
-                  <a href={signedMoaUrl} target="_blank" rel="noreferrer">
-                    <Eye className="h-3.5 w-3.5" /> View
-                  </a>
+                <Button variant="ghost" size="sm" className="h-8 gap-1" onClick={() => setViewer({ url: signedMoaUrl!, title: `Signed MOA — ${selectedCompany?.name || "Company"}` })}>
+                  <Eye className="h-3.5 w-3.5" /> View
                 </Button>
                 <Button variant="outline" size="sm" className="h-8 gap-1" asChild>
-                  <a href={signedMoaUrl} download>
+                  <a href={signedMoaUrl!} download>
                     <Download className="h-3.5 w-3.5" /> Download MOA
                   </a>
                 </Button>
@@ -191,8 +191,8 @@ export function DocumentsTab({ studentDocs, templateData, activeCompanies, inten
                 </div>
                 {t.file ? (
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
-                      <a href={t.file} target="_blank" rel="noreferrer"><Eye className="h-3.5 w-3.5" /></a>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setViewer({ url: t.file!, title: t.name })}>
+                      <Eye className="h-3.5 w-3.5" />
                     </Button>
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
                       <a href={t.file} download><Download className="h-3.5 w-3.5" /></a>
@@ -232,8 +232,8 @@ export function DocumentsTab({ studentDocs, templateData, activeCompanies, inten
                 <StatusBadge status={doc.status} />
                 {doc.file && (
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
-                      <a href={doc.file} target="_blank" rel="noreferrer"><Eye className="h-3.5 w-3.5" /></a>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setViewer({ url: doc.file!, title: doc.name })}>
+                      <Eye className="h-3.5 w-3.5" />
                     </Button>
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
                       <a href={doc.file} download><Download className="h-3.5 w-3.5" /></a>
@@ -254,6 +254,12 @@ export function DocumentsTab({ studentDocs, templateData, activeCompanies, inten
           </div>
         </CardContent>
       </Card>
+      <DocumentViewerModal
+        open={!!viewer}
+        onClose={() => setViewer(null)}
+        fileUrl={viewer?.url ?? null}
+        title={viewer?.title}
+      />
     </div>
   );
 }
