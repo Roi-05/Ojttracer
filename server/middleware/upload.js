@@ -53,4 +53,7 @@ module.exports = {
     saveBase64Image,
     // In-memory upload for Excel imports (no disk write needed)
     uploadExcel: multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } }),
+    // In-memory upload for DOCX -> PDF conversion
+    uploadConvert: multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } }),
 };
+
