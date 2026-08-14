@@ -102,6 +102,17 @@ const reviewDocument = async (req, res) => {
   }
 };
 
+const getSofficeCmd = () => {
+  if (process.platform === 'win32') {
+    const defaultWinPath = 'C:\\Program Files\\LibreOffice\\program\\soffice.exe';
+    if (fs.existsSync(defaultWinPath)) return defaultWinPath;
+    const win32Path = 'C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe';
+    if (fs.existsSync(win32Path)) return win32Path;
+    return 'soffice.exe';
+  }
+  return 'soffice';
+};
+
 const convertDocxToPdf = async (req, res) => {
   let inputPath = null;
   let pdfPath = null;
@@ -124,14 +135,16 @@ const convertDocxToPdf = async (req, res) => {
       return res.status(400).json({ error: 'No DOCX file provided for conversion' });
     }
 
-    // Convert DOCX -> PDF using LibreOffice headless
+    // Convert DOCX -> PDF using LibreOffice headless (cross-platform executable)
+    const sofficeCmd = getSofficeCmd();
     await new Promise((resolve, reject) => {
       const { execFile } = require('child_process');
-      execFile('soffice', ['--headless', '--convert-to', 'pdf', inputPath, '--outdir', tmpDir], (err) => {
+      execFile(sofficeCmd, ['--headless', '--convert-to', 'pdf', inputPath, '--outdir', tmpDir], (err) => {
         if (err) return reject(err);
         resolve();
       });
     });
+
 
     pdfPath = path.join(tmpDir, `convert_${fileId}.pdf`);
 
