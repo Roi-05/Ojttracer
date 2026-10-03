@@ -152,3 +152,15 @@ create table if not exists public.evaluations (
   comments       text default '',
   submitted_at   timestamptz not null default now()
 );
+
+-- ── LIVE LOCATION PINGS (for Live Map Tracker) ─────────────────────────────
+create table if not exists public.location_pings (
+  id          bigserial primary key,
+  student_id  uuid not null references public.profiles(id) on delete cascade,
+  latitude    numeric(10, 7) not null,
+  longitude   numeric(10, 7) not null,
+  accuracy    int,
+  pinged_at   timestamptz not null default now()
+);
+create index if not exists idx_location_pings_student_pinged
+  on public.location_pings(student_id, pinged_at desc);

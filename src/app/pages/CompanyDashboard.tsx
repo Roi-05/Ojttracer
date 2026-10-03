@@ -11,9 +11,10 @@ import { AccomplishmentsTab } from "../components/company/AccomplishmentsTab";
 import { EvaluationsTab } from "../components/company/EvaluationsTab";
 import { MoaTab } from "../components/company/MoaTab";
 import { CompanyDtrTab } from "../components/company/CompanyDtrTab";
+import { LiveTrackerTab } from "../components/company/LiveTrackerTab";
 
 import {
-  LayoutDashboard, Building2, Users, Star, FileCheck, ShieldCheck, Clock
+  LayoutDashboard, Building2, Users, Star, FileCheck, ShieldCheck, Clock, MapPin
 } from "lucide-react";
 
 const menuItems = [
@@ -21,6 +22,7 @@ const menuItems = [
   { icon: <Building2 className="h-4 w-4" />, label: "Company Profile", value: "profile" },
   { icon: <ShieldCheck className="h-4 w-4" />, label: "Accreditation", value: "accreditation" },
   { icon: <Users className="h-4 w-4" />, label: "My Interns", value: "interns" },
+  { icon: <MapPin className="h-4 w-4" />, label: "Live Tracker", value: "tracker" },
   { icon: <Clock className="h-4 w-4" />, label: "Attendance (DTR)", value: "attendance" },
   { icon: <FileCheck className="h-4 w-4" />, label: "Accomplishments", value: "accomplishments" },
   { icon: <Star className="h-4 w-4" />, label: "Evaluations", value: "evaluations" },
@@ -85,6 +87,7 @@ export function CompanyDashboard() {
       />
     ),
     interns: () => <InternsTab interns={interns} />,
+    tracker: () => <LiveTrackerTab companyInfo={companyInfo} interns={interns} />,
     attendance: () => (
       <CompanyDtrTab dtrLogs={dtrLogs} interns={interns} onReviewDtr={reviewDTR} />
     ),

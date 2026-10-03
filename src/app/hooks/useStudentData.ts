@@ -3,6 +3,7 @@ import * as api from "../lib/api";
 import { resolveUploadUrl } from "../lib/uploads";
 import { useAuth } from "../contexts/AuthContext";
 import { getOrCreateDeviceToken, getDeviceName } from "../lib/device";
+import { getCurrentPosition } from "../lib/geolocation";
 import { toast } from "sonner";
 
 export type DTRRecord = {
@@ -89,6 +90,30 @@ export function useStudentData() {
   });
   
   const [loading, setLoading] = useState(true);
+  const locationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Location tracker helpers ───────────────────────────────────────────────
+  const sendLocationPing = async () => {
+    try {
+      const pos = await getCurrentPosition();
+      await api.pingLocation(pos.latitude, pos.longitude, pos.accuracy);
+    } catch {
+      // Silently swallow — network hiccup or GPS unavailable; will retry next interval
+    }
+  };
+
+  const startLocationTracking = () => {
+    if (locationIntervalRef.current) return; // already running
+    sendLocationPing(); // send immediately on start
+    locationIntervalRef.current = setInterval(sendLocationPing, 30_000);
+  };
+
+  const stopLocationTracking = () => {
+    if (locationIntervalRef.current) {
+      clearInterval(locationIntervalRef.current);
+      locationIntervalRef.current = null;
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -192,9 +217,21 @@ export function useStudentData() {
     };
 
     loadAllData();
-    
-    return () => { isMounted = false; };
+
+    return () => { isMounted = false; stopLocationTracking(); };
   }, [user]);
+
+  // Auto-resume tracking if already clocked in (page reload / tab switch)
+  useEffect(() => {
+    if (!dtrRecords.length) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const todayRecord = dtrRecords.find(r => r.date === today);
+    if (todayRecord?.timeIn && !todayRecord?.timeOut) {
+      startLocationTracking();
+    } else {
+      stopLocationTracking();
+    }
+  }, [dtrRecords]);
 
   const registerCurrentDevice = async () => {
     try {
@@ -229,6 +266,7 @@ export function useStudentData() {
           hours: 0, remarks: "Regular",
         }, ...records];
       });
+      startLocationTracking(); // Begin live tracking
     } catch (err: any) {
       toast.error(err?.message || "Clock In failed.");
       throw err;
@@ -243,6 +281,7 @@ export function useStudentData() {
         if (r.date !== date || !r.timeIn) return r;
         return { ...r, timeOut: time, timeOutPhoto: photo, hours };
       }));
+      stopLocationTracking(); // End live tracking
     } catch (err: any) {
       toast.error(err?.message || "Clock Out failed.");
       throw err;

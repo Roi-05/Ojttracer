@@ -106,6 +106,15 @@ export async function reviewDTR(id: string | number, status: "approved" | "rejec
   return apiFetch(`/company/dtr/${id}/review`, { method: "POST", body: JSON.stringify({ status, note }) });
 }
 
+// ─── Live Location ─────────────────────────────────────────────────────────
+export async function pingLocation(latitude: number, longitude: number, accuracy?: number) {
+  return apiFetch("/location/ping", { method: "POST", body: JSON.stringify({ latitude, longitude, accuracy }) });
+}
+
+export async function getActiveInternLocations() {
+  return apiFetch("/location/interns");
+}
+
 // ─── Accomplishments ────────────────────────────────────────────────────
 export async function getAccomplishments(studentId?: string) {
   const q = studentId ? `?studentId=${studentId}` : "";

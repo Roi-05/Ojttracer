@@ -20,6 +20,7 @@ const internRoutes = require('./routes/interns');
 const accomplishmentRoutes = require('./routes/accomplishments');
 const evaluationRoutes = require('./routes/evaluations');
 const importRoutes = require('./routes/import');
+const locationRoutes = require('./routes/location');
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use('/interns', internRoutes);
 app.use('/accomplishments', accomplishmentRoutes);
 app.use('/evaluations', evaluationRoutes);
 app.use('/import', importRoutes);
+app.use('/location', locationRoutes);
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`Server listening on port ${port}`));
