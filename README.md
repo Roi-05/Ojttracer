@@ -32,9 +32,11 @@ cd ..
 This project uses a local PostgreSQL database and pgAdmin for visualization, managed via Docker Compose.
 
 ```bash
-# Start the database and pgAdmin containers in the background
+# Start Postgres, pgAdmin, and Gotenberg (journal DOCX -> PDF) in the background
 docker-compose up -d
 ```
+
+Journal PDF conversion uses **Gotenberg** (LibreOffice in Docker) at `http://localhost:3001`. The Express API falls back to a local `soffice` install if Gotenberg is not running. Override the URL with `GOTENBERG_URL` if needed.
 
 **Initialize the Schema:**
 Run the following command to apply the database schema to your local Postgres container:

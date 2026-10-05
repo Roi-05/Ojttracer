@@ -5,7 +5,7 @@ import { buildJournalDOCXBlob, JournalInfo } from "./generateJournal";
 
 /**
  * Generates a PDF file of the student's OJT Journal by first generating the populated DOCX blob,
- * and converting it directly to PDF using server-side LibreOffice Writer for 100% native layout fidelity.
+ * and converting it directly to PDF via Gotenberg (LibreOffice) for native layout fidelity.
  */
 export async function generateJournalPDF(info: JournalInfo): Promise<void> {
   // 1. Build the populated DOCX blob from the Word template

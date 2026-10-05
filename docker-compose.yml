@@ -25,5 +25,17 @@ services:
     depends_on:
       - db
 
+  # LibreOffice-backed DOCX -> PDF for journal generation.
+  # Mapped to 3001 so it does not collide with the Express API on 3000.
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: ojttracer-gotenberg
+    restart: always
+    ports:
+      - "3001:3000"
+    command:
+      - gotenberg
+      - --api-timeout=120s
+
 volumes:
   pgdata:
