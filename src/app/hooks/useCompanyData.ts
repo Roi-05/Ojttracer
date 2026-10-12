@@ -17,6 +17,8 @@ export type Intern = {
   requiredHours: number;
   performance: number;
   status: string;
+  registeredDeviceName?: string | null;
+  deviceResetRequested?: boolean;
 };
 
 export type InternAccomplishment = {
@@ -109,6 +111,8 @@ export function useCompanyData() {
             requiredHours: i.deployment?.requiredHours || 486,
             performance: i.performance ? parseFloat(i.performance) : 0,
             status: i.deployment?.status || "ongoing",
+            registeredDeviceName: i.registeredDeviceName || null,
+            deviceResetRequested: i.deviceResetRequested || false,
           })));
         }
 
@@ -127,6 +131,7 @@ export function useCompanyData() {
             timeOutPhotoUrl: r.timeOutPhotoUrl,
             hours: Number(r.hours) || 0,
             status: r.timeOut ? "regular" : r.timeIn ? "ongoing" : "rest",
+            remarks: r.remarks || "",
             verificationStatus: r.verificationStatus || "pending",
             reviewNote: r.reviewNote || "",
           })));
@@ -198,6 +203,28 @@ export function useCompanyData() {
     }
   };
 
+  const setDtrTimeout = async (id: string | number, timeOut: string) => {
+    try {
+      await api.setDtrTimeout(id, timeOut);
+      // Optimistically update the log in state so UI reflects the new time-out
+      setDtrLogs(list => list.map(log => {
+        if (log.id !== id) return log;
+        return {
+          ...log,
+          timeOut,
+          status: 'regular',
+          verificationStatus: 'pending',
+          remarks: 'Supervisor-adjusted',
+        };
+      }));
+      toast.success('Time-out set successfully. Record is now ready for review.');
+      refreshData();
+    } catch (e: any) {
+      toast.error(`Failed to set time-out: ${e.message}`);
+      throw e;
+    }
+  };
+
   const reviewDTR = async (id: string | number, status: "approved" | "rejected", note?: string) => {
     // Optimistic update
     setDtrLogs(list => list.map(log => log.id === id ? { ...log, verificationStatus: status, reviewNote: note || "" } : log));
@@ -240,6 +267,32 @@ export function useCompanyData() {
     }
   };
 
+  const resetStudentDevice = async (studentId: string | number, name: string) => {
+    try {
+      await api.resetStudentDevice(String(studentId));
+      setInterns(list => list.map(i => String(i.id) === String(studentId)
+        ? { ...i, registeredDeviceName: null, deviceResetRequested: false }
+        : i));
+      toast.success(`Registered device for ${name} has been reset.`);
+    } catch (err: any) {
+      toast.error(`Reset failed: ${err.message}`);
+      throw err;
+    }
+  };
+
+  const rejectStudentDevice = async (studentId: string | number, name: string) => {
+    try {
+      await api.rejectStudentDevice(String(studentId));
+      setInterns(list => list.map(i => String(i.id) === String(studentId)
+        ? { ...i, deviceResetRequested: false }
+        : i));
+      toast.success(`Device reset request for ${name} rejected.`);
+    } catch (err: any) {
+      toast.error(`Rejection failed: ${err.message}`);
+      throw err;
+    }
+  };
+
   return {
     loading,
     companyInfo,
@@ -253,7 +306,10 @@ export function useCompanyData() {
     approveAccomplishment,
     rejectAccomplishment,
     reviewDTR,
+    setDtrTimeout,
     submitEvaluation,
-    getEvaluation
+    getEvaluation,
+    resetStudentDevice,
+    rejectStudentDevice
   };
 }

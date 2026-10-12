@@ -38,6 +38,8 @@ export interface JournalInfo {
   supervisorContact: string;
   position: string;
   avatarUrl?: string | null;
+  signatureUrl?: string | null;
+  coordinatorName?: string;
   fatherName?: string;
   fatherOccupation?: string;
   fatherPhone?: string;
@@ -224,6 +226,12 @@ export async function buildJournalDOCXBlob(info: JournalInfo): Promise<Blob> {
     avatarBuffer = await fetchImageAsArrayBuffer(info.avatarUrl);
   }
 
+  // ── Fetch signature image ───────────────────────────────────────────────
+  let signatureBuffer: ArrayBuffer | null = null;
+  if (info.signatureUrl) {
+    signatureBuffer = await fetchImageAsArrayBuffer(info.signatureUrl);
+  }
+
   // ── Retrieve accomplishment images and build grid ───────────────────────
   const accomplishmentImages: string[] = [];
   info.months.forEach(mGroup => {
@@ -243,19 +251,27 @@ export async function buildJournalDOCXBlob(info: JournalInfo): Promise<Blob> {
     centered: false,
     fileType: "docx",
     getImage(tagValue: string) {
-      if (tagValue === "profilepicture2x2" && avatarBuffer) {
+      const lower = tagValue ? tagValue.toLowerCase() : "";
+      if (lower === "profilepicture2x2" && avatarBuffer) {
         return avatarBuffer;
       }
-      if (tagValue === "journalEntriesImages" && gridBuffer) {
+      if ((lower === "studentsignature" || lower === "signature") && signatureBuffer) {
+        return signatureBuffer;
+      }
+      if (lower === "journalentriesimages" && gridBuffer) {
         return gridBuffer;
       }
       return FALLBACK_1X1_PNG;
     },
     getSize(_img: any, tagValue: string, _tagName: string): [number, number] {
-      if (tagValue === "profilepicture2x2") {
+      const lower = tagValue ? tagValue.toLowerCase() : "";
+      if (lower === "profilepicture2x2") {
         return [96, 96]; // 1x1 inch
       }
-      if (tagValue === "journalEntriesImages") {
+      if (lower === "studentsignature" || lower === "signature") {
+        return [140, 45]; // Signature size
+      }
+      if (lower === "journalentriesimages") {
         if (gridDimensions) {
           const targetWidth = 480; // Fit standard margins nicely
           const scale = targetWidth / gridDimensions.width;
@@ -266,6 +282,8 @@ export async function buildJournalDOCXBlob(info: JournalInfo): Promise<Blob> {
       return [1, 1];
     },
   });
+
+  const coordinatorNameVal = info.coordinatorName || "OJT Coordinator";
 
   const data = {
     studentName: info.studentName || "",
@@ -296,8 +314,14 @@ export async function buildJournalDOCXBlob(info: JournalInfo): Promise<Blob> {
     guardianRelationship: info.guardianRelationship || "",
     guardianPhone: info.guardianPhone || "",
     totalHours: globalTotalHours,
-    // Note: the template tag for image must have % prefix (e.g. {%profilepicture2x2} and {%journalEntriesImages})
+    COORDINATOR: coordinatorNameVal,
+    coordinator: coordinatorNameVal,
+    Coordinator: coordinatorNameVal,
+    // Note: image tags in docxtemplater may use % prefix (e.g. {%profilepicture2x2}, {%studentSignature}) or plain tags
     profilepicture2x2: avatarBuffer ? "profilepicture2x2" : "",
+    studentSignature: signatureBuffer ? "studentSignature" : "",
+    studentsignature: signatureBuffer ? "studentSignature" : "",
+    signature: signatureBuffer ? "studentSignature" : "",
     journalEntriesImages: gridBuffer ? "journalEntriesImages" : "",
     months: formattedMonths.length ? formattedMonths : []
   };

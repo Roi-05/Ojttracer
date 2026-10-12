@@ -83,10 +83,12 @@ export function useStudentData() {
     registeredDeviceToken: string | null;
     registeredDeviceName: string | null;
     deviceRegisteredAt: string | null;
+    deviceResetRequested?: boolean;
   }>({
     registeredDeviceToken: null,
     registeredDeviceName: null,
     deviceRegisteredAt: null,
+    deviceResetRequested: false,
   });
   
   const [loading, setLoading] = useState(true);
@@ -142,6 +144,7 @@ export function useStudentData() {
             registeredDeviceToken: deviceRes.registeredDeviceToken || null,
             registeredDeviceName: deviceRes.registeredDeviceName || null,
             deviceRegisteredAt: deviceRes.deviceRegisteredAt || null,
+            deviceResetRequested: deviceRes.deviceResetRequested || false,
           });
         }
 
@@ -246,6 +249,20 @@ export function useStudentData() {
       toast.success(`Device registered: ${res.registeredDeviceName}`);
     } catch (err: any) {
       toast.error(err?.message || "Failed to register device");
+      throw err;
+    }
+  };
+
+  const requestDeviceReset = async () => {
+    try {
+      await api.requestDeviceReset();
+      setDeviceInfo(prev => ({
+        ...prev,
+        deviceResetRequested: true,
+      }));
+      toast.success("Device reset request sent to your supervisor for approval.");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to request device reset");
       throw err;
     }
   };
@@ -367,6 +384,7 @@ export function useStudentData() {
     evaluation,
     deviceInfo,
     registerCurrentDevice,
+    requestDeviceReset,
     clockIn,
     clockOut,
     submitDocument,

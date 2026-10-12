@@ -24,8 +24,9 @@ import { DocumentsTab } from "../components/admin/DocumentsTab";
 import { AnalyticsTab } from "../components/admin/AnalyticsTab";
 import { MapTab } from "../components/admin/MapTab";
 import { EvaluationsTab } from "../components/admin/EvaluationsTab";
+import { SettingsTab } from "../components/admin/SettingsTab";
 
-import { LayoutDashboard, Building2, MapPin, Clock, BookOpen, Upload, Megaphone, BarChart3, Map, GraduationCap, Briefcase, Star } from "lucide-react";
+import { LayoutDashboard, Building2, MapPin, Clock, BookOpen, Upload, Megaphone, BarChart3, Map, GraduationCap, Briefcase, Star, Settings } from "lucide-react";
 
 const menuItems = [
   { icon: <LayoutDashboard className="h-4 w-4" />, label: "Overview", value: "dashboard" },
@@ -39,6 +40,7 @@ const menuItems = [
   { icon: <Upload className="h-4 w-4" />, label: "Documents", value: "documents" },
   { icon: <BarChart3 className="h-4 w-4" />, label: "Analytics", value: "analytics" },
   { icon: <Map className="h-4 w-4" />, label: "Map View", value: "map" },
+  { icon: <Settings className="h-4 w-4" />, label: "Settings", value: "settings" },
 ];
 
 const SECTIONS = ["4A", "4B", "4C", "4D"];
@@ -53,7 +55,7 @@ export function AdminDashboard() {
 
   const {
     students, companies, evaluations, dtrLogs, journalLogs, announcements, templates, studentSubmissions,
-    verifyCompany, updateMoaStatus, uploadTemplate, reviewDocument, deployStudent, resetStudentDevice, deleteAnnouncement, deleteCompany, deleteTemplate, reload
+    verifyCompany, updateMoaStatus, uploadTemplate, reviewDocument, deployStudent, resetStudentDevice, rejectStudentDevice, deleteAnnouncement, deleteCompany, deleteTemplate, reload
   } = useAdminData();
 
   const companyLocations = useMemo(() => {
@@ -116,7 +118,7 @@ export function AdminDashboard() {
 
   const sectionMap: Record<string, () => JSX.Element> = {
     dashboard: () => <OverviewTab students={students} companies={companies} setActiveSection={setActiveSection} monthlyPlacementData={monthlyPlacementData} sectionDistribution={sectionDistribution} openReportsModal={() => setShowReportsModal(true)} />,
-    students: () => <StudentsTab students={students} sections={SECTIONS} openImportModal={() => setShowImportModal(true)} onResetDevice={resetStudentDevice} />,
+    students: () => <StudentsTab students={students} sections={SECTIONS} openImportModal={() => setShowImportModal(true)} onResetDevice={resetStudentDevice} onRejectDevice={rejectStudentDevice} />,
     companies: () => <CompaniesTab companies={companies} onManageMoa={(c) => setMoaModalCompany(c)} openUploadMoa={() => setShowMoaTemplateUpload(true)} onDelete={deleteCompany} />,
     deployment: () => <DeploymentTab students={students} />,
     attendance: () => <AttendanceTab dtrLogs={dtrLogs} />,
@@ -131,7 +133,8 @@ export function AdminDashboard() {
       openDeployModal={(id) => setShowDeployModal({ open: true, studentId: id })} 
     />,
     analytics: () => <AnalyticsTab students={students} companies={companies} overviewStats={[]} hoursProgressData={[]} monthlyPlacementData={[]} sectionDistribution={sectionDistribution} />,
-    map: () => <MapTab companyLocations={companyLocations} selectedMapCompany={selectedMapCompany} setSelectedMapCompany={setSelectedMapCompany} />
+    map: () => <MapTab companyLocations={companyLocations} selectedMapCompany={selectedMapCompany} setSelectedMapCompany={setSelectedMapCompany} />,
+    settings: () => <SettingsTab />,
   };
 
   return (

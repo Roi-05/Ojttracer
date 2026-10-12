@@ -108,7 +108,7 @@ const getInterns = async (req, res) => {
   try {
     if (req.user.role !== 'company') return res.status(403).json({ error: 'Company only' });
     const result = await db.query(`
-      SELECT p.id, p.name, 
+      SELECT p.id, p.name, s.course, s.registered_device_token, s.registered_device_name, s.device_reset_requested,
              d.position, d.supervisor, d.start_date, d.end_date, d.required_hours, d.status,
              (SELECT COALESCE(SUM(hours), 0) FROM public.dtr_records WHERE student_id = p.id AND status = 'approved') as completed_hours,
              e.overall_score
@@ -125,6 +125,9 @@ const getInterns = async (req, res) => {
       course: r.course || 'BSIT',
       completedHours: parseFloat(r.completed_hours),
       performance: parseFloat(r.overall_score) || 0,
+      registeredDeviceToken: r.registered_device_token || null,
+      registeredDeviceName: r.registered_device_name || null,
+      deviceResetRequested: r.device_reset_requested || false,
       deployment: {
         position: r.position,
         supervisor: r.supervisor,

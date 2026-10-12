@@ -34,6 +34,12 @@ const uploadAvatar = multer({
   fileFilter: imageFilter,
 });
 
+const uploadSignature = multer({
+  storage: makeStorage('signatures'),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: imageFilter,
+});
+
 function saveBase64Image(dataUrl, folder, filename) {
   const baseDir = path.join(UPLOADS_DIR, folder);
   if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true });
@@ -50,10 +56,12 @@ module.exports = {
     uploadTemplate,
     uploadDoc,
     uploadAvatar,
+    uploadSignature,
     saveBase64Image,
     // In-memory upload for Excel imports (no disk write needed)
     uploadExcel: multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } }),
     // In-memory upload for DOCX -> PDF conversion
     uploadConvert: multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } }),
 };
+
 

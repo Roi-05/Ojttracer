@@ -69,6 +69,17 @@ export async function uploadAvatar(file: File) {
   return apiFetch("/profile/avatar", { method: "POST", body: fd });
 }
 
+export async function uploadSignature(file: File) {
+  const fd = new FormData();
+  fd.append("signature", file);
+  return apiFetch("/profile/signature", { method: "POST", body: fd });
+}
+
+export async function getCoordinatorName() {
+  return apiFetch("/profile/coordinator");
+}
+
+
 // ─── DTR ──────────────────────────────────────────────────────────────────
 export async function getDTR() {
   return apiFetch("/dtr");
@@ -102,9 +113,22 @@ export async function resetStudentDevice(studentId: string) {
   return apiFetch(`/students/${studentId}/reset-device`, { method: "POST" });
 }
 
+export async function rejectStudentDevice(studentId: string) {
+  return apiFetch(`/students/${studentId}/reject-device-reset`, { method: "POST" });
+}
+
+export async function requestDeviceReset() {
+  return apiFetch("/students/request-device-reset", { method: "POST" });
+}
+
 export async function reviewDTR(id: string | number, status: "approved" | "rejected", note?: string) {
   return apiFetch(`/company/dtr/${id}/review`, { method: "POST", body: JSON.stringify({ status, note }) });
 }
+
+export async function setDtrTimeout(id: string | number, timeOut: string) {
+  return apiFetch(`/company/dtr/${id}/set-timeout`, { method: "PUT", body: JSON.stringify({ timeOut }) });
+}
+
 
 // ─── Live Location ─────────────────────────────────────────────────────────
 export async function pingLocation(latitude: number, longitude: number, accuracy?: number) {

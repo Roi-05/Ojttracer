@@ -28,6 +28,7 @@ interface ProfileTabProps {
     skills: string[];
     religion?: string;
     avatarUrl?: string | null;
+    signatureUrl?: string | null;
     fatherName?: string;
     fatherOccupation?: string;
     fatherPhone?: string;
@@ -58,19 +59,25 @@ export function ProfileTab({ studentProfile, updateProfileData }: ProfileTabProp
   const [formData, setFormData] = useState(studentProfile);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [isUploadingSignature, setIsUploadingSignature] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(
     resolveUploadUrl(user?.avatarUrl ?? studentProfile.avatarUrl)
+  );
+  const [signaturePreview, setSignaturePreview] = useState<string | null>(
+    resolveUploadUrl((user as any)?.signatureUrl ?? studentProfile.signatureUrl)
   );
 
   useEffect(() => {
     setAvatarPreview(resolveUploadUrl(user?.avatarUrl ?? studentProfile.avatarUrl));
-  }, [user?.avatarUrl, studentProfile.avatarUrl]);
+    setSignaturePreview(resolveUploadUrl((user as any)?.signatureUrl ?? studentProfile.signatureUrl));
+  }, [user?.avatarUrl, (user as any)?.signatureUrl, studentProfile.avatarUrl, studentProfile.signatureUrl]);
 
   // Skills
   const [newSkill, setNewSkill] = useState("");
 
-  // File input ref
+  // File input refs
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const signatureInputRef = useRef<HTMLInputElement>(null);
 
   const dobDisplay = formData.dateOfBirth
     ? new Date(formData.dateOfBirth).toISOString().split("T")[0]
@@ -86,6 +93,7 @@ export function ProfileTab({ studentProfile, updateProfileData }: ProfileTabProp
   };
 
   const handlePhotoClick = () => fileInputRef.current?.click();
+  const handleSignatureClick = () => signatureInputRef.current?.click();
 
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -118,6 +126,41 @@ export function ProfileTab({ studentProfile, updateProfileData }: ProfileTabProp
       setAvatarPreview(resolveUploadUrl(user?.avatarUrl ?? studentProfile.avatarUrl));
     } finally {
       setIsUploadingPhoto(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleSignatureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      toast.error("Only image files are allowed (JPG, PNG, WEBP, GIF).");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be smaller than 5 MB.");
+      e.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (ev) => setSignaturePreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+
+    setIsUploadingSignature(true);
+    try {
+      const res = await api.uploadSignature(file);
+      await refreshProfile();
+      setSignaturePreview(resolveUploadUrl(res.signatureUrl));
+      setFormData(prev => ({ ...prev, signatureUrl: res.signatureUrl }));
+      toast.success("Digital signature updated!");
+    } catch (err: any) {
+      toast.error(`Failed to upload signature: ${err.message}`);
+      setSignaturePreview(resolveUploadUrl((user as any)?.signatureUrl ?? studentProfile.signatureUrl));
+    } finally {
+      setIsUploadingSignature(false);
       e.target.value = "";
     }
   };
@@ -158,54 +201,99 @@ export function ProfileTab({ studentProfile, updateProfileData }: ProfileTabProp
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Avatar card */}
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-6 text-center">
-            {/* Hidden file input */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-              className="hidden"
-              onChange={handlePhotoChange}
-            />
+        {/* Left Column (Avatar + Signature) */}
+        <div className="space-y-6">
+          {/* Avatar card */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-6 text-center">
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={handlePhotoChange}
+              />
 
-            {/* Avatar circle */}
-            <div className="relative inline-block mb-4">
-              <div className="h-24 w-24 rounded-full overflow-hidden bg-blue-100 text-blue-600 flex items-center justify-center text-3xl font-bold mx-auto">
-                {avatarPreview ? (
-                  <img src={avatarPreview} alt="Profile" className="h-full w-full object-cover" />
-                ) : (
-                  initials
+              {/* Avatar circle */}
+              <div className="relative inline-block mb-4">
+                <div className="h-24 w-24 rounded-full overflow-hidden bg-blue-100 text-blue-600 flex items-center justify-center text-3xl font-bold mx-auto">
+                  {avatarPreview ? (
+                    <img src={avatarPreview} alt="Profile" className="h-full w-full object-cover" />
+                  ) : (
+                    initials
+                  )}
+                </div>
+                {isUploadingPhoto && (
+                  <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center">
+                    <Loader2 className="h-6 w-6 text-white animate-spin" />
+                  </div>
                 )}
               </div>
-              {isUploadingPhoto && (
-                <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center">
-                  <Loader2 className="h-6 w-6 text-white animate-spin" />
-                </div>
-              )}
-            </div>
 
-            <h3 className="font-semibold text-lg">
-              {formData.lastName && formData.firstName
-                ? `${formData.firstName} ${formData.middleName ? formData.middleName.charAt(0) + ". " : ""}${formData.lastName}`
-                : formData.name}
-            </h3>
-            <p className="text-muted-foreground text-sm">{formData.course}</p>
-            <p className="text-muted-foreground text-sm">{formData.year} • {formData.section}</p>
-            <p className="text-xs text-muted-foreground mt-1">ID: {formData.studentId}</p>
+              <h3 className="font-semibold text-lg">
+                {formData.lastName && formData.firstName
+                  ? `${formData.firstName} ${formData.middleName ? formData.middleName.charAt(0) + ". " : ""}${formData.lastName}`
+                  : formData.name}
+              </h3>
+              <p className="text-muted-foreground text-sm">{formData.course}</p>
+              <p className="text-muted-foreground text-sm">{formData.year} • {formData.section}</p>
+              <p className="text-xs text-muted-foreground mt-1">ID: {formData.studentId}</p>
 
-            <button
-              onClick={handlePhotoClick}
-              disabled={isUploadingPhoto}
-              className="mt-4 flex items-center gap-1.5 text-sm text-primary hover:underline mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Camera className="h-3.5 w-3.5" />
-              {isUploadingPhoto ? "Uploading..." : "Change Photo"}
-            </button>
-            <p className="text-xs text-muted-foreground mt-1">JPG, PNG, WEBP or GIF · max 5 MB</p>
-          </CardContent>
-        </Card>
+              <button
+                onClick={handlePhotoClick}
+                disabled={isUploadingPhoto}
+                className="mt-4 flex items-center gap-1.5 text-sm text-primary hover:underline mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Camera className="h-3.5 w-3.5" />
+                {isUploadingPhoto ? "Uploading..." : "Change Photo"}
+              </button>
+              <p className="text-xs text-muted-foreground mt-1">JPG, PNG, WEBP or GIF · max 5 MB</p>
+            </CardContent>
+          </Card>
+
+          {/* Digital Signature Card */}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Digital Signature</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 text-center pt-2">
+              <input
+                ref={signatureInputRef}
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={handleSignatureChange}
+              />
+
+              <div className="relative border-2 border-dashed border-muted-foreground/30 rounded-xl p-4 bg-muted/10 min-h-[100px] flex items-center justify-center overflow-hidden mb-3">
+                {signaturePreview ? (
+                  <img src={signaturePreview} alt="Digital Signature" className="max-h-24 max-w-full object-contain mx-auto" />
+                ) : (
+                  <div className="text-center py-3">
+                    <p className="text-xs text-muted-foreground">No digital signature uploaded yet.</p>
+                    <p className="text-[11px] text-muted-foreground/80 mt-1">Required for automated OJT Journal export.</p>
+                  </div>
+                )}
+                {isUploadingSignature && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                    <Loader2 className="h-6 w-6 text-white animate-spin" />
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={handleSignatureClick}
+                disabled={isUploadingSignature}
+                className="flex items-center gap-1.5 text-sm text-primary hover:underline mx-auto disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                <Camera className="h-3.5 w-3.5" />
+                {isUploadingSignature ? "Uploading..." : signaturePreview ? "Change Signature" : "Upload Signature Image"}
+              </button>
+              <p className="text-xs text-muted-foreground mt-1">Clear PNG/JPG with signature · max 5 MB</p>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Personal info */}
         <Card className="lg:col-span-2 border-0 shadow-sm">

@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { getCurrentPosition, checkGeofence } from "../lib/geolocation";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { useAuth } from "../contexts/AuthContext";
 import { useStudentData } from "../hooks/useStudentData";
+import * as api from "../lib/api";
 
 import { ClockInModal } from "../components/student/ClockInModal";
 import { UploadDocumentModal } from "../components/student/UploadDocumentModal";
@@ -63,6 +64,7 @@ export function StudentDashboard() {
     skills: (user as any)?.skills || emptyStudentInfo.skills,
     religion: (user as any)?.religion || "",
     avatarUrl: (user as any)?.avatarUrl || null,
+    signatureUrl: (user as any)?.signatureUrl || null,
     fatherName: (user as any)?.fatherName || "",
     fatherOccupation: (user as any)?.fatherOccupation || "",
     fatherPhone: (user as any)?.fatherPhone || "",
@@ -77,11 +79,19 @@ export function StudentDashboard() {
   const {
     loading, dtrRecords, accomplishments, documents, deployment, announcements, templates,
     activeCompanies, intendedCompanyId, intendedPosition, evaluation, setTargetCompany,
-    deviceInfo, registerCurrentDevice,
+    deviceInfo, registerCurrentDevice, requestDeviceReset,
     clockIn, clockOut, submitDocument, submitAccomplishment, updateProfileData
   } = useStudentData();
 
   const [activeSection, setActiveSection] = useState("dashboard");
+  const [coordinatorName, setCoordinatorName] = useState("");
+
+  // Fetch coordinator name once on mount
+  useEffect(() => {
+    api.getCoordinatorName().then((res: any) => {
+      if (res?.name) setCoordinatorName(res.name);
+    }).catch(() => {});
+  }, []);
   
   // Modal states
   const [cameraModal, setCameraModal] = useState<{ open: boolean, mode: "in" | "out" }>({ open: false, mode: "in" });
@@ -178,7 +188,7 @@ export function StudentDashboard() {
         <p className="font-medium text-lg">Deployment Not Active</p>
         <p className="text-sm text-muted-foreground mt-1">You must have an ongoing deployment to view and manage your Daily Time Record.</p>
       </div>
-    ) : <DTRTab dtrRecords={dtrRecords} todayRecord={todayRecord} openCamera={openDTRCamera} geofenceStatus={geofenceStatus} deviceInfo={deviceInfo} onRegisterDevice={registerCurrentDevice} />,
+    ) : <DTRTab dtrRecords={dtrRecords} todayRecord={todayRecord} openCamera={openDTRCamera} geofenceStatus={geofenceStatus} deviceInfo={deviceInfo} onRegisterDevice={registerCurrentDevice} onRequestResetDevice={requestDeviceReset} />,
     journal: () => activeDeployment.status !== "ongoing" ? (
       <div className="p-8 text-center bg-muted/5 border border-border rounded-xl mt-6">
         <p className="font-medium text-lg">Deployment Not Active</p>
@@ -191,6 +201,7 @@ export function StudentDashboard() {
       studentName={studentProfile.name}
       studentSection={`${studentProfile.course} ${studentProfile.year} ${studentProfile.section}`}
       studentProfile={studentProfile}
+      coordinatorName={coordinatorName}
       deployment={{ company: activeDeployment.company, position: activeDeployment.position, supervisor: activeDeployment.supervisor, companyAddress: activeDeployment.companyAddress || activeDeployment.address || "", supervisorContact: activeDeployment.supervisorEmail || "" }}
     />,
     documents: () => (

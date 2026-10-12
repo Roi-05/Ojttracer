@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { Search, Upload, Phone, MapPin, Mail, ChevronDown, ChevronUp, Smartphone, RefreshCw } from "lucide-react";
+import { Search, Upload, Phone, MapPin, Mail, ChevronDown, ChevronUp, Smartphone, RefreshCw, ShieldAlert, Check, X } from "lucide-react";
 import { AdminStudent } from "../../hooks/useAdminData";
 import { StatusBadge } from "../student/shared";
 
@@ -11,6 +11,7 @@ interface StudentsTabProps {
   sections: string[];
   openImportModal: () => void;
   onResetDevice?: (id: string | number, name: string) => Promise<void>;
+  onRejectDevice?: (id: string | number, name: string) => Promise<void>;
 }
 
 function age(dob: string | null): string {
@@ -23,7 +24,7 @@ function age(dob: string | null): string {
   return String(a);
 }
 
-function StudentRow({ s, onResetDevice }: { s: AdminStudent; onResetDevice?: (id: string | number, name: string) => Promise<void> }) {
+function StudentRow({ s, onResetDevice, onRejectDevice }: { s: AdminStudent; onResetDevice?: (id: string | number, name: string) => Promise<void>; onRejectDevice?: (id: string | number, name: string) => Promise<void> }) {
   const [expanded, setExpanded] = useState(false);
   const initials = [s.firstName.charAt(0), s.lastName.charAt(0)].filter(Boolean).join("") || s.name.charAt(0);
   const displayName = s.lastName && s.firstName
@@ -40,7 +41,14 @@ function StudentRow({ s, onResetDevice }: { s: AdminStudent; onResetDevice?: (id
           {initials}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm truncate">{displayName}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-medium text-sm truncate">{displayName}</p>
+            {s.deviceResetRequested && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">
+                <ShieldAlert className="h-3 w-3 text-amber-600" /> Reset Requested
+              </span>
+            )}
+          </div>
           <p className="text-xs text-muted-foreground font-mono">{s.studentId}</p>
         </div>
         <div className="hidden sm:block text-xs text-muted-foreground text-center w-16">
@@ -62,6 +70,41 @@ function StudentRow({ s, onResetDevice }: { s: AdminStudent; onResetDevice?: (id
       {expanded && (
         <div className="px-4 pb-4 pt-1 bg-muted/10">
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-3 text-sm ml-13 pl-[52px]">
+            {s.deviceResetRequested && (
+              <div className="sm:col-span-2 lg:col-span-3 p-3 rounded-lg bg-amber-50 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-1">
+                <div className="flex items-center gap-2 text-xs font-medium text-amber-900">
+                  <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span>Student requested to reset registered device (<strong className="font-semibold">{s.registeredDeviceName || "Registered Phone"}</strong>)</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {onResetDevice && (
+                    <Button
+                      size="sm"
+                      className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onResetDevice(s.id, s.name);
+                      }}
+                    >
+                      <Check className="h-3.5 w-3.5" /> Approve Reset
+                    </Button>
+                  )}
+                  {onRejectDevice && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 border-rose-200 text-rose-700 hover:bg-rose-50 text-xs gap-1.5"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRejectDevice(s.id, s.name);
+                      }}
+                    >
+                      <X className="h-3.5 w-3.5" /> Reject
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
             <div>
               <p className="text-xs text-muted-foreground mb-0.5">Full Name</p>
               <p className="font-medium">{[s.firstName, s.middleName, s.lastName].filter(Boolean).join(" ") || s.name}</p>
@@ -116,7 +159,7 @@ function StudentRow({ s, onResetDevice }: { s: AdminStudent; onResetDevice?: (id
                     )}
                   </p>
                 </div>
-                {s.registeredDeviceName && onResetDevice && (
+                {s.registeredDeviceName && onResetDevice && !s.deviceResetRequested && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -140,7 +183,7 @@ function StudentRow({ s, onResetDevice }: { s: AdminStudent; onResetDevice?: (id
   );
 }
 
-export function StudentsTab({ students, sections, openImportModal, onResetDevice }: StudentsTabProps) {
+export function StudentsTab({ students, sections, openImportModal, onResetDevice, onRejectDevice }: StudentsTabProps) {
   const [search, setSearch] = useState("");
   const [sectionFilter, setSectionFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -199,7 +242,7 @@ export function StudentsTab({ students, sections, openImportModal, onResetDevice
               {students.length === 0 ? "No students yet. Use \"Import Students\" to add them." : "No students match your search."}
             </div>
           ) : (
-            filtered.map(s => <StudentRow key={s.id} s={s} onResetDevice={onResetDevice} />)
+            filtered.map(s => <StudentRow key={s.id} s={s} onResetDevice={onResetDevice} onRejectDevice={onRejectDevice} />)
           )}
         </CardContent>
       </Card>

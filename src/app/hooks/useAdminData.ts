@@ -13,6 +13,7 @@ export type AdminStudent = {
   company: string; position: string; hoursCompleted: number; requiredHours: number;
   status: string; intendedCompanyId?: string | null; intendedPosition?: string; performance: number;
   registeredDeviceName?: string | null; deviceRegisteredAt?: string | null;
+  deviceResetRequested?: boolean;
 };
 export type AdminCompany = { id: string | number; name: string; industry: string; location: string; activeInterns: number; totalCapacity: number; moaStatus: string; moaExpiry: string; contactPerson: string; verified: boolean; hrContact?: string; hrEmail?: string; signedMoaUrl?: string | null; latitude?: number | null; longitude?: number | null; geofenceRadius?: number };
 export type DTRLog = {
@@ -29,6 +30,7 @@ export type DTRLog = {
   timeOutPhotoUrl?: string;
   hours: number;
   status: string;
+  remarks?: string;
   verificationStatus?: "pending" | "approved" | "rejected";
   reviewNote?: string;
 };
@@ -85,6 +87,7 @@ export function useAdminData() {
           intendedPosition: s.intendedPosition || '',
           registeredDeviceName: s.registeredDeviceName || null,
           deviceRegisteredAt: s.deviceRegisteredAt || null,
+          deviceResetRequested: s.deviceResetRequested || false,
           performance: parseFloat(s.performance) || 0,
         })));
       }
@@ -319,11 +322,24 @@ export function useAdminData() {
     try {
       await api.resetStudentDevice(String(studentId));
       setStudents(list => list.map(s => String(s.id) === String(studentId)
-        ? { ...s, registeredDeviceName: null, deviceRegisteredAt: null }
+        ? { ...s, registeredDeviceName: null, deviceRegisteredAt: null, deviceResetRequested: false }
         : s));
       toast.success(`Registered device for ${name} has been reset.`);
     } catch (err: any) {
       toast.error(`Reset failed: ${err.message}`);
+      throw err;
+    }
+  };
+
+  const rejectStudentDevice = async (studentId: string | number, name: string) => {
+    try {
+      await api.rejectStudentDevice(String(studentId));
+      setStudents(list => list.map(s => String(s.id) === String(studentId)
+        ? { ...s, deviceResetRequested: false }
+        : s));
+      toast.success(`Device reset request for ${name} rejected.`);
+    } catch (err: any) {
+      toast.error(`Rejection failed: ${err.message}`);
       throw err;
     }
   };
@@ -344,6 +360,7 @@ export function useAdminData() {
     reviewDocument,
     deployStudent,
     resetStudentDevice,
+    rejectStudentDevice,
     deleteAnnouncement,
     deleteCompany,
     deleteTemplate,

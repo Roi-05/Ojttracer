@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
 import { Button } from "../ui/button";
-import { Camera, CameraOff, Download, Loader2, CheckCircle2, XCircle, MapPin, AlertTriangle, Smartphone, ShieldCheck, ShieldAlert } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
+import { Camera, CameraOff, Download, Loader2, CheckCircle2, XCircle, MapPin, AlertTriangle, Smartphone, ShieldCheck, ShieldAlert, Clock } from "lucide-react";
 import { DTRRecord } from "../../hooks/useStudentData";
 import { resolveUploadUrl } from "../../lib/uploads";
 import { formatDate, TODAY_LABEL, TODAY_DAY } from "./shared";
@@ -18,12 +19,16 @@ interface DTRTabProps {
     registeredDeviceToken: string | null;
     registeredDeviceName: string | null;
     deviceRegisteredAt: string | null;
+    deviceResetRequested?: boolean;
   };
   onRegisterDevice?: () => Promise<void>;
+  onRequestResetDevice?: () => Promise<void>;
 }
 
-export function DTRTab({ dtrRecords, todayRecord, openCamera, geofenceStatus = "idle", deviceInfo, onRegisterDevice }: DTRTabProps) {
+export function DTRTab({ dtrRecords, todayRecord, openCamera, geofenceStatus = "idle", deviceInfo, onRegisterDevice, onRequestResetDevice }: DTRTabProps) {
   const [registering, setRegistering] = useState(false);
+  const [requestingReset, setRequestingReset] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const hasTimeIn = !!todayRecord?.timeIn;
   const hasTimeOut = !!todayRecord?.timeOut;
   const sortedRecords = [...dtrRecords].sort((a, b) => b.date.localeCompare(a.date));
@@ -32,6 +37,7 @@ export function DTRTab({ dtrRecords, todayRecord, openCamera, geofenceStatus = "
   const currentDeviceName = getDeviceName();
   const isDeviceRegistered = !!deviceInfo?.registeredDeviceToken;
   const isCurrentDeviceBound = isDeviceRegistered && deviceInfo.registeredDeviceToken === localToken;
+  const isResetPending = !!deviceInfo?.deviceResetRequested;
 
   const handleRegister = async () => {
     if (!onRegisterDevice) return;
@@ -40,6 +46,17 @@ export function DTRTab({ dtrRecords, todayRecord, openCamera, geofenceStatus = "
       await onRegisterDevice();
     } finally {
       setRegistering(false);
+    }
+  };
+
+  const handleRequestReset = async () => {
+    if (!onRequestResetDevice) return;
+    try {
+      setRequestingReset(true);
+      await onRequestResetDevice();
+      setShowResetConfirm(false);
+    } finally {
+      setRequestingReset(false);
     }
   };
 
@@ -83,19 +100,37 @@ export function DTRTab({ dtrRecords, todayRecord, openCamera, geofenceStatus = "
       ) : !isCurrentDeviceBound ? (
         <Card className="border-red-200 bg-red-50/70 shadow-sm">
           <CardContent className="pt-5 pb-5">
-            <div className="flex items-start gap-3">
-              <div className="h-10 w-10 rounded-full bg-red-100 border border-red-300 flex items-center justify-center shrink-0">
-                <XCircle className="h-5 w-5 text-red-700" />
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-full bg-red-100 border border-red-300 flex items-center justify-center shrink-0">
+                  <XCircle className="h-5 w-5 text-red-700" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-red-900 text-sm sm:text-base">Unregistered Phone Detected</h3>
+                  <p className="text-xs text-red-800 mt-0.5 max-w-xl">
+                    Your account is registered to another device (<span className="font-semibold">{deviceInfo?.registeredDeviceName || "Registered Device"}</span>). DTR access is locked on this browser.
+                  </p>
+                  {isResetPending ? (
+                    <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300">
+                      <Clock className="h-3.5 w-3.5 text-amber-600 animate-pulse" />
+                      Reset Request Sent — Pending Supervisor Approval
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-red-700 mt-1">
+                      Switched phones or browsers? Submit a device reset request for your Supervisor or OJT Coordinator to approve.
+                    </p>
+                  )}
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold text-red-900 text-sm sm:text-base">Unregistered Phone Detected</h3>
-                <p className="text-xs text-red-800 mt-0.5">
-                  Your account is registered to another device (<span className="font-semibold">{deviceInfo?.registeredDeviceName || "Registered Device"}</span>). DTR access is locked on this browser.
-                </p>
-                <p className="text-[11px] text-red-700 mt-1 italic">
-                  Changed phones? Contact your OJT Coordinator or Administrator to reset your device registration.
-                </p>
-              </div>
+              {!isResetPending && (
+                <Button
+                  onClick={() => setShowResetConfirm(true)}
+                  variant="destructive"
+                  className="shrink-0 font-medium text-xs sm:text-sm h-10 shadow-sm gap-2"
+                >
+                  <Smartphone className="h-4 w-4" /> Request Device Reset
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -290,6 +325,34 @@ export function DTRTab({ dtrRecords, todayRecord, openCamera, geofenceStatus = "
           </div>
         </CardContent>
       </Card>
+
+      {/* Confirmation Dialog for Requesting Device Reset */}
+      <Dialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-700">
+              <ShieldAlert className="h-5 w-5" /> Request Device Reset?
+            </DialogTitle>
+            <DialogDescription className="text-sm pt-2 space-y-2">
+              <p>
+                This will send a device reset request to your <strong className="font-semibold text-foreground">OJT Supervisor / Coordinator</strong>.
+              </p>
+              <p>
+                Once approved, your previous device registration (<strong className="font-semibold text-foreground">{deviceInfo?.registeredDeviceName || "Registered Device"}</strong>) will be cleared, allowing you to bind this device (<strong className="font-semibold text-foreground">{currentDeviceName}</strong>).
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowResetConfirm(false)} disabled={requestingReset}>
+              Cancel
+            </Button>
+            <Button onClick={handleRequestReset} disabled={requestingReset} className="bg-amber-600 hover:bg-amber-700 text-white gap-2">
+              {requestingReset ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
+              {requestingReset ? "Submitting..." : "Submit Reset Request"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -47,8 +47,11 @@ export function CompanyDashboard() {
     approveAccomplishment,
     rejectAccomplishment,
     reviewDTR,
+    setDtrTimeout,
     submitEvaluation,
     getEvaluation,
+    resetStudentDevice,
+    rejectStudentDevice,
   } = useCompanyData();
 
   const handleOpenEvalModal = async (id: string | number) => {
@@ -86,10 +89,10 @@ export function CompanyDashboard() {
         onUploadSigned={uploadSignedMoa}
       />
     ),
-    interns: () => <InternsTab interns={interns} />,
+    interns: () => <InternsTab interns={interns} onResetDevice={resetStudentDevice} onRejectDevice={rejectStudentDevice} />,
     tracker: () => <LiveTrackerTab companyInfo={companyInfo} interns={interns} />,
     attendance: () => (
-      <CompanyDtrTab dtrLogs={dtrLogs} interns={interns} onReviewDtr={reviewDTR} />
+      <CompanyDtrTab dtrLogs={dtrLogs} interns={interns} onReviewDtr={reviewDTR} onSetTimeout={setDtrTimeout} />
     ),
     accomplishments: () => (
       <AccomplishmentsTab

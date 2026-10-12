@@ -25,6 +25,7 @@ interface JournalTabProps {
     supervisorContact?: string;
   };
   studentProfile?: any;
+  coordinatorName?: string;
 }
 
 // Days of week for journal template ordering
@@ -84,6 +85,7 @@ export function JournalTab({
   studentSection = "",
   deployment = {},
   studentProfile = {},
+  coordinatorName = "",
 }: JournalTabProps) {
   const sortedDesc = [...accomplishmentList].sort((a, b) => b.date.localeCompare(a.date));
   const approved = accomplishmentList.filter(a => a.status === "approved").length;
@@ -135,6 +137,8 @@ export function JournalTab({
       supervisorContact: deployment.supervisorContact || "",
       position: deployment.position || "",
       avatarUrl: studentProfile.avatarUrl || null,
+      signatureUrl: studentProfile.signatureUrl || null,
+      coordinatorName: coordinatorName || "",
       fatherName: studentProfile.fatherName || "",
       fatherOccupation: studentProfile.fatherOccupation || "",
       fatherPhone: studentProfile.fatherPhone || "",

@@ -12,6 +12,7 @@ interface CompanyDtrTabProps {
   dtrLogs: DTRLog[];
   interns?: any[];
   onReviewDtr?: (id: string | number, status: "approved" | "rejected", note?: string) => Promise<void>;
+  onSetTimeout?: (id: string | number, timeOut: string) => Promise<void>;
 }
 
 function formatTime(t: string) {
@@ -49,7 +50,7 @@ function progressTextColor(pct: number) {
 
 const REQUIRED_HOURS = 486;
 
-export function CompanyDtrTab({ dtrLogs, interns = [], onReviewDtr }: CompanyDtrTabProps) {
+export function CompanyDtrTab({ dtrLogs, interns = [], onReviewDtr, onSetTimeout }: CompanyDtrTabProps) {
   const [search, setSearch] = useState("");
   const [expandedIds, setExpandedIds] = useState<Set<string | number>>(new Set());
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "week">("all");
@@ -61,6 +62,11 @@ export function CompanyDtrTab({ dtrLogs, interns = [], onReviewDtr }: CompanyDtr
   const [rejectingLog, setRejectingLog] = useState<DTRLog | null>(null);
   const [rejectNote, setRejectNote] = useState("");
   const [submittingReject, setSubmittingReject] = useState(false);
+
+  // Set Time-Out Modal State
+  const [settingTimeoutLog, setSettingTimeoutLog] = useState<DTRLog | null>(null);
+  const [timeoutValue, setTimeoutValue] = useState("");
+  const [submittingTimeout, setSubmittingTimeout] = useState(false);
 
   const today = new Date().toISOString().slice(0, 10);
   const weekStart = (() => {
@@ -172,6 +178,30 @@ export function CompanyDtrTab({ dtrLogs, interns = [], onReviewDtr }: CompanyDtr
       console.error(err);
     } finally {
       setSubmittingReject(false);
+    }
+  };
+
+  const openSetTimeoutModal = (log: DTRLog) => {
+    setSettingTimeoutLog(log);
+    // Pre-fill with current time in HH:MM format as a sensible default
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    setTimeoutValue(`${hh}:${mm}`);
+  };
+
+  const handleSetTimeoutSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!onSetTimeout || !settingTimeoutLog?.id || !timeoutValue) return;
+    try {
+      setSubmittingTimeout(true);
+      // Convert HH:MM (from <input type="time">) to 24h string for the server
+      await onSetTimeout(settingTimeoutLog.id, timeoutValue);
+      setSettingTimeoutLog(null);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSubmittingTimeout(false);
     }
   };
 
@@ -388,6 +418,8 @@ export function CompanyDtrTab({ dtrLogs, interns = [], onReviewDtr }: CompanyDtr
                         <tbody>
                           {filteredLogs.map((log, i) => {
                             const isPendingReview = log.verificationStatus === "pending" && log.timeOut && log.timeOut !== "—";
+                            // Incomplete: has time_in but no time_out (stale/forgotten clock-out)
+                            const isIncomplete = log.verificationStatus === "pending" && log.timeIn && log.timeIn !== "—" && (!log.timeOut || log.timeOut === "—");
                             
                             return (
                               <tr key={i} className="border-t border-border/40 hover:bg-muted/10 transition-colors">
@@ -496,6 +528,14 @@ export function CompanyDtrTab({ dtrLogs, interns = [], onReviewDtr }: CompanyDtr
                                         <ThumbsDown className="h-3.5 w-3.5" /> Reject
                                       </button>
                                     </div>
+                                  ) : isIncomplete ? (
+                                    <button
+                                      onClick={() => openSetTimeoutModal(log)}
+                                      className="h-7 px-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded text-xs font-semibold flex items-center gap-1 transition-colors shadow-sm"
+                                      title="Manually set the time-out for this incomplete record"
+                                    >
+                                      <Clock className="h-3.5 w-3.5" /> Set Time-Out
+                                    </button>
                                   ) : (
                                     <span className="text-[11px] text-muted-foreground">
                                       {log.verificationStatus === "rejected" && log.reviewNote 
@@ -593,6 +633,60 @@ export function CompanyDtrTab({ dtrLogs, interns = [], onReviewDtr }: CompanyDtr
           </div>
         </div>
       )}
+
+      {/* Set Time-Out Dialog Modal */}
+      {settingTimeoutLog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="px-5 py-4 border-b border-border flex justify-between items-center bg-amber-50">
+              <h3 className="font-bold text-amber-800 text-sm flex items-center gap-1.5">
+                <Clock className="h-4 w-4" /> Set Clock-Out Time
+              </h3>
+              <button onClick={() => setSettingTimeoutLog(null)} className="text-amber-800/60 hover:text-amber-800 text-xl font-bold">×</button>
+            </div>
+            <form onSubmit={handleSetTimeoutSubmit}>
+              <div className="p-5 space-y-4">
+                <div className="bg-amber-50/80 border border-amber-200/80 rounded-lg p-3 text-xs text-amber-800 space-y-1">
+                  <p className="font-semibold">Incomplete Record Adjustment</p>
+                  <p>
+                    <strong>{settingTimeoutLog.student}</strong> clocked in at <strong>{formatTime(settingTimeoutLog.timeIn)}</strong> on <strong>{formatDate(settingTimeoutLog.date)}</strong> but did not clock out.
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-foreground">Enter Actual Clock-Out Time</label>
+                  <input
+                    type="time"
+                    required
+                    value={timeoutValue}
+                    onChange={e => setTimeoutValue(e.target.value)}
+                    className="w-full p-2.5 border border-border rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Hours worked will be calculated automatically based on the time-in. The record will then be updated to <em>Pending Review</em> for final approval.
+                  </p>
+                </div>
+              </div>
+              <div className="px-5 py-4 bg-muted/40 border-t border-border flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSettingTimeoutLog(null)}
+                  className="px-4 py-2 border border-border hover:bg-muted text-foreground font-semibold rounded-lg text-xs"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingTimeout}
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg text-xs disabled:opacity-55 flex items-center gap-1.5"
+                >
+                  {submittingTimeout ? "Saving..." : "Save Time-Out"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

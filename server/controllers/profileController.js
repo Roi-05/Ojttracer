@@ -76,8 +76,36 @@ const uploadAvatarHandler = async (req, res) => {
   }
 };
 
+const uploadSignatureHandler = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No signature image file uploaded.' });
+    const fileUrl = publicUploadPath('signatures', req.file.filename);
+    await db.query(`UPDATE public.students SET signature_url = $1 WHERE user_id = $2`, [fileUrl, req.user.id]);
+    const updated = await loadProfile(req.user.id);
+    res.json({ success: true, signatureUrl: fileUrl, profile: updated });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const getCoordinator = async (req, res) => {
+  try {
+    const adminRes = await db.query(`SELECT id, name, email FROM public.profiles WHERE role = 'admin' ORDER BY created_at ASC LIMIT 1`);
+    const admin = adminRes.rows[0];
+    res.json({
+      name: admin ? admin.name : 'OJT Coordinator',
+      email: admin ? admin.email : ''
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 module.exports = {
   updateProfile,
   uploadAvatarHandler,
   uploadAvatar,
+  uploadSignatureHandler,
+  getCoordinator
 };
+

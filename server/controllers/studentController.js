@@ -47,7 +47,7 @@ const getStudents = async (req, res) => {
              s.phone, s.address, s.skills, s.religion, s.intended_company_id, s.intended_position,
              s.father_name, s.father_occupation, s.father_phone, s.mother_name, s.mother_occupation, s.mother_phone,
              s.guardian_name, s.guardian_relationship, s.guardian_phone,
-             s.registered_device_token, s.registered_device_name, s.device_registered_at,
+             s.registered_device_token, s.registered_device_name, s.device_registered_at, s.device_reset_requested,
              d.company_name, d.position, d.required_hours, d.status as deployment_status,
              e.overall_score,
              COALESCE(dtr_sum.total_hours, 0) AS completed_hours
@@ -92,9 +92,11 @@ const getStudents = async (req, res) => {
       guardianName: r.guardian_name || '',
       guardianRelationship: r.guardian_relationship || '',
       guardianPhone: r.guardian_phone || '',
+      signatureUrl: r.signature_url || null,
       registeredDeviceToken: r.registered_device_token || null,
       registeredDeviceName: r.registered_device_name || null,
       deviceRegisteredAt: r.device_registered_at || null,
+      deviceResetRequested: r.device_reset_requested || false,
       performance: parseFloat(r.overall_score) || 0,
       completedHours: parseFloat(r.completed_hours) || 0,
       deployment: r.company_name ? {
@@ -207,13 +209,13 @@ const registerDevice = async (req, res) => {
     const current = currentRes.rows[0];
     if (current && current.registered_device_token && current.registered_device_token !== deviceToken) {
       return res.status(400).json({
-        error: 'Another device is already registered for your account. Please ask your OJT Coordinator/Admin to reset your registered device if you changed phones.'
+        error: 'Another device is already registered for your account. Click "Request Reset from Supervisor" if you switched devices.'
       });
     }
 
     await db.query(
       `UPDATE public.students 
-       SET registered_device_token = $1, registered_device_name = $2, device_registered_at = NOW() 
+       SET registered_device_token = $1, registered_device_name = $2, device_registered_at = NOW(), device_reset_requested = FALSE 
        WHERE user_id = $3`,
       [deviceToken, deviceName || 'Mobile Device', req.user.id]
     );
@@ -222,7 +224,8 @@ const registerDevice = async (req, res) => {
       success: true,
       registeredDeviceToken: deviceToken,
       registeredDeviceName: deviceName || 'Mobile Device',
-      deviceRegisteredAt: new Date().toISOString()
+      deviceRegisteredAt: new Date().toISOString(),
+      deviceResetRequested: false
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -232,15 +235,31 @@ const registerDevice = async (req, res) => {
 const getDeviceStatus = async (req, res) => {
   try {
     const result = await db.query(
-      `SELECT registered_device_token, registered_device_name, device_registered_at FROM public.students WHERE user_id = $1`,
+      `SELECT registered_device_token, registered_device_name, device_registered_at, device_reset_requested FROM public.students WHERE user_id = $1`,
       [req.user.id]
     );
     const row = result.rows[0];
     res.json({
       registeredDeviceToken: row?.registered_device_token || null,
       registeredDeviceName: row?.registered_device_name || null,
-      deviceRegisteredAt: row?.device_registered_at || null
+      deviceRegisteredAt: row?.device_registered_at || null,
+      deviceResetRequested: row?.device_reset_requested || false
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const requestDeviceReset = async (req, res) => {
+  try {
+    if (req.user.role !== 'student') {
+      return res.status(403).json({ error: 'Student authorization required' });
+    }
+    await db.query(
+      `UPDATE public.students SET device_reset_requested = TRUE WHERE user_id = $1`,
+      [req.user.id]
+    );
+    res.json({ success: true, message: 'Device reset requested. Waiting for supervisor or admin approval.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -248,19 +267,37 @@ const getDeviceStatus = async (req, res) => {
 
 const resetStudentDevice = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Admin authorization required' });
+    if (!['admin', 'company'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Admin or Company Supervisor authorization required' });
     }
 
     const { studentId } = req.params;
     await db.query(
       `UPDATE public.students 
-       SET registered_device_token = NULL, registered_device_name = NULL, device_registered_at = NULL 
+       SET registered_device_token = NULL, registered_device_name = NULL, device_registered_at = NULL, device_reset_requested = FALSE 
        WHERE user_id = $1`,
       [studentId]
     );
 
     res.json({ success: true, message: 'Student device registration reset successfully.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const rejectDeviceReset = async (req, res) => {
+  try {
+    if (!['admin', 'company'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Admin or Company Supervisor authorization required' });
+    }
+
+    const { studentId } = req.params;
+    await db.query(
+      `UPDATE public.students SET device_reset_requested = FALSE WHERE user_id = $1`,
+      [studentId]
+    );
+
+    res.json({ success: true, message: 'Student device reset request rejected.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -275,5 +312,7 @@ module.exports = {
   setIntendedCompany,
   registerDevice,
   getDeviceStatus,
-  resetStudentDevice
+  requestDeviceReset,
+  resetStudentDevice,
+  rejectDeviceReset
 };

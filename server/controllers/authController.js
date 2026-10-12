@@ -38,7 +38,8 @@ async function loadProfile(userId) {
       motherPhone: s.mother_phone || '',
       guardianName: s.guardian_name || '',
       guardianRelationship: s.guardian_relationship || '',
-      guardianPhone: s.guardian_phone || ''
+      guardianPhone: s.guardian_phone || '',
+      signatureUrl: normalizeUploadUrl(s.signature_url)
     });
   } else if (base.role === 'company') {
     const cRes = await db.query(`SELECT * FROM public.companies WHERE user_id = $1`, [userId]);

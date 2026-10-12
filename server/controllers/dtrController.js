@@ -18,6 +18,23 @@ function mapDtrRow(r) {
   };
 }
 
+// Shared time parser — accepts "HH:MM" (24h) or "HH:MM AM/PM" (12h)
+function parseTime(s) {
+  if (!s) return 0;
+  const ampm = s.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (ampm) {
+    let h = parseInt(ampm[1]);
+    const min = parseInt(ampm[2]);
+    const period = ampm[3].toUpperCase();
+    if (period === 'PM' && h !== 12) h += 12;
+    if (period === 'AM' && h === 12) h = 0;
+    return h * 60 + min;
+  }
+  const plain = s.match(/(\d+):(\d+)/);
+  if (plain) return parseInt(plain[1]) * 60 + parseInt(plain[2]);
+  return 0;
+}
+
 const clockDtr = async (req, res) => {
   try {
     const { date, mode, time, photo, day, deviceToken } = req.body;
@@ -48,7 +65,7 @@ const clockDtr = async (req, res) => {
       if (existing?.time_in) return res.status(400).json({ error: 'Already timed in' });
       let photoUrl = null;
       if (photo) photoUrl = saveBase64Image(photo, 'dtr', `${req.user.id}-${date}-in.jpg`);
-      
+
       const insert = await db.query(
         `INSERT INTO public.dtr_records (student_id, date, day, time_in, time_in_photo_url) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
         [req.user.id, date, day || '', time, photoUrl]
@@ -59,26 +76,10 @@ const clockDtr = async (req, res) => {
       if (existing.time_out) return res.status(400).json({ error: 'Already timed out' });
       let photoUrl = null;
       if (photo) photoUrl = saveBase64Image(photo, 'dtr', `${req.user.id}-${date}-out.jpg`);
-      
-      // Parse time – accepts both "HH:MM" (24h) and "HH:MM AM/PM" (12h)
-      const parseTime = (s) => {
-        if (!s) return 0;
-        const ampm = s.match(/(\d+):(\d+)\s*(AM|PM)/i);
-        if (ampm) {
-          let h = parseInt(ampm[1]);
-          const min = parseInt(ampm[2]);
-          const period = ampm[3].toUpperCase();
-          if (period === 'PM' && h !== 12) h += 12;
-          if (period === 'AM' && h === 12) h = 0;
-          return h * 60 + min;
-        }
-        const plain = s.match(/(\d+):(\d+)/);
-        if (plain) return parseInt(plain[1]) * 60 + parseInt(plain[2]);
-        return 0;
-      };
+
       const diffMinutes = parseTime(time) - parseTime(existing.time_in);
       const hours = diffMinutes > 0 ? Math.round((diffMinutes / 60) * 100) / 100 : 0;
-      
+
       const upd = await db.query(
         `UPDATE public.dtr_records SET time_out = $1, time_out_photo_url = $2, hours = $3 WHERE id = $4 RETURNING *`,
         [time, photoUrl, hours, existing.id]
@@ -191,10 +192,57 @@ const reviewDtr = async (req, res) => {
   }
 };
 
+/**
+ * PUT /company/dtr/:id/set-timeout
+ * Supervisor manually sets a time-out for an incomplete (no time_out) DTR record.
+ * Recalculates hours from the stored time_in, marks remark as 'Supervisor-adjusted',
+ * and resets status to 'pending' so it can be approved/rejected normally.
+ */
+const setDtrTimeout = async (req, res) => {
+  try {
+    if (req.user.role !== 'company') return res.status(403).json({ error: 'Company only' });
+
+    const { id } = req.params;
+    const { timeOut } = req.body;
+
+    if (!timeOut) return res.status(400).json({ error: 'timeOut is required' });
+
+    // Verify the record belongs to an intern deployed at this company and has no time_out yet
+    const check = await db.query(
+      `SELECT d.time_in, d.time_out
+       FROM public.dtr_records d
+       JOIN public.deployments dep ON dep.student_id = d.student_id AND dep.company_id = $1
+       WHERE d.id = $2`,
+      [req.user.id, id]
+    );
+    if (!check.rows.length) return res.status(404).json({ error: 'Record not found' });
+    if (check.rows[0].time_out) return res.status(409).json({ error: 'This record already has a time-out' });
+
+    const timeIn = check.rows[0].time_in;
+    if (!timeIn) return res.status(400).json({ error: 'No time-in recorded for this entry' });
+
+    const diffMinutes = parseTime(timeOut) - parseTime(timeIn);
+    const hours = diffMinutes > 0 ? Math.round((diffMinutes / 60) * 100) / 100 : 0;
+
+    const upd = await db.query(
+      `UPDATE public.dtr_records
+       SET time_out = $1, hours = $2, remarks = 'Supervisor-adjusted', status = 'pending'
+       WHERE id = $3
+       RETURNING *`,
+      [timeOut, hours, id]
+    );
+
+    res.json({ success: true, record: upd.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 module.exports = {
   clockDtr,
   getDtr,
   getAdminDtr,
   getCompanyDtr,
   reviewDtr,
+  setDtrTimeout,
 };

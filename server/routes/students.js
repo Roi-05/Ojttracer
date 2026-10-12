@@ -8,7 +8,9 @@ router.get('/active-companies/:companyId', authMiddleware, studentController.get
 router.get('/active-companies', authMiddleware, studentController.getActiveCompanies);
 router.get('/device-status', authMiddleware, studentController.getDeviceStatus);
 router.post('/register-device', authMiddleware, studentController.registerDevice);
+router.post('/request-device-reset', authMiddleware, studentController.requestDeviceReset);
 router.post('/:studentId/reset-device', authMiddleware, studentController.resetStudentDevice);
+router.post('/:studentId/reject-device-reset', authMiddleware, studentController.rejectDeviceReset);
 router.put('/intended-company', authMiddleware, studentController.setIntendedCompany);
 router.put('/:studentId/deploy', authMiddleware, studentController.deployStudent);
 

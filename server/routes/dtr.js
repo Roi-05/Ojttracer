@@ -8,5 +8,7 @@ router.get('/dtr', authMiddleware, dtrController.getDtr);
 router.get('/admin/dtr', authMiddleware, dtrController.getAdminDtr);
 router.get('/company/dtr', authMiddleware, dtrController.getCompanyDtr);
 router.post('/company/dtr/:id/review', authMiddleware, dtrController.reviewDtr);
+router.put('/company/dtr/:id/set-timeout', authMiddleware, dtrController.setDtrTimeout);
 
 module.exports = router;
+
