@@ -2,11 +2,14 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
-import { Camera, CameraOff, Download, Loader2, CheckCircle2, XCircle, MapPin, AlertTriangle, Smartphone, ShieldCheck, ShieldAlert, Clock } from "lucide-react";
+import { Camera, CameraOff, Download, FileText, Loader2, CheckCircle2, XCircle, MapPin, AlertTriangle, Smartphone, ShieldCheck, ShieldAlert, Clock } from "lucide-react";
 import { DTRRecord } from "../../hooks/useStudentData";
 import { resolveUploadUrl } from "../../lib/uploads";
-import { formatDate, TODAY_LABEL, TODAY_DAY } from "./shared";
+import { formatDate, monthLabel, TODAY_LABEL, TODAY_DAY } from "./shared";
 import { getOrCreateDeviceToken, getDeviceName } from "../../lib/device";
+import { generateDTRDOCX } from "../../lib/generateDTR";
+import { generateDTRPDF } from "../../lib/generateDTRPDF";
+import { toast } from "sonner";
 
 type GeofenceStatus = "idle" | "checking" | "allowed" | "denied" | "out_of_range" | "no_gps";
 
@@ -23,15 +26,85 @@ interface DTRTabProps {
   };
   onRegisterDevice?: () => Promise<void>;
   onRequestResetDevice?: () => Promise<void>;
+  studentProfile?: {
+    name?: string;
+    firstName?: string;
+    lastName?: string;
+    middleName?: string;
+    signatureUrl?: string | null;
+  };
+  supervisorSignatureUrl?: string | null;
 }
 
-export function DTRTab({ dtrRecords, todayRecord, openCamera, geofenceStatus = "idle", deviceInfo, onRegisterDevice, onRequestResetDevice }: DTRTabProps) {
+export function DTRTab({
+  dtrRecords,
+  todayRecord,
+  openCamera,
+  geofenceStatus = "idle",
+  deviceInfo,
+  onRegisterDevice,
+  onRequestResetDevice,
+  studentProfile = {},
+  supervisorSignatureUrl = null,
+}: DTRTabProps) {
   const [registering, setRegistering] = useState(false);
   const [requestingReset, setRequestingReset] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const hasTimeIn = !!todayRecord?.timeIn;
   const hasTimeOut = !!todayRecord?.timeOut;
   const sortedRecords = [...dtrRecords].sort((a, b) => b.date.localeCompare(a.date));
+  const approvedCount = dtrRecords.filter((r) => r.status === "approved").length;
+
+  const getDTRPayload = () => {
+    const entriesByMonth: Record<string, DTRRecord[]> = {};
+    const approved = dtrRecords
+      .filter((r) => r.status === "approved" && !!r.date)
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    for (const e of approved) {
+      const mLabel = monthLabel(e.date);
+      if (mLabel === "—") continue;
+      if (!entriesByMonth[mLabel]) entriesByMonth[mLabel] = [];
+      entriesByMonth[mLabel].push(e);
+    }
+
+    return {
+      studentName: studentProfile.name || "",
+      firstName: studentProfile.firstName || "",
+      lastName: studentProfile.lastName || "",
+      middleInitial: studentProfile.middleName ? studentProfile.middleName.charAt(0) + "." : "",
+      signatureUrl: studentProfile.signatureUrl || null,
+      supervisorSignatureUrl: supervisorSignatureUrl || null,
+      months: Object.entries(entriesByMonth).map(([month, entries]) => ({
+        month,
+        entries: entries.map((e) => ({
+          date: e.date,
+          timeIn: e.timeIn,
+          timeOut: e.timeOut,
+          hours: e.hours,
+          status: e.status,
+        })),
+      })),
+    };
+  };
+
+  const handleDownloadPDF = async () => {
+    const payload = getDTRPayload();
+    toast.promise(generateDTRPDF(payload), {
+      loading: "Compiling DTR PDF...",
+      success: "DTR PDF downloaded successfully!",
+      error: "Failed to compile DTR PDF. Please try again.",
+    });
+  };
+
+  const handleDownloadDOCX = async () => {
+    const payload = getDTRPayload();
+    toast.promise(generateDTRDOCX(payload), {
+      loading: "Generating DTR Word document...",
+      success: "DTR (.docx) downloaded successfully!",
+      error: "Failed to generate DTR Word document. Please try again.",
+    });
+  };
 
   const localToken = getOrCreateDeviceToken();
   const currentDeviceName = getDeviceName();
@@ -62,9 +135,31 @@ export function DTRTab({ dtrRecords, todayRecord, openCamera, geofenceStatus = "
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Attendance (DTR)</h1>
-        <p className="text-muted-foreground mt-1">Daily Time Record — clock in and out with a selfie on your registered phone</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Attendance (DTR)</h1>
+          <p className="text-muted-foreground mt-1">Daily Time Record — clock in and out with a selfie on your registered phone</p>
+        </div>
+        <div className="flex gap-2 flex-wrap items-center">
+          <Button
+            className="gap-2 bg-primary hover:bg-primary/90 text-white shadow-sm"
+            onClick={handleDownloadPDF}
+            disabled={approvedCount === 0}
+            title={approvedCount === 0 ? "No approved DTR records to export" : "Export approved DTR as PDF"}
+          >
+            <Download className="h-4 w-4" /> Export DTR (PDF)
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 border-border text-muted-foreground hover:text-foreground"
+            onClick={handleDownloadDOCX}
+            disabled={approvedCount === 0}
+            title="Download editable Word document (.docx)"
+          >
+            <FileText className="h-3.5 w-3.5" /> Word (.docx)
+          </Button>
+        </div>
       </div>
 
       {/* Device Registration Banner */}

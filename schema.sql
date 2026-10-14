@@ -58,7 +58,8 @@ create table if not exists public.companies (
   accredited_until  text default '',
   latitude          numeric(10, 7),
   longitude         numeric(10, 7),
-  geofence_radius   int not null default 200
+  geofence_radius   int not null default 200,
+  signature_url     text
 );
 
 -- ── DAILY TIME RECORDS ─────────────────────────────────────────────────────

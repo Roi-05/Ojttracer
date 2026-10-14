@@ -1,13 +1,14 @@
-import { useState } from "react";
-import { Card, CardContent } from "../ui/card";
+import { useEffect, useRef, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
-import { CheckCircle, Edit, MapPin, Loader2, CheckCircle2, Minus, Plus, Navigation } from "lucide-react";
+import { Camera, CheckCircle, Edit, MapPin, Loader2, CheckCircle2, Minus, Plus, Navigation } from "lucide-react";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { toast } from "sonner";
 import * as api from "../../lib/api";
 import { useAuth } from "../../contexts/AuthContext";
 import { getCurrentPosition } from "../../lib/geolocation";
+import { resolveUploadUrl } from "../../lib/uploads";
 
 interface ProfileTabProps {
   companyInfo: any;
@@ -18,6 +19,15 @@ export function ProfileTab({ companyInfo }: ProfileTabProps) {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingLocation, setIsSavingLocation] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
+  const [isUploadingSignature, setIsUploadingSignature] = useState(false);
+  const signatureInputRef = useRef<HTMLInputElement>(null);
+  const [signaturePreview, setSignaturePreview] = useState<string | null>(
+    resolveUploadUrl((user as any)?.signatureUrl ?? companyInfo.signatureUrl)
+  );
+
+  useEffect(() => {
+    setSignaturePreview(resolveUploadUrl((user as any)?.signatureUrl ?? companyInfo.signatureUrl));
+  }, [(user as any)?.signatureUrl, companyInfo.signatureUrl]);
 
   const [profileForm, setProfileForm] = useState({
     companyName: companyInfo.name,
@@ -104,6 +114,35 @@ export function ProfileTab({ companyInfo }: ProfileTabProps) {
       toast.error(`Failed to save location: ${e.message}`);
     } finally {
       setIsSavingLocation(false);
+    }
+  };
+
+  const handleSignatureClick = () => signatureInputRef.current?.click();
+
+  const handleSignatureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Signature image must be under 5 MB.");
+      e.target.value = "";
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => setSignaturePreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+
+    setIsUploadingSignature(true);
+    try {
+      const res = await api.uploadSignature(file);
+      setSignaturePreview(resolveUploadUrl(res.signatureUrl));
+      await refreshProfile();
+      toast.success("Supervisor signature updated!");
+    } catch (err: any) {
+      toast.error(`Failed to upload signature: ${err.message}`);
+      setSignaturePreview(resolveUploadUrl((user as any)?.signatureUrl ?? companyInfo.signatureUrl));
+    } finally {
+      setIsUploadingSignature(false);
+      e.target.value = "";
     }
   };
 
@@ -324,6 +363,49 @@ export function ProfileTab({ companyInfo }: ProfileTabProps) {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Supervisor Digital Signature</CardTitle>
+        </CardHeader>
+        <CardContent className="p-6 pt-2">
+          <input
+            ref={signatureInputRef}
+            type="file"
+            accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+            className="hidden"
+            onChange={handleSignatureChange}
+          />
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="relative w-full sm:w-72 border-2 border-dashed border-muted-foreground/30 rounded-xl p-4 bg-muted/10 min-h-[100px] flex items-center justify-center overflow-hidden">
+              {signaturePreview ? (
+                <img src={signaturePreview} alt="Supervisor Signature" className="max-h-24 max-w-full object-contain mx-auto" />
+              ) : (
+                <div className="text-center py-3">
+                  <p className="text-xs text-muted-foreground">No supervisor signature uploaded yet.</p>
+                  <p className="text-[11px] text-muted-foreground/80 mt-1">Used on student DTR PDF exports.</p>
+                </div>
+              )}
+              {isUploadingSignature && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                  <Loader2 className="h-6 w-6 text-white animate-spin" />
+                </div>
+              )}
+            </div>
+            <div className="text-center sm:text-left">
+              <button
+                onClick={handleSignatureClick}
+                disabled={isUploadingSignature}
+                className="flex items-center gap-1.5 text-sm text-primary hover:underline disabled:opacity-50 disabled:cursor-not-allowed font-medium mx-auto sm:mx-0"
+              >
+                <Camera className="h-3.5 w-3.5" />
+                {isUploadingSignature ? "Uploading..." : signaturePreview ? "Change Signature" : "Upload Signature Image"}
+              </button>
+              <p className="text-xs text-muted-foreground mt-1">Clear PNG/JPG with signature · max 5 MB</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

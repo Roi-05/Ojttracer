@@ -58,6 +58,7 @@ async function loadProfile(userId) {
       latitude: cmp.latitude != null ? parseFloat(cmp.latitude) : null,
       longitude: cmp.longitude != null ? parseFloat(cmp.longitude) : null,
       geofenceRadius: cmp.geofence_radius || 200,
+      signatureUrl: normalizeUploadUrl(cmp.signature_url),
     });
   }
   return out;

@@ -1,9 +1,10 @@
 const db = require('../db');
+const { normalizeUploadUrl } = require('../utils/uploadUrl');
 
 const getDeployment = async (req, res) => {
   try {
     const result = await db.query(`
-      SELECT d.*, c.company_address, c.latitude, c.longitude, c.geofence_radius
+      SELECT d.*, c.company_address, c.latitude, c.longitude, c.geofence_radius, c.signature_url AS supervisor_signature_url
       FROM public.deployments d
       LEFT JOIN public.companies c ON c.user_id = d.company_id
       WHERE d.student_id = $1
@@ -33,6 +34,7 @@ const getDeployment = async (req, res) => {
       companyLat: d.latitude != null ? parseFloat(d.latitude) : null,
       companyLng: d.longitude != null ? parseFloat(d.longitude) : null,
       geofenceRadius: d.geofence_radius || 200,
+      supervisorSignatureUrl: normalizeUploadUrl(d.supervisor_signature_url),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

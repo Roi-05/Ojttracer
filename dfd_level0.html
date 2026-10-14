@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Level 0 DFD – OJT Tracer System</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #fff; font-family: Arial, sans-serif; }
+  svg text { font-family: Arial, sans-serif; }
+</style>
+</head>
+<body>
+<svg id="dfd" xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <!-- Title -->
+  <text x="600" y="30" text-anchor="middle" font-size="16" font-weight="bold" fill="#222">Level 0 DFD – OJT Tracer System (Context Diagram)</text>
+
+  <!-- ════ Central Process ════ -->
+  <!-- Blue rounded rect -->
+  <rect x="430" y="270" width="340" height="160" rx="18" ry="18"
+        fill="#c9d9f0" stroke="#4472c4" stroke-width="2"/>
+  <!-- Process number box inside -->
+  <rect x="430" y="270" width="340" height="32" rx="18" ry="18"
+        fill="#4472c4"/>
+  <rect x="430" y="286" width="340" height="16" fill="#4472c4"/>
+  <text x="600" y="292" text-anchor="middle" font-size="14" font-weight="bold" fill="#fff">0</text>
+  <text x="600" y="345" text-anchor="middle" font-size="16" font-weight="bold" fill="#1a3860">OJT Tracer System</text>
+  <text x="600" y="368" text-anchor="middle" font-size="12" fill="#1a3860">with Journal Generator</text>
+  <text x="600" y="390" text-anchor="middle" font-size="11" fill="#1a3860">PSU Porac Campus</text>
+
+  <!-- ════ LEFT ENTITIES ════ -->
+  <!-- Student -->
+  <rect x="30" y="80" width="160" height="52" rx="4" fill="#fff2cc" stroke="#d6a800" stroke-width="2"/>
+  <text x="110" y="111" text-anchor="middle" font-size="13" font-weight="bold" fill="#333">Student</text>
+
+  <!-- HTE Supervisor -->
+  <rect x="30" y="310" width="160" height="52" rx="4" fill="#fff2cc" stroke="#d6a800" stroke-width="2"/>
+  <text x="110" y="331" text-anchor="middle" font-size="11" font-weight="bold" fill="#333">HTE / Company</text>
+  <text x="110" y="351" text-anchor="middle" font-size="11" font-weight="bold" fill="#333">Supervisor</text>
+
+  <!-- OJT Coordinator -->
+  <rect x="30" y="540" width="160" height="52" rx="4" fill="#fff2cc" stroke="#d6a800" stroke-width="2"/>
+  <text x="110" y="561" text-anchor="middle" font-size="11" font-weight="bold" fill="#333">OJT Coordinator</text>
+  <text x="110" y="578" text-anchor="middle" font-size="11" font-weight="bold" fill="#333">(Admin)</text>
+
+  <!-- ════ RIGHT ENTITIES ════ -->
+  <!-- Gmail SMTP -->
+  <rect x="1010" y="80" width="160" height="52" rx="4" fill="#fff2cc" stroke="#d6a800" stroke-width="2"/>
+  <text x="1090" y="111" text-anchor="middle" font-size="13" font-weight="bold" fill="#333">Gmail SMTP</text>
+
+  <!-- GPS API -->
+  <rect x="1010" y="300" width="160" height="52" rx="4" fill="#fff2cc" stroke="#d6a800" stroke-width="2"/>
+  <text x="1090" y="321" text-anchor="middle" font-size="11" font-weight="bold" fill="#333">Browser GPS</text>
+  <text x="1090" y="341" text-anchor="middle" font-size="11" font-weight="bold" fill="#333">Geolocation API</text>
+
+  <!-- Nominatim -->
+  <rect x="1010" y="520" width="160" height="52" rx="4" fill="#fff2cc" stroke="#d6a800" stroke-width="2"/>
+  <text x="1090" y="541" text-anchor="middle" font-size="11" font-weight="bold" fill="#333">OpenStreetMap</text>
+  <text x="1090" y="558" text-anchor="middle" font-size="11" font-weight="bold" fill="#333">Nominatim API</text>
+
+  <!-- ════════════════════════
+       ARROWS — LEFT
+  ═════════════════════════ -->
+
+  <!-- Student → System (inputs) -->
+  <line x1="190" y1="100" x2="430" y2="310" stroke="#333" stroke-width="1.4" marker-end="url(#arr)"/>
+  <text x="260" y="172" text-anchor="middle" font-size="9" fill="#333">Profile details, selfie captures</text>
+  <text x="268" y="184" text-anchor="middle" font-size="9" fill="#333">GPS coordinates, journal logs</text>
+  <text x="258" y="196" text-anchor="middle" font-size="9" fill="#333">document submissions</text>
+
+  <!-- System → Student (outputs) -->
+  <line x1="430" y1="316" x2="190" y2="110" stroke="#333" stroke-width="1.4" marker-end="url(#arr)"/>
+  <text x="312" y="226" text-anchor="middle" font-size="9" fill="#333">JWT session token, DTR records</text>
+  <text x="316" y="238" text-anchor="middle" font-size="9" fill="#333">approved hours, announcements</text>
+  <text x="316" y="250" text-anchor="middle" font-size="9" fill="#333">evaluation results, Journal DOCX</text>
+
+  <!-- Supervisor → System -->
+  <line x1="190" y1="336" x2="430" y2="350" stroke="#333" stroke-width="1.4" marker-end="url(#arr)"/>
+  <text x="282" y="328" text-anchor="middle" font-size="9" fill="#333">HTE profile &amp; GPS coords, signed MOA</text>
+  <text x="280" y="340" text-anchor="middle" font-size="9" fill="#333">DTR/journal review decisions, evaluations</text>
+
+  <!-- System → Supervisor -->
+  <line x1="430" y1="365" x2="190" y2="355" stroke="#333" stroke-width="1.4" marker-end="url(#arr)"/>
+  <text x="294" y="386" text-anchor="middle" font-size="9" fill="#333">JWT token, intern list</text>
+  <text x="295" y="398" text-anchor="middle" font-size="9" fill="#333">pending DTR &amp; journal logs</text>
+
+  <!-- Admin → System -->
+  <line x1="190" y1="556" x2="430" y2="410" stroke="#333" stroke-width="1.4" marker-end="url(#arr)"/>
+  <text x="256" y="503" text-anchor="middle" font-size="9" fill="#333">Excel student import, templates</text>
+  <text x="256" y="515" text-anchor="middle" font-size="9" fill="#333">deployment assignments</text>
+  <text x="258" y="527" text-anchor="middle" font-size="9" fill="#333">HTE verifications, announcements</text>
+
+  <!-- System → Admin -->
+  <line x1="430" y1="420" x2="190" y2="566" stroke="#333" stroke-width="1.4" marker-end="url(#arr)"/>
+  <text x="358" y="494" text-anchor="middle" font-size="9" fill="#333">JWT token, analytics dashboard</text>
+  <text x="358" y="506" text-anchor="middle" font-size="9" fill="#333">student directory, XLSX reports</text>
+
+  <!-- ════════════════════════
+       ARROWS — RIGHT
+  ═════════════════════════ -->
+
+  <!-- System → Gmail -->
+  <line x1="770" y1="310" x2="1010" y2="110" stroke="#333" stroke-width="1.4" marker-end="url(#arr)"/>
+  <text x="930" y="184" text-anchor="middle" font-size="9" fill="#333">credential emails (login, password)</text>
+
+  <!-- Gmail → System (delivery receipt) -->
+  <line x1="1010" y1="120" x2="770" y2="315" stroke="#333" stroke-width="1.4" marker-end="url(#arr)"/>
+  <text x="868" y="240" text-anchor="middle" font-size="9" fill="#333">delivery confirmation</text>
+
+  <!-- GPS → System -->
+  <line x1="1010" y1="326" x2="770" y2="350" stroke="#333" stroke-width="1.4" marker-end="url(#arr)"/>
+  <text x="882" y="322" text-anchor="middle" font-size="9" fill="#333">latitude, longitude, accuracy</text>
+
+  <!-- System → Nominatim -->
+  <line x1="770" y1="390" x2="1010" y2="536" stroke="#333" stroke-width="1.4" marker-end="url(#arr)"/>
+  <text x="940" y="450" text-anchor="middle" font-size="9" fill="#333">reverse geocode request (lat/lng)</text>
+
+  <!-- Nominatim → System -->
+  <line x1="1010" y1="545" x2="770" y2="400" stroke="#333" stroke-width="1.4" marker-end="url(#arr)"/>
+  <text x="896" y="505" text-anchor="middle" font-size="9" fill="#333">human-readable address</text>
+
+  <!-- Arrow marker -->
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#333"/>
+    </marker>
+  </defs>
+</svg>
+</body>
+</html>

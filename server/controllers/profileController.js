@@ -80,7 +80,15 @@ const uploadSignatureHandler = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No signature image file uploaded.' });
     const fileUrl = publicUploadPath('signatures', req.file.filename);
-    await db.query(`UPDATE public.students SET signature_url = $1 WHERE user_id = $2`, [fileUrl, req.user.id]);
+    const roleRes = await db.query(`SELECT role FROM public.profiles WHERE id = $1`, [req.user.id]);
+    const role = roleRes.rows[0]?.role;
+    if (role === 'company') {
+      await db.query(`UPDATE public.companies SET signature_url = $1 WHERE user_id = $2`, [fileUrl, req.user.id]);
+    } else if (role === 'student') {
+      await db.query(`UPDATE public.students SET signature_url = $1 WHERE user_id = $2`, [fileUrl, req.user.id]);
+    } else {
+      return res.status(403).json({ error: 'Only students and company supervisors can upload a signature.' });
+    }
     const updated = await loadProfile(req.user.id);
     res.json({ success: true, signatureUrl: fileUrl, profile: updated });
   } catch (err) {

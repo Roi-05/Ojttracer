@@ -77,6 +77,7 @@ export function useCompanyData() {
     latitude: (user as any)?.latitude ?? null,
     longitude: (user as any)?.longitude ?? null,
     geofenceRadius: (user as any)?.geofenceRadius || 200,
+    signatureUrl: (user as any)?.signatureUrl || null,
   };
 
   useEffect(() => {

@@ -42,6 +42,7 @@ const emptyDeploymentInfo = {
   company: "", supervisor: "", supervisorEmail: "", address: "", companyAddress: "",
   startDate: "", endDate: "", requiredHours: 486, completedHours: 0, position: "", status: "pending",
   companyLat: null as number | null, companyLng: null as number | null, geofenceRadius: 200,
+  supervisorSignatureUrl: null as string | null,
 };
 
 export function StudentDashboard() {
@@ -188,7 +189,17 @@ export function StudentDashboard() {
         <p className="font-medium text-lg">Deployment Not Active</p>
         <p className="text-sm text-muted-foreground mt-1">You must have an ongoing deployment to view and manage your Daily Time Record.</p>
       </div>
-    ) : <DTRTab dtrRecords={dtrRecords} todayRecord={todayRecord} openCamera={openDTRCamera} geofenceStatus={geofenceStatus} deviceInfo={deviceInfo} onRegisterDevice={registerCurrentDevice} onRequestResetDevice={requestDeviceReset} />,
+    ) : <DTRTab
+      dtrRecords={dtrRecords}
+      todayRecord={todayRecord}
+      openCamera={openDTRCamera}
+      geofenceStatus={geofenceStatus}
+      deviceInfo={deviceInfo}
+      onRegisterDevice={registerCurrentDevice}
+      onRequestResetDevice={requestDeviceReset}
+      studentProfile={studentProfile}
+      supervisorSignatureUrl={activeDeployment.supervisorSignatureUrl || null}
+    />,
     journal: () => activeDeployment.status !== "ongoing" ? (
       <div className="p-8 text-center bg-muted/5 border border-border rounded-xl mt-6">
         <p className="font-medium text-lg">Deployment Not Active</p>
