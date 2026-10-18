@@ -69,10 +69,10 @@ export function DashboardTab({
           <CardContent>
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">{effectiveDeployment.completedHours} hours completed</span>
-              <span className="text-sm text-muted-foreground">{effectiveDeployment.requiredHours - effectiveDeployment.completedHours} hrs remaining</span>
+              <span className="text-sm text-muted-foreground">{Math.max(0, effectiveDeployment.requiredHours - effectiveDeployment.completedHours)} hrs remaining</span>
             </div>
             <div className="h-3 bg-muted rounded-full overflow-hidden mb-1">
-              <div className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+              <div className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, pct)}%` }} />
             </div>
             <p className="text-xs text-muted-foreground text-right">{pct}% complete</p>
             <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-border">

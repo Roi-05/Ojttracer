@@ -103,9 +103,18 @@ export function StudentDashboard() {
   // Derived state
   const todayRecord = dtrRecords.find(r => r.date === TODAY_ISO) || null;
   const activeDeployment = deployment || emptyDeploymentInfo;
+  const isDeployed = !!deployment && activeDeployment.status !== "pending";
   const completedHours = dtrRecords.filter(r => r.status === "approved").reduce((s, r) => s + (r.hours || 0), 0);
-  const effectiveDeployment = { ...activeDeployment, completedHours: Math.round(completedHours * 10) / 10 };
-  const pct = effectiveDeployment.requiredHours ? Math.round((effectiveDeployment.completedHours / effectiveDeployment.requiredHours) * 100) : 0;
+  const roundedHours = Math.round(completedHours * 10) / 10;
+  const hoursDone = activeDeployment.requiredHours > 0 && roundedHours >= activeDeployment.requiredHours;
+  const effectiveDeployment = {
+    ...activeDeployment,
+    completedHours: roundedHours,
+    status: hoursDone ? "completed" : activeDeployment.status,
+  };
+  const pct = effectiveDeployment.requiredHours
+    ? Math.min(100, Math.round((effectiveDeployment.completedHours / effectiveDeployment.requiredHours) * 100))
+    : 0;
 
   // Geofence-gated camera opener
   const openDTRCamera = async (mode: "in" | "out") => {
@@ -184,7 +193,7 @@ export function StudentDashboard() {
     />,
     profile: () => <ProfileTab studentProfile={studentProfile} updateProfileData={updateProfileData} />,
     deployment: () => <DeploymentTab effectiveDeployment={effectiveDeployment} pct={pct} />,
-    attendance: () => activeDeployment.status !== "ongoing" ? (
+    attendance: () => !isDeployed ? (
       <div className="p-8 text-center bg-muted/5 border border-border rounded-xl mt-6">
         <p className="font-medium text-lg">Deployment Not Active</p>
         <p className="text-sm text-muted-foreground mt-1">You must have an ongoing deployment to view and manage your Daily Time Record.</p>
@@ -200,7 +209,7 @@ export function StudentDashboard() {
       studentProfile={studentProfile}
       supervisorSignatureUrl={activeDeployment.supervisorSignatureUrl || null}
     />,
-    journal: () => activeDeployment.status !== "ongoing" ? (
+    journal: () => !isDeployed ? (
       <div className="p-8 text-center bg-muted/5 border border-border rounded-xl mt-6">
         <p className="font-medium text-lg">Deployment Not Active</p>
         <p className="text-sm text-muted-foreground mt-1">You must have an ongoing deployment to view and manage your Internship Journal.</p>

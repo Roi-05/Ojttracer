@@ -4,6 +4,7 @@ import { resolveUploadUrl } from "../lib/uploads";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
 import type { DTRLog } from "./useAdminData";
+import { ojtHoursComplete } from "../lib/ojtProgress";
 
 export type Intern = {
   id: string | number;
@@ -111,7 +112,9 @@ export function useCompanyData() {
             hoursCompleted: i.completedHours || 0,
             requiredHours: i.deployment?.requiredHours || 486,
             performance: i.performance ? parseFloat(i.performance) : 0,
-            status: i.deployment?.status || "ongoing",
+            status: ojtHoursComplete(i.completedHours || 0, i.deployment?.requiredHours || 486)
+              ? "completed"
+              : (i.deployment?.status || "ongoing"),
             registeredDeviceName: i.registeredDeviceName || null,
             deviceResetRequested: i.deviceResetRequested || false,
           })));

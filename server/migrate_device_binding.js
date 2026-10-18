@@ -49,6 +49,21 @@ async function migrate() {
       console.log('✓ device_registered_at column already exists');
     }
 
+    // 4. device_reset_requested (supervisor reset flow)
+    const resetCol = await db.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'students'
+        AND column_name = 'device_reset_requested'
+    `);
+    if (resetCol.rows.length === 0) {
+      await db.query(`ALTER TABLE public.students ADD COLUMN device_reset_requested boolean NOT NULL DEFAULT FALSE`);
+      console.log('✓ Added device_reset_requested column to public.students');
+    } else {
+      console.log('✓ device_reset_requested column already exists');
+    }
+
     console.log('Migration completed successfully.');
     process.exit(0);
   } catch (err) {

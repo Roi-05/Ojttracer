@@ -35,7 +35,7 @@ const sendCredentialEmail = async (to, name, studentNo, password) => {
           <p style="margin: 8px 0 0; font-size: 14px;"><strong>Password:</strong> <code style="background:#e5e7eb;padding:2px 6px;border-radius:4px;">${password}</code></p>
         </div>
         <p style="font-size: 13px; color: #6b7280;">Please change your password after logging in for the first time.</p>
-        <a href="${process.env.APP_URL || 'http://localhost:5173'}/login" 
+        <a href="${process.env.APP_URL || 'https://neglector-amigo-obedient.ngrok-free.dev'}/login" 
            style="display:inline-block;background:#1d4ed8;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:8px;">
           Log In Now
         </a>

@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { useAuth } from "../contexts/AuthContext";
-import { useAdminData, CompanyLocation } from "../hooks/useAdminData";
+import { useAdminData } from "../hooks/useAdminData";
 
 import { ImportStudentsModal } from "../components/admin/ImportStudentsModal";
 import { AddCompanyModal } from "../components/admin/AddCompanyModal";
@@ -22,11 +22,10 @@ import { JournalsTab } from "../components/admin/JournalsTab";
 import { AnnouncementsTab } from "../components/admin/AnnouncementsTab";
 import { DocumentsTab } from "../components/admin/DocumentsTab";
 import { AnalyticsTab } from "../components/admin/AnalyticsTab";
-import { MapTab } from "../components/admin/MapTab";
 import { EvaluationsTab } from "../components/admin/EvaluationsTab";
 import { SettingsTab } from "../components/admin/SettingsTab";
 
-import { LayoutDashboard, Building2, MapPin, Clock, BookOpen, Upload, Megaphone, BarChart3, Map, GraduationCap, Briefcase, Star, Settings } from "lucide-react";
+import { LayoutDashboard, Building2, Clock, BookOpen, Upload, Megaphone, BarChart3, GraduationCap, Briefcase, Star, Settings } from "lucide-react";
 
 const menuItems = [
   { icon: <LayoutDashboard className="h-4 w-4" />, label: "Overview", value: "dashboard" },
@@ -39,7 +38,6 @@ const menuItems = [
   { icon: <Megaphone className="h-4 w-4" />, label: "Announcements", value: "announcements" },
   { icon: <Upload className="h-4 w-4" />, label: "Documents", value: "documents" },
   { icon: <BarChart3 className="h-4 w-4" />, label: "Analytics", value: "analytics" },
-  { icon: <Map className="h-4 w-4" />, label: "Map View", value: "map" },
   { icon: <Settings className="h-4 w-4" />, label: "Settings", value: "settings" },
 ];
 
@@ -51,45 +49,11 @@ const hoursProgressData: any[] = [];
 export function AdminDashboard() {
   const { user } = useAuth();
   const [activeSection, setActiveSection] = useState("dashboard");
-  const [selectedMapCompany, setSelectedMapCompany] = useState<CompanyLocation | null>(null);
 
   const {
     students, companies, evaluations, dtrLogs, journalLogs, announcements, templates, studentSubmissions,
     verifyCompany, updateMoaStatus, uploadTemplate, reviewDocument, deployStudent, resetStudentDevice, rejectStudentDevice, deleteAnnouncement, deleteCompany, deleteTemplate, reload
   } = useAdminData();
-
-  const companyLocations = useMemo(() => {
-    return companies
-      .filter(c => c.latitude != null && c.longitude != null)
-      .map(c => {
-        const lat = c.latitude!;
-        const lng = c.longitude!;
-        
-        // Standard geographic bounds for Pampanga:
-        // Lat: 14.85 to 15.22
-        // Lng: 120.45 to 120.85
-        const minLat = 14.85;
-        const maxLat = 15.22;
-        const minLng = 120.45;
-        const maxLng = 120.85;
-        
-        // Convert to percentage coordinates (clamped to 5% - 95% to avoid borders)
-        const x = Math.min(95, Math.max(5, ((lng - minLng) / (maxLng - minLng)) * 100));
-        const y = Math.min(95, Math.max(5, 100 - (((lat - minLat) / (maxLat - minLat)) * 100)));
-        
-        return {
-          name: c.name,
-          address: c.location,
-          lat,
-          lng,
-          industry: c.industry,
-          interns: c.activeInterns,
-          x,
-          y,
-          geofenceRadius: c.geofenceRadius
-        };
-      });
-  }, [companies]);
 
   // Modals state
   const [showImportModal, setShowImportModal] = useState(false);
@@ -133,7 +97,6 @@ export function AdminDashboard() {
       openDeployModal={(id) => setShowDeployModal({ open: true, studentId: id })} 
     />,
     analytics: () => <AnalyticsTab students={students} companies={companies} overviewStats={[]} hoursProgressData={[]} monthlyPlacementData={[]} sectionDistribution={sectionDistribution} />,
-    map: () => <MapTab companyLocations={companyLocations} selectedMapCompany={selectedMapCompany} setSelectedMapCompany={setSelectedMapCompany} />,
     settings: () => <SettingsTab />,
   };
 

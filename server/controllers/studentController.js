@@ -1,10 +1,12 @@
 const db = require('../db');
+const { deploymentStatusFromHours } = require('../utils/ojtProgress');
 const { normalizeUploadUrl } = require('../utils/uploadUrl');
 
 const getDeployment = async (req, res) => {
   try {
     const result = await db.query(`
-      SELECT d.*, c.company_address, c.latitude, c.longitude, c.geofence_radius, c.signature_url AS supervisor_signature_url
+      SELECT d.*, c.company_address, c.latitude, c.longitude, c.geofence_radius, c.signature_url AS supervisor_signature_url,
+             (SELECT COALESCE(SUM(hours), 0) FROM public.dtr_records WHERE student_id = d.student_id AND status = 'approved') AS completed_hours
       FROM public.deployments d
       LEFT JOIN public.companies c ON c.user_id = d.company_id
       WHERE d.student_id = $1
@@ -30,7 +32,7 @@ const getDeployment = async (req, res) => {
       endDate: d.end_date || '',
       requiredHours: d.required_hours || 486,
       position: d.position || '',
-      status: d.status || 'pending',
+      status: deploymentStatusFromHours(d.completed_hours, d.required_hours, d.status || 'pending'),
       companyLat: d.latitude != null ? parseFloat(d.latitude) : null,
       companyLng: d.longitude != null ? parseFloat(d.longitude) : null,
       geofenceRadius: d.geofence_radius || 200,
@@ -105,7 +107,7 @@ const getStudents = async (req, res) => {
         company: r.company_name,
         position: r.position,
         requiredHours: r.required_hours,
-        status: r.deployment_status
+        status: deploymentStatusFromHours(r.completed_hours, r.required_hours, r.deployment_status)
       } : null
     })));
   } catch (err) {

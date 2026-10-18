@@ -39,7 +39,9 @@ create table if not exists public.students (
   guardian_phone     text default '',
   registered_device_token text default null,
   registered_device_name text default null,
-  device_registered_at timestamptz default null
+  device_registered_at timestamptz default null,
+  device_reset_requested boolean not null default false,
+  signature_url text default null
 );
 
 -- ── COMPANY-SPECIFIC FIELDS ────────────────────────────────────────────────

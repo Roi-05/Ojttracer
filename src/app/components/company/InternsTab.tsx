@@ -27,7 +27,9 @@ export function InternsTab({ interns, onResetDevice, onRejectDevice }: InternsTa
           </Card>
         )}
         {interns.map(intern => {
-          const pct = Math.round((intern.hoursCompleted / intern.requiredHours) * 100);
+          const pct = intern.requiredHours > 0
+            ? Math.min(100, Math.round((intern.hoursCompleted / intern.requiredHours) * 100))
+            : 0;
           return (
             <Card key={intern.id} className="border-0 shadow-sm">
               <CardContent className="p-5">

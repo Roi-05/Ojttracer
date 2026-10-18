@@ -55,6 +55,10 @@ export function CompanyDashboard() {
   } = useCompanyData();
 
   const handleOpenEvalModal = async (id: string | number) => {
+    const intern = interns.find(i => i.id === id);
+    if (!intern || intern.hoursCompleted < intern.requiredHours) {
+      return;
+    }
     setShowEvalModal(id);
     const existing = await getEvaluation(id);
     if (existing && existing.scores) {

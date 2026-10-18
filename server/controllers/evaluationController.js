@@ -1,4 +1,5 @@
 const db = require('../db');
+const { ojtHoursComplete } = require('../utils/ojtProgress');
 
 const getEvaluation = async (req, res) => {
   try {
@@ -16,6 +17,25 @@ const submitEvaluation = async (req, res) => {
     
     const { studentId, studentName, scores, comments } = req.body;
     const companyId = req.user.id;
+
+    const progress = await db.query(
+      `SELECT
+         d.required_hours,
+         d.company_id,
+         (SELECT COALESCE(SUM(hours), 0) FROM public.dtr_records WHERE student_id = d.student_id AND status = 'approved') AS completed_hours
+       FROM public.deployments d
+       WHERE d.student_id = $1`,
+      [studentId]
+    );
+    const row = progress.rows[0];
+    if (!row || String(row.company_id) !== String(companyId)) {
+      return res.status(403).json({ error: 'This intern is not deployed to your company.' });
+    }
+    if (!ojtHoursComplete(row.completed_hours, row.required_hours)) {
+      return res.status(400).json({
+        error: `Evaluation unlocks when approved DTR hours reach the required total (${parseFloat(row.completed_hours) || 0}/${row.required_hours || 0} hrs).`
+      });
+    }
     
     // Compute overall score (average of all 1-5 scores, multiplied by 20 to get percentage)
     const scoreValues = Object.values(scores);

@@ -48,7 +48,9 @@ export function DashboardTab({ companyInfo, interns, setActiveSection }: Dashboa
         </CardHeader>
         <CardContent className="space-y-3">
           {interns.map(intern => {
-            const pct = Math.round((intern.hoursCompleted / intern.requiredHours) * 100);
+            const pct = intern.requiredHours > 0
+              ? Math.min(100, Math.round((intern.hoursCompleted / intern.requiredHours) * 100))
+              : 0;
             return (
               <div key={intern.id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
                 <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-600 font-bold flex items-center justify-center text-sm flex-shrink-0">

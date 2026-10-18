@@ -80,17 +80,11 @@ export function OverviewTab({ students, companies, setActiveSection, sectionDist
             {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          {openReportsModal && (
-            <Button variant="outline" className="gap-2 border-green-200 text-green-700 hover:bg-green-50 hover:text-green-800" onClick={openReportsModal}>
-              <Download className="h-4 w-4" /> Generate Reports
-            </Button>
-          )}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full text-xs text-green-700 font-medium">
-            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-            System Live
-          </div>
-        </div>
+        {openReportsModal && (
+          <Button variant="outline" className="gap-2 border-green-200 text-green-700 hover:bg-green-50 hover:text-green-800" onClick={openReportsModal}>
+            <Download className="h-4 w-4" /> Generate Reports
+          </Button>
+        )}
       </div>
 
       {/* KPI Cards */}

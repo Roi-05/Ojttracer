@@ -36,7 +36,6 @@ export type DTRLog = {
 };
 export type JournalLog = { student: string; section: string; week: string; title: string; submitted: string; status: string };
 export type Announcement = { id: string | number; title: string; content: string; date: string; category: string; priority: string };
-export type CompanyLocation = { name: string; address: string; lat: number; lng: number; industry: string; interns: number; x: number; y: number; geofenceRadius?: number };
 export type AdminTemplate = { name: string; file: string | null; size: string; uploaded: string; docSlug: string | null };
 export type AdminDocEntry = { name: string; status: string; file: string | null; uploaded: string };
 export type AdminSubmission = { studentId: string | number; name: string; studentNo: string; course: string; section: string; deployed: boolean; assignedCompany: string | null; docs: AdminDocEntry[] };
@@ -82,7 +81,9 @@ export function useAdminData() {
           phone: s.phone || '', address: s.address || '',
           company: s.deployment?.company || '—', position: s.deployment?.position || '—',
           hoursCompleted: s.completedHours || 0, requiredHours: s.deployment?.requiredHours || 486,
-          status: s.deployment ? (s.deployment.status || 'ongoing') : 'pending',
+          status: s.deployment
+            ? (s.deployment.status || 'ongoing')
+            : 'pending',
           intendedCompanyId: s.intendedCompanyId || null,
           intendedPosition: s.intendedPosition || '',
           registeredDeviceName: s.registeredDeviceName || null,

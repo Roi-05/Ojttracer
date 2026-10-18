@@ -69,11 +69,11 @@ export function DeploymentTab({ effectiveDeployment, pct }: DeploymentTabProps) 
                 <span className="text-sm font-bold text-primary">{pct}%</span>
               </div>
               <div className="h-3 bg-muted rounded-full overflow-hidden mb-2">
-                <div className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full" style={{ width: `${pct}%` }} />
+                <div className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full" style={{ width: `${Math.min(100, pct)}%` }} />
               </div>
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>{effectiveDeployment.completedHours} hrs done</span>
-                <span>{effectiveDeployment.requiredHours - effectiveDeployment.completedHours} hrs remaining</span>
+                <span>{Math.max(0, effectiveDeployment.requiredHours - effectiveDeployment.completedHours)} hrs remaining</span>
               </div>
             </div>
           </CardContent>

@@ -1,8 +1,9 @@
 import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
-import { Star, ClipboardList, Download } from "lucide-react";
+import { Star, ClipboardList, Download, Lock } from "lucide-react";
 import { Intern } from "../../hooks/useCompanyData";
 import { StatusBadge } from "../student/shared";
+import { ojtHoursComplete } from "../../lib/ojtProgress";
 
 interface EvaluationsTabProps {
   interns: Intern[];
@@ -25,7 +26,10 @@ export function EvaluationsTab({ interns, onEvaluate }: EvaluationsTabProps) {
             </CardContent>
           </Card>
         )}
-        {interns.map(intern => (
+        {interns.map(intern => {
+          const hoursDone = ojtHoursComplete(intern.hoursCompleted, intern.requiredHours);
+          const hasEval = intern.performance > 0;
+          return (
           <Card key={intern.id} className="border-0 shadow-sm">
             <CardContent className="p-5 flex items-center gap-4">
               <div className="h-11 w-11 rounded-full bg-blue-100 text-blue-600 font-bold flex items-center justify-center flex-shrink-0 text-sm">
@@ -37,6 +41,10 @@ export function EvaluationsTab({ interns, onEvaluate }: EvaluationsTabProps) {
                   <StatusBadge status={intern.status} />
                 </div>
                 <p className="text-sm text-muted-foreground">{intern.position} — {intern.course}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {intern.hoursCompleted}/{intern.requiredHours} approved DTR hrs
+                  {!hoursDone && " — evaluation unlocks at required hours"}
+                </p>
               </div>
               <div className="text-center">
                 <div className="flex items-center gap-0.5">
@@ -54,12 +62,13 @@ export function EvaluationsTab({ interns, onEvaluate }: EvaluationsTabProps) {
                   variant="outline"
                   size="sm"
                   className="h-8 text-xs gap-1.5"
-                  onClick={() => onEvaluate(intern.id)}
+                  disabled={!hoursDone}
+                  onClick={() => hoursDone && onEvaluate(intern.id)}
                 >
-                  <ClipboardList className="h-3.5 w-3.5" />
-                  {intern.status === "completed" ? "View Eval" : "Evaluate"}
+                  {hoursDone ? <ClipboardList className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
+                  {hoursDone ? (hasEval ? "View Eval" : "Evaluate") : "Locked"}
                 </Button>
-                {intern.status === "completed" && (
+                {hasEval && hoursDone && (
                   <Button variant="outline" size="sm" className="h-8 text-xs gap-1">
                     <Download className="h-3.5 w-3.5" /> PDF
                   </Button>
@@ -67,7 +76,8 @@ export function EvaluationsTab({ interns, onEvaluate }: EvaluationsTabProps) {
               </div>
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

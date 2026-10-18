@@ -1,4 +1,5 @@
 const db = require('../db');
+const { deploymentStatusFromHours } = require('../utils/ojtProgress');
 const { publicUploadPath } = require('../utils/uploadUrl');
 const path = require('path');
 const fs = require('fs');
@@ -134,7 +135,7 @@ const getInterns = async (req, res) => {
         startDate: r.start_date,
         endDate: r.end_date,
         requiredHours: r.required_hours,
-        status: r.status
+        status: deploymentStatusFromHours(r.completed_hours, r.required_hours, r.status)
       }
     })));
   } catch (err) {
