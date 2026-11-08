@@ -4,6 +4,8 @@ const companyController = require('../controllers/companyController');
 const { authMiddleware } = require('../auth');
 
 router.get('/', authMiddleware, companyController.getCompanies);
+router.put('/break-time', authMiddleware, companyController.updateBreakTime);
+router.put('/:id/break-time', authMiddleware, companyController.updateBreakTime);
 router.put('/:id/verify', authMiddleware, companyController.verifyCompany);
 router.put('/:id/moa', authMiddleware, companyController.updateMoa);
 router.put('/:id/location', authMiddleware, companyController.updateCompanyLocation);

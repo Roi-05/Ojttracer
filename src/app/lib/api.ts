@@ -59,6 +59,25 @@ export async function getMe() {
   return apiFetch("/auth/me");
 }
 
+export async function forgotPassword(payload: { email: string }): Promise<{ success: boolean; message: string; devCode?: string }> {
+  return apiFetch("/auth/forgot-password", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export async function resetPassword(payload: {
+  email: string;
+  code: string;
+  newPassword: string;
+}): Promise<{ success: boolean; message: string }> {
+  return apiFetch("/auth/reset-password", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export async function changePassword(payload: {
+  currentPassword: string;
+  newPassword: string;
+}): Promise<{ success: boolean; message: string }> {
+  return apiFetch("/auth/change-password", { method: "POST", body: JSON.stringify(payload) });
+}
+
 export async function updateProfile(data: Record<string, unknown>) {
   return apiFetch("/profile", { method: "PUT", body: JSON.stringify(data) });
 }
@@ -254,8 +273,22 @@ export async function updateMoa(id: string | number, status: string, expiryDate?
   return apiFetch(`/companies/${id}/moa`, { method: "PUT", body: JSON.stringify({ status, expiryDate }) });
 }
 
-export async function updateCompanyLocation(id: string | number, latitude: number, longitude: number, geofenceRadius: number) {
-  return apiFetch(`/companies/${id}/location`, { method: "PUT", body: JSON.stringify({ latitude, longitude, geofenceRadius }) });
+export async function updateCompanyLocation(
+  id: string | number,
+  latitude: number,
+  longitude: number,
+  geofenceRadius: number,
+  geofencePolygon?: [number, number][] | null
+) {
+  return apiFetch(`/companies/${id}/location`, {
+    method: "PUT",
+    body: JSON.stringify({ latitude, longitude, geofenceRadius, geofencePolygon }),
+  });
+}
+
+export async function updateBreakTime(breakStart: string | null, breakEnd: string | null, companyId?: string | number) {
+  const url = companyId ? `/companies/${companyId}/break-time` : `/companies/break-time`;
+  return apiFetch(url, { method: "PUT", body: JSON.stringify({ breakStart, breakEnd }) });
 }
 
 export async function uploadSignedMoa(file: File) {
@@ -303,8 +336,42 @@ export const previewImport = async (file: File) => {
   return apiFetch("/import/students/preview", { method: "POST", body: form });
 };
 
-export const importStudents = async (file: File) => {
+export const importStudents = async (file: File, schoolYear?: string) => {
   const form = new FormData();
   form.append("file", file);
+  if (schoolYear) form.append("schoolYear", schoolYear);
   return apiFetch("/import/students", { method: "POST", body: form });
+};
+
+// ─── Coordinators (Superadmin) ───────────────────────────────────────────
+export interface CoordinatorItem {
+  id: string;
+  email: string;
+  name: string;
+  coordinatorCourse: string;
+  createdAt: string;
+}
+
+export const getCoordinators = async (): Promise<CoordinatorItem[]> => {
+  return apiFetch("/coordinators");
+};
+
+export const createCoordinator = async (payload: {
+  email: string;
+  password: string;
+  name: string;
+  coordinatorCourse: string;
+}): Promise<{ success: boolean; coordinator: CoordinatorItem }> => {
+  return apiFetch("/coordinators", { method: "POST", body: JSON.stringify(payload) });
+};
+
+export const updateCoordinator = async (
+  id: string,
+  payload: { name?: string; email?: string; coordinatorCourse?: string; password?: string }
+): Promise<{ success: boolean; coordinator: CoordinatorItem }> => {
+  return apiFetch(`/coordinators/${id}`, { method: "PUT", body: JSON.stringify(payload) });
+};
+
+export const deleteCoordinator = async (id: string): Promise<{ success: boolean }> => {
+  return apiFetch(`/coordinators/${id}`, { method: "DELETE" });
 };

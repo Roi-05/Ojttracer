@@ -7,21 +7,26 @@ const { UPLOADS_DIR } = require('../middleware/upload');
 const getDocuments = async (req, res) => {
   try {
     const { studentId } = req.query;
-    // Admin can query all students; student can only see their own
-    if (req.user.role === 'admin') {
+    // Admin can query all students; student can only see their own; company can query their assigned interns
+    if (['coordinator','superadmin'].includes(req.user.role)) {
       if (studentId) {
         // Per-student docs (for review modal)
         const docsRes = await db.query(`SELECT d.*, p.name as student_name FROM public.documents d JOIN public.profiles p ON p.id = d.student_id WHERE d.student_id = $1`, [studentId]);
         return res.json(docsRes.rows.map(r => ({ id: r.id, studentId: r.student_id, name: r.name, status: r.status, fileUrl: r.file_url, uploadedDate: r.uploaded_date, reviewNote: r.review_note })));
       }
-      // All students aggregate
+      // All students aggregate (scoped by course for coordinator; all for superadmin)
+      const isSuperadmin = req.user.role === 'superadmin';
+      const docParams = [];
+      const docCourseClause = isSuperadmin
+        ? ''
+        : (() => { docParams.push(req.user.coordinatorCourse || 'BSIT'); return 'AND s.course = $' + docParams.length; })();
       const profiles = await db.query(`
-        SELECT p.id, p.name, s.student_id as student_no, s.section, d.company_name
+        SELECT p.id, p.name, s.student_id as student_no, s.section, s.course, d.company_name
         FROM public.profiles p 
         LEFT JOIN public.students s ON s.user_id = p.id 
         LEFT JOIN public.deployments d ON d.student_id = p.id
-        WHERE p.role = 'student'
-      `);
+        WHERE p.role = 'student' ${docCourseClause}
+      `, docParams);
       const all = [];
       for (const prof of profiles.rows) {
         const docsRes = await db.query(`SELECT * FROM public.documents WHERE student_id = $1`, [prof.id]);
@@ -37,6 +42,67 @@ const getDocuments = async (req, res) => {
       }
       return res.json(all);
     }
+
+    if (req.user.role === 'company') {
+      if (studentId) {
+        // Strict tenant isolation: verify that the student is deployed to this company
+        const depCheck = await db.query(
+          `SELECT 1 FROM public.deployments WHERE student_id = $1 AND company_id = $2`,
+          [studentId, req.user.id]
+        );
+        if (depCheck.rows.length === 0) {
+          return res.status(403).json({ error: 'Not authorized to view documents for this student' });
+        }
+        const docsRes = await db.query(
+          `SELECT d.*, p.name as student_name FROM public.documents d JOIN public.profiles p ON p.id = d.student_id WHERE d.student_id = $1`,
+          [studentId]
+        );
+        return res.json(docsRes.rows.map(r => ({
+          id: r.id,
+          studentId: r.student_id,
+          name: r.name,
+          status: r.status,
+          fileUrl: r.file_url,
+          uploadedDate: r.uploaded_date,
+          reviewNote: r.review_note,
+        })));
+      }
+
+      // Aggregate of all interns deployed to this company
+      const internsRes = await db.query(`
+        SELECT p.id, p.name, s.student_id as student_no, s.course, s.section, d.position, d.supervisor, d.status as deployment_status
+        FROM public.deployments d
+        JOIN public.profiles p ON p.id = d.student_id
+        LEFT JOIN public.students s ON s.user_id = d.student_id
+        WHERE d.company_id = $1
+        ORDER BY p.name ASC
+      `, [req.user.id]);
+
+      const allInternDocs = [];
+      for (const intern of internsRes.rows) {
+        const docsRes = await db.query(`SELECT * FROM public.documents WHERE student_id = $1`, [intern.id]);
+        allInternDocs.push({
+          studentId: intern.id,
+          studentName: intern.name,
+          studentNo: intern.student_no || '—',
+          course: intern.course || 'BSIT',
+          section: intern.section || '—',
+          position: intern.position || '—',
+          supervisor: intern.supervisor || '—',
+          deploymentStatus: intern.deployment_status || 'ongoing',
+          docs: docsRes.rows.map(r => ({
+            id: r.id,
+            name: r.name,
+            status: r.status,
+            fileUrl: r.file_url,
+            uploadedDate: r.uploaded_date,
+            reviewNote: r.review_note,
+          })),
+        });
+      }
+      return res.json(allInternDocs);
+    }
+
     // Student
     const result = await db.query(`SELECT * FROM public.documents WHERE student_id = $1`, [req.user.id]);
     res.json(result.rows.map(r => ({ id: r.id, name: r.name, status: r.status, fileUrl: r.file_url, uploadedDate: r.uploaded_date, reviewNote: r.review_note })));
@@ -88,7 +154,7 @@ const submitDocument = async (req, res) => {
 
 const reviewDocument = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    if (req.user.role !== 'coordinator') return res.status(403).json({ error: 'Coordinator only' });
     const { studentId, docName, status, note } = req.body;
     if (!studentId || !docName || !status) return res.status(400).json({ error: 'Missing fields' });
     await db.query(
@@ -170,11 +236,13 @@ const convertDocxToPdf = async (req, res) => {
       return res.status(400).json({ error: 'No DOCX file provided for conversion' });
     }
 
+    const outputFilename = (req.file?.originalname || 'document.docx').replace(/\.docx$/i, '.pdf');
+
     try {
       const pdfBuffer = await convertWithGotenberg(docxBuffer);
-      console.log(`Journal PDF converted via Gotenberg (${GOTENBERG_URL})`);
+      console.log(`PDF converted via Gotenberg (${GOTENBERG_URL})`);
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', 'attachment; filename="Journal.pdf"');
+      res.setHeader('Content-Disposition', `attachment; filename="${outputFilename}"`);
       return res.send(pdfBuffer);
     } catch (gotenbergErr) {
       console.warn('Gotenberg conversion failed, trying local LibreOffice:', gotenbergErr.message);
@@ -195,10 +263,10 @@ const convertDocxToPdf = async (req, res) => {
       throw new Error('PDF output file was not generated by LibreOffice converter');
     }
 
-    console.log('Journal PDF converted via local LibreOffice');
+    console.log('PDF converted via local LibreOffice');
     const pdfBuffer = fs.readFileSync(pdfPath);
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename="Journal.pdf"');
+    res.setHeader('Content-Disposition', `attachment; filename="${outputFilename}"`);
     res.send(pdfBuffer);
   } catch (err) {
     console.error('DOCX to PDF conversion error:', err);

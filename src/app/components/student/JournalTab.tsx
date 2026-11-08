@@ -126,6 +126,7 @@ export function JournalTab({
       course: studentProfile.course || "",
       year: studentProfile.year || "",
       section: studentProfile.section || studentSection,
+      schoolYear: (studentProfile as any).schoolYear || deployment.schoolYear || "",
       address: studentProfile.address || "",
       dateOfBirth: studentProfile.dateOfBirth ? new Date(studentProfile.dateOfBirth).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "",
       age: ageStr,

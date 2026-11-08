@@ -27,6 +27,7 @@ export interface JournalInfo {
   course: string;
   year: string;
   section: string;
+  schoolYear?: string;
   address: string;
   dateOfBirth: string;
   age: string;
@@ -294,6 +295,9 @@ export async function buildJournalDOCXBlob(info: JournalInfo): Promise<Blob> {
     course: info.course || "",
     year: info.year || "",
     section: info.section || "",
+    schoolYear: info.schoolYear || "",
+    sy: info.schoolYear || "",
+    SY: info.schoolYear || "",
     address: info.address || "",
     dateOfBirth: info.dateOfBirth || "",
     age: info.age || "",

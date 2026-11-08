@@ -5,8 +5,10 @@ export interface UserProfile {
   id: string;
   email: string;
   name: string;
-  role: "student" | "company" | "admin";
+  role: "student" | "company" | "coordinator" | "superadmin";
   avatarUrl?: string | null;
+  // Coordinator/Superadmin fields
+  coordinatorCourse?: string | null;
   // Student fields
   studentId?: string;
   section?: string;

@@ -1,17 +1,136 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
-import { Camera, CameraOff, Download, FileText, Loader2, CheckCircle2, XCircle, MapPin, AlertTriangle, Smartphone, ShieldCheck, ShieldAlert, Clock } from "lucide-react";
+import {
+  Camera,
+  CameraOff,
+  Download,
+  FileText,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  MapPin,
+  AlertTriangle,
+  Smartphone,
+  ShieldCheck,
+  ShieldAlert,
+  Clock,
+  RefreshCw,
+  Crosshair,
+  Maximize2,
+  Minimize2,
+  Navigation,
+} from "lucide-react";
+import { MapContainer, TileLayer, Marker, Popup, Circle, Polygon, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import "../../lib/leaflet-setup";
 import { DTRRecord } from "../../hooks/useStudentData";
 import { resolveUploadUrl } from "../../lib/uploads";
 import { formatDate, monthLabel, TODAY_LABEL, TODAY_DAY } from "./shared";
 import { getOrCreateDeviceToken, getDeviceName } from "../../lib/device";
 import { generateDTRDOCX } from "../../lib/generateDTR";
 import { generateDTRPDF } from "../../lib/generateDTRPDF";
+import { normalizePolygon, getPolygonCentroid, checkGeofence, getCurrentPosition } from "../../lib/geolocation";
 import { toast } from "sonner";
 
 type GeofenceStatus = "idle" | "checking" | "allowed" | "denied" | "out_of_range" | "no_gps";
+
+function makeCompanyMarker() {
+  return L.divIcon({
+    className: "",
+    html: `
+      <div style="
+        width: 36px; height: 36px;
+        background: #2563eb;
+        border: 3px solid #ffffff;
+        border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 18px;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.45);
+      ">🏢</div>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 36],
+    popupAnchor: [0, -38],
+  });
+}
+
+function makeStudentMarker(isInside: boolean, initials: string) {
+  const bg = isInside ? "#10b981" : "#ef4444";
+  const glow = isInside ? "rgba(16, 185, 129, 0.45)" : "rgba(239, 68, 68, 0.45)";
+  return L.divIcon({
+    className: "",
+    html: `
+      <div style="position: relative; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;">
+        <div style="
+          position: absolute;
+          inset: -4px;
+          border-radius: 50%;
+          background: ${glow};
+          animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+        "></div>
+        <div style="
+          position: relative;
+          width: 30px; height: 30px;
+          background: ${bg};
+          border: 2.5px solid #ffffff;
+          border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+          font-weight: 700;
+          font-size: 11px;
+          color: white;
+          box-shadow: 0 3px 10px rgba(0,0,0,0.35);
+        ">
+          ${initials || "ME"}
+        </div>
+      </div>`,
+    iconSize: [38, 38],
+    iconAnchor: [19, 19],
+    popupAnchor: [0, -22],
+  });
+}
+
+function MapBoundsFitter({
+  studentPos,
+  companyPos,
+  polygon,
+  fitTrigger,
+}: {
+  studentPos: [number, number] | null;
+  companyPos: [number, number] | null;
+  polygon: [number, number][];
+  fitTrigger: number;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      map.invalidateSize();
+    }, 200);
+    return () => clearTimeout(t);
+  }, [map, fitTrigger]);
+
+  useEffect(() => {
+    const points: [number, number][] = [];
+    if (polygon.length >= 3) {
+      polygon.forEach((p) => points.push(p));
+    } else if (companyPos) {
+      points.push(companyPos);
+    }
+    if (studentPos) {
+      points.push(studentPos);
+    }
+
+    if (points.length === 1) {
+      map.setView(points[0], 16, { animate: true });
+    } else if (points.length > 1) {
+      map.fitBounds(points, { padding: [40, 40], animate: true, maxZoom: 18 });
+    }
+  }, [map, studentPos, companyPos, polygon, fitTrigger]);
+
+  return null;
+}
 
 interface DTRTabProps {
   dtrRecords: DTRRecord[];
@@ -34,6 +153,14 @@ interface DTRTabProps {
     signatureUrl?: string | null;
   };
   supervisorSignatureUrl?: string | null;
+  companyLocation?: {
+    latitude: number | null;
+    longitude: number | null;
+    geofenceRadius: number;
+    geofencePolygon?: [number, number][] | null;
+    companyName: string;
+    companyAddress?: string;
+  };
 }
 
 export function DTRTab({
@@ -46,10 +173,77 @@ export function DTRTab({
   onRequestResetDevice,
   studentProfile = {},
   supervisorSignatureUrl = null,
+  companyLocation,
 }: DTRTabProps) {
   const [registering, setRegistering] = useState(false);
   const [requestingReset, setRequestingReset] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  // Live GPS tracking state for student perimeter map
+  const [studentLoc, setStudentLoc] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
+  const [locLoading, setLocLoading] = useState(false);
+  const [locError, setLocError] = useState<string | null>(null);
+  const [fitTrigger, setFitTrigger] = useState(0);
+  const [isMapExpanded, setIsMapExpanded] = useState(false);
+
+  const refreshLocation = useCallback(async (notify = false) => {
+    setLocLoading(true);
+    setLocError(null);
+    try {
+      const pos = await getCurrentPosition();
+      setStudentLoc({ lat: pos.latitude, lng: pos.longitude, accuracy: pos.accuracy });
+      setFitTrigger((c) => c + 1);
+      if (notify) {
+        toast.success("GPS location updated");
+      }
+    } catch (err: any) {
+      const msg = typeof err === "string" ? err : "Failed to obtain current GPS location.";
+      setLocError(msg);
+      if (notify) {
+        toast.error(msg);
+      }
+    } finally {
+      setLocLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshLocation(false);
+  }, [refreshLocation]);
+
+  const toggleMapExpanded = () => {
+    setIsMapExpanded((prev) => !prev);
+    setTimeout(() => setFitTrigger((c) => c + 1), 150);
+  };
+
+  const companyPolygon = normalizePolygon(companyLocation?.geofencePolygon);
+  const companyCentroid = getPolygonCentroid(companyPolygon);
+  const companyCenter: [number, number] | null =
+    companyLocation?.latitude && companyLocation?.longitude
+      ? [companyLocation.latitude, companyLocation.longitude]
+      : companyCentroid;
+
+  const defaultCenter: [number, number] =
+    companyCenter || (studentLoc ? [studentLoc.lat, studentLoc.lng] : [15.0794, 120.6200]);
+
+  const geofenceResult =
+    studentLoc && companyLocation
+      ? checkGeofence(
+          studentLoc.lat,
+          studentLoc.lng,
+          companyLocation.latitude,
+          companyLocation.longitude,
+          companyLocation.geofenceRadius || 200,
+          companyPolygon
+        )
+      : null;
+
+  const hasPerimeter =
+    companyPolygon.length >= 3 ||
+    (companyLocation?.latitude != null && companyLocation?.longitude != null);
+  const isInside = !hasPerimeter || (geofenceResult?.allowed ?? false);
+  const studentInitials =
+    `${studentProfile?.firstName?.charAt(0) || ""}${studentProfile?.lastName?.charAt(0) || ""}`.toUpperCase() || "ME";
   const hasTimeIn = !!todayRecord?.timeIn;
   const hasTimeOut = !!todayRecord?.timeOut;
   const sortedRecords = [...dtrRecords].sort((a, b) => b.date.localeCompare(a.date));
@@ -73,6 +267,7 @@ export function DTRTab({
       firstName: studentProfile.firstName || "",
       lastName: studentProfile.lastName || "",
       middleInitial: studentProfile.middleName ? studentProfile.middleName.charAt(0) + "." : "",
+      schoolYear: (studentProfile as any).schoolYear || "",
       signatureUrl: studentProfile.signatureUrl || null,
       supervisorSignatureUrl: supervisorSignatureUrl || null,
       months: Object.entries(entriesByMonth).map(([month, entries]) => ({
@@ -248,30 +443,276 @@ export function DTRTab({
           <CardTitle className="text-base">Today's Attendance</CardTitle>
           <CardDescription>{TODAY_LABEL} — {TODAY_DAY}</CardDescription>
         </CardHeader>
-        <CardContent>
-          {/* Geofence Status Banner */}
+        <CardContent className="space-y-4">
+          {/* Live Geofence Tracking Map */}
+          <div className="rounded-xl border border-border overflow-hidden bg-card shadow-xs">
+            {/* Map Top Bar */}
+            <div className="flex items-center justify-between px-3.5 py-2.5 bg-muted/40 border-b border-border flex-wrap gap-2">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <Navigation className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-semibold text-foreground">
+                      Company Perimeter & Live GPS
+                    </span>
+                    {locLoading ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                        <Loader2 className="h-2.5 w-2.5 animate-spin shrink-0" /> Acquiring GPS…
+                      </span>
+                    ) : locError ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200" title={locError}>
+                        <AlertTriangle className="h-2.5 w-2.5 shrink-0" /> Location Error
+                      </span>
+                    ) : !hasPerimeter ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                        <MapPin className="h-2.5 w-2.5 shrink-0" /> No Perimeter Set
+                      </span>
+                    ) : isInside ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <CheckCircle2 className="h-2.5 w-2.5 shrink-0" /> Within Allowed Perimeter
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+                        <XCircle className="h-2.5 w-2.5 shrink-0" /> Outside Perimeter ({geofenceResult?.distance ?? 0}m away)
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {companyLocation?.companyName || "Assigned Company"} {companyLocation?.companyAddress ? `· ${companyLocation.companyAddress}` : ""}
+                  </p>
+                </div>
+              </div>
+
+              {/* Map Action Controls */}
+              <div className="flex items-center gap-1 shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs gap-1.5 border-border hover:bg-muted text-foreground"
+                  onClick={() => refreshLocation(true)}
+                  disabled={locLoading}
+                  title="Refresh your live GPS location"
+                >
+                  <RefreshCw className={`h-3 w-3 ${locLoading ? "animate-spin text-primary" : ""}`} />
+                  <span className="hidden sm:inline">Refresh GPS</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs gap-1.5 border-border hover:bg-muted text-foreground"
+                  onClick={() => setFitTrigger((c) => c + 1)}
+                  title="Center view on company perimeter and your position"
+                >
+                  <Crosshair className="h-3 w-3" />
+                  <span className="hidden sm:inline">Center</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                  onClick={toggleMapExpanded}
+                  title={isMapExpanded ? "Compact map view" : "Expand map view"}
+                >
+                  {isMapExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                </Button>
+              </div>
+            </div>
+
+            {/* Error notice if location denied */}
+            {locError && (
+              <div className="px-3.5 py-2 bg-amber-50/90 border-b border-amber-200 text-amber-900 text-xs flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span>{locError}</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 text-[11px] px-2 bg-white border-amber-300 text-amber-800 hover:bg-amber-100"
+                  onClick={() => refreshLocation(true)}
+                >
+                  Retry GPS
+                </Button>
+              </div>
+            )}
+
+            {/* Interactive Leaflet Map */}
+            <div className={`relative w-full transition-[height] duration-200 ${isMapExpanded ? "h-[420px]" : "h-[270px]"}`} style={{ zIndex: 0 }}>
+              <MapContainer
+                center={defaultCenter}
+                zoom={16}
+                style={{ height: "100%", width: "100%" }}
+                scrollWheelZoom={false}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+
+                <MapBoundsFitter
+                  studentPos={studentLoc ? [studentLoc.lat, studentLoc.lng] : null}
+                  companyPos={companyCenter}
+                  polygon={companyPolygon}
+                  fitTrigger={fitTrigger}
+                />
+
+                {/* Company Perimeter: Polygon or Circle */}
+                {companyPolygon.length >= 3 ? (
+                  <Polygon
+                    positions={companyPolygon}
+                    pathOptions={{
+                      color: "#2563eb",
+                      fillColor: "#3b82f6",
+                      fillOpacity: 0.18,
+                      weight: 2.5,
+                      dashArray: "6 4",
+                    }}
+                  />
+                ) : companyLocation?.latitude && companyLocation?.longitude ? (
+                  <Circle
+                    center={[companyLocation.latitude, companyLocation.longitude]}
+                    radius={companyLocation.geofenceRadius || 200}
+                    pathOptions={{
+                      color: "#2563eb",
+                      fillColor: "#3b82f6",
+                      fillOpacity: 0.12,
+                      weight: 2,
+                      dashArray: "6 4",
+                    }}
+                  />
+                ) : null}
+
+                {/* Company Office Pin */}
+                {companyCenter && (
+                  <Marker
+                    position={companyCenter}
+                    icon={makeCompanyMarker()}
+                  >
+                    <Popup>
+                      <div className="p-1 space-y-1">
+                        <div className="font-semibold text-sm text-foreground">
+                          {companyLocation?.companyName || "Company Office"}
+                        </div>
+                        {companyLocation?.companyAddress && (
+                          <div className="text-xs text-muted-foreground">
+                            {companyLocation.companyAddress}
+                          </div>
+                        )}
+                        <div className="text-[11px] font-medium text-blue-600 pt-1 border-t border-border mt-1">
+                          {companyPolygon.length >= 3
+                            ? `Polygon Boundary (${companyPolygon.length} vertices)`
+                            : `Circular Geofence (${companyLocation?.geofenceRadius || 200}m)`}
+                        </div>
+                      </div>
+                    </Popup>
+                  </Marker>
+                )}
+
+                {/* Student Marker & Accuracy Radius */}
+                {studentLoc && (
+                  <>
+                    <Circle
+                      center={[studentLoc.lat, studentLoc.lng]}
+                      radius={studentLoc.accuracy}
+                      pathOptions={{
+                        color: isInside ? "#10b981" : "#ef4444",
+                        fillColor: isInside ? "#10b981" : "#ef4444",
+                        fillOpacity: 0.08,
+                        weight: 1,
+                        dashArray: "3 3",
+                      }}
+                    />
+                    <Marker
+                      position={[studentLoc.lat, studentLoc.lng]}
+                      icon={makeStudentMarker(isInside, studentInitials)}
+                    >
+                      <Popup>
+                        <div className="p-1 space-y-1">
+                          <div className="font-semibold text-sm text-foreground">
+                            {studentProfile?.name || "Your Location"}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            GPS Accuracy: ±{studentLoc.accuracy}m
+                          </div>
+                          <div className={`text-xs font-semibold pt-1 border-t border-border mt-1 ${isInside ? "text-emerald-600" : "text-rose-600"}`}>
+                            {isInside
+                              ? "✓ Inside Perimeter — Ready to Time In / Out"
+                              : `✕ Outside Boundary (${geofenceResult?.distance ?? 0}m away)`}
+                          </div>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  </>
+                )}
+              </MapContainer>
+
+              {/* Floating Legend */}
+              <div className="absolute bottom-2.5 left-2.5 z-[400] bg-background/90 backdrop-blur-md px-2.5 py-1.5 rounded-lg border border-border shadow-md text-[10px] text-muted-foreground flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-blue-500 border border-blue-600 inline-block"></span>
+                  <span className="font-medium text-foreground">Perimeter</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs">🏢</span>
+                  <span className="font-medium text-foreground">Company</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className={`w-2.5 h-2.5 rounded-full inline-block ${isInside ? "bg-emerald-500" : "bg-rose-500"}`}></span>
+                  <span className="font-medium text-foreground">You ({isInside ? "Inside" : "Outside"})</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom info footer */}
+            <div className="px-3.5 py-2 bg-muted/20 border-t border-border flex items-center justify-between text-xs text-muted-foreground flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+                <span>
+                  {companyPolygon.length >= 3
+                    ? `Perimeter: Custom Polygon (${companyPolygon.length} boundary vertices)`
+                    : companyLocation?.latitude
+                    ? `Perimeter: ${companyLocation.geofenceRadius || 200}m circular radius`
+                    : "No perimeter set by company coordinator"}
+                </span>
+              </div>
+              {studentLoc && (
+                <div className="flex items-center gap-3 text-[11px]">
+                  <span>GPS Accuracy: <strong>±{studentLoc.accuracy}m</strong></span>
+                  {geofenceResult && !geofenceResult.allowed && geofenceResult.distance != null && (
+                    <span className="text-rose-600 font-semibold">
+                      Must move {geofenceResult.distance}m closer
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Geofence Status Action Banner (shown when timing in/out) */}
           {geofenceStatus === "checking" && (
-            <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-blue-50 text-blue-700 text-sm border border-blue-200">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 text-blue-700 text-sm border border-blue-200">
               <Loader2 className="h-4 w-4 animate-spin shrink-0" /> Checking your location…
             </div>
           )}
           {geofenceStatus === "allowed" && (
-            <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-green-50 text-green-700 text-sm border border-green-200">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 text-green-700 text-sm border border-green-200">
               <CheckCircle2 className="h-4 w-4 shrink-0" /> You are within your company's geofence ✔
             </div>
           )}
           {geofenceStatus === "out_of_range" && (
-            <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-red-50 text-red-700 text-sm border border-red-200">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 text-red-700 text-sm border border-red-200">
               <XCircle className="h-4 w-4 shrink-0" /> You are outside the allowed area. Move closer to your company.
             </div>
           )}
           {geofenceStatus === "denied" && (
-            <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-orange-50 text-orange-700 text-sm border border-orange-200">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-50 text-orange-700 text-sm border border-orange-200">
               <AlertTriangle className="h-4 w-4 shrink-0" /> Location access denied. Enable it in browser settings to use DTR.
             </div>
           )}
           {geofenceStatus === "no_gps" && (
-            <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-muted text-muted-foreground text-sm border border-border">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted text-muted-foreground text-sm border border-border">
               <MapPin className="h-4 w-4 shrink-0" /> No geofence set for your company. DTR available without location check.
             </div>
           )}
@@ -334,6 +775,41 @@ export function DTRTab({
               </Button>
             </div>
           </div>
+
+          {/* Today DTR Completion / Undertime Status Banner */}
+          {todayRecord?.timeOut && (
+            <div className={`mt-4 p-3.5 rounded-xl border text-xs flex items-center justify-between flex-wrap gap-2 ${
+              todayRecord.hours < 8
+                ? "bg-amber-50/90 border-amber-200 text-amber-900 shadow-xs"
+                : "bg-emerald-50/90 border-emerald-200 text-emerald-900 shadow-xs"
+            }`}>
+              <div className="flex items-center gap-2 font-medium">
+                {todayRecord.hours < 8 ? (
+                  <>
+                    <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                    <span>
+                      Undertime recorded today: <strong>{todayRecord.hours.toFixed(2)}h</strong> (&lt; 8.0 hrs standard)
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <span>
+                      Full day completed: <strong>{todayRecord.hours.toFixed(2)}h</strong> (&ge; 8.0 hrs standard)
+                    </span>
+                  </>
+                )}
+              </div>
+              <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider border ${
+                todayRecord.hours < 8
+                  ? "bg-amber-100 text-amber-800 border-amber-300"
+                  : "bg-emerald-100 text-emerald-800 border-emerald-300"
+              }`}>
+                {todayRecord.hours < 8 ? "Undertime (<8h)" : "Completed (8h+)"}
+              </span>
+            </div>
+          )}
+
           {!hasTimeIn && (
             <p className="text-xs text-muted-foreground mt-3">You must Time In before you can Time Out.</p>
           )}
@@ -377,13 +853,29 @@ export function DTRTab({
                         ? <img src={resolveUploadUrl(e.timeOutPhoto)!} alt="" className="h-8 w-8 rounded object-cover border border-border" />
                         : <span className="text-muted-foreground text-xs">—</span>}
                     </td>
-                    <td className="py-2.5 px-3">{e.hours > 0 ? `${e.hours.toFixed(2)}h` : "—"}</td>
+                    <td className="py-2.5 px-3 font-semibold">{e.hours > 0 ? `${e.hours.toFixed(2)}h` : "—"}</td>
                     <td className="py-2.5 px-3">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        e.remarks === "Regular" ? "bg-green-100 text-green-700" :
-                        e.remarks === "Late" ? "bg-orange-100 text-orange-700" :
-                        "bg-gray-100 text-gray-500"
-                      }`}>{e.remarks}</span>
+                      {(() => {
+                        const effectiveRemarks = e.remarks || (e.timeOut ? (e.hours < 8 ? "Undertime" : "Completed") : "Regular");
+                        const isUndertime = effectiveRemarks === "Undertime" || (e.timeOut && e.hours < 8 && effectiveRemarks !== "Late");
+                        const isCompleted = effectiveRemarks === "Completed" || (e.timeOut && e.hours >= 8);
+
+                        return (
+                          <span className={`text-xs px-2.5 py-1 rounded-full font-semibold inline-flex items-center gap-1 border ${
+                            isCompleted
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : isUndertime
+                              ? "bg-amber-50 text-amber-700 border-amber-200"
+                              : effectiveRemarks === "Late"
+                              ? "bg-orange-50 text-orange-700 border-orange-200"
+                              : "bg-gray-100 text-gray-600 border-gray-200"
+                          }`}>
+                            {isUndertime && <AlertTriangle className="h-3 w-3 text-amber-600 shrink-0" />}
+                            {isCompleted && <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0" />}
+                            {isUndertime ? "Undertime" : isCompleted ? "Completed" : effectiveRemarks}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="py-2.5 px-3">
                       {e.status === "approved" && (

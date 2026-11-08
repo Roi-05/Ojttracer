@@ -49,6 +49,11 @@ function EvaluationRow({ ev }: { ev: EvaluationRecord }) {
             <h3 className="font-semibold truncate">{ev.studentName}</h3>
             <span className="text-xs text-muted-foreground font-mono bg-muted px-2 py-0.5 rounded-full">{ev.studentNumber}</span>
             <span className="text-xs text-muted-foreground px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">BSIT {ev.section}</span>
+            {ev.schoolYear && ev.schoolYear !== "—" && (
+              <span className="text-xs font-semibold text-purple-700 px-2 py-0.5 bg-purple-50 rounded-full border border-purple-200">
+                S.Y. {ev.schoolYear}
+              </span>
+            )}
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">
             Evaluated by: <strong className="text-foreground">{ev.companyName}</strong>

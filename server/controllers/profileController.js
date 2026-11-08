@@ -55,6 +55,8 @@ const updateProfile = async (req, res) => {
       if (body.hrEmail !== undefined) { fields.push(`hr_email=$${i++}`); vals.push(body.hrEmail); }
       if (body.phone !== undefined) { fields.push(`phone=$${i++}`); vals.push(body.phone); }
       if (body.description !== undefined) { fields.push(`description=$${i++}`); vals.push(body.description); }
+      if (body.breakStart !== undefined) { fields.push(`break_start=$${i++}`); vals.push(body.breakStart || null); }
+      if (body.breakEnd !== undefined) { fields.push(`break_end=$${i++}`); vals.push(body.breakEnd || null); }
       if (fields.length) { vals.push(req.user.id); await db.query(`UPDATE public.companies SET ${fields.join(', ')} WHERE user_id=$${i}`, vals); }
     }
     const updated = await loadProfile(req.user.id);
@@ -98,8 +100,20 @@ const uploadSignatureHandler = async (req, res) => {
 
 const getCoordinator = async (req, res) => {
   try {
-    const adminRes = await db.query(`SELECT id, name, email FROM public.profiles WHERE role = 'admin' ORDER BY created_at ASC LIMIT 1`);
-    const admin = adminRes.rows[0];
+    let course = null;
+    if (req.user && req.user.role === 'student') {
+      const sRes = await db.query('SELECT course FROM public.students WHERE user_id = $1', [req.user.id]);
+      course = sRes.rows[0]?.course;
+    }
+    let admin = null;
+    if (course) {
+      const cRes = await db.query('SELECT id, name, email FROM public.profiles WHERE role = $1 AND coordinator_course = $2 LIMIT 1', ['coordinator', course]);
+      admin = cRes.rows[0];
+    }
+    if (!admin) {
+      const adminRes = await db.query(`SELECT id, name, email FROM public.profiles WHERE role = 'coordinator' ORDER BY created_at ASC LIMIT 1`);
+      admin = adminRes.rows[0];
+    }
     res.json({
       name: admin ? admin.name : 'OJT Coordinator',
       email: admin ? admin.email : ''

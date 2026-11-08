@@ -4,7 +4,7 @@ const JWT_SECRET = 'your-super-secret-key-for-local-dev';
 
 function generateToken(user) {
   return jwt.sign(
-    { id: user.id, email: user.email, role: user.role },
+    { id: user.id, email: user.email, role: user.role, coordinatorCourse: user.coordinator_course || null },
     JWT_SECRET,
     { expiresIn: '24h' }
   );

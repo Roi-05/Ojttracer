@@ -15,7 +15,7 @@ const getTemplates = async (req, res) => {
 
 const uploadTemplate = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    if (!['coordinator','superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Coordinator only' });
     const docName = req.body.docName;
     if (!docName) return res.status(400).json({ error: 'docName is required' });
 
@@ -56,7 +56,7 @@ const uploadTemplate = async (req, res) => {
 
 const deleteTemplate = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    if (!['coordinator','superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Coordinator only' });
     const result = await db.query(`DELETE FROM public.templates WHERE doc_slug=$1 RETURNING file_url`, [req.params.slug]);
     const row = result.rows[0];
     if (row?.file_url) {

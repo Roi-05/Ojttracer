@@ -4,7 +4,8 @@ create table if not exists public.profiles (
   email       text not null unique,
   password_hash text not null,
   name        text not null,
-  role        text not null check (role in ('student','company','admin')),
+  role        text not null check (role in ('student','company','coordinator','superadmin')),
+  coordinator_course text,
   avatar_url  text,
   created_at  timestamptz not null default now()
 );
@@ -19,6 +20,7 @@ create table if not exists public.students (
   section            text default '',
   course             text default 'BSIT',
   year_level         text default '4th Year',
+  school_year        text default '2025-2026',
   date_of_birth      date,
   civil_status       text default '',
   sex                text default '',
@@ -61,7 +63,10 @@ create table if not exists public.companies (
   latitude          numeric(10, 7),
   longitude         numeric(10, 7),
   geofence_radius   int not null default 200,
-  signature_url     text
+  geofence_polygon  jsonb default null,
+  signature_url     text,
+  break_start       text default null,
+  break_end         text default null
 );
 
 -- ── DAILY TIME RECORDS ─────────────────────────────────────────────────────
@@ -75,7 +80,7 @@ create table if not exists public.dtr_records (
   time_in_photo_url   text,
   time_out_photo_url  text,
   hours               numeric not null default 0,
-  remarks             text not null default 'Regular',
+  remarks             text not null default 'Regular', -- 'Regular' (active/pending timeout), 'Completed' (>=8h), 'Undertime' (<8h)
   status              text default 'pending',
   review_note         text default '',
   unique (student_id, date)
@@ -167,3 +172,20 @@ create table if not exists public.location_pings (
 );
 create index if not exists idx_location_pings_student_pinged
   on public.location_pings(student_id, pinged_at desc);
+
+alter table if exists public.companies add column if not exists break_start text default null;
+alter table if exists public.companies add column if not exists break_end text default null;
+
+alter table if exists public.students add column if not exists school_year text default '2025-2026';
+
+-- ── PASSWORD RESET TOKENS ──────────────────────────────────────────────────
+create table if not exists public.password_reset_tokens (
+  id          serial primary key,
+  email       text not null,
+  code        text not null,
+  token       text not null,
+  expires_at  timestamptz not null,
+  used        boolean not null default false,
+  created_at  timestamptz not null default now()
+);
+create index if not exists idx_pwd_reset_email on public.password_reset_tokens(email);

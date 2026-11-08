@@ -10,12 +10,13 @@ interface ImportStudentsModalProps {
   onImported: () => void;
 }
 
-const EXPECTED_COLUMNS = ["Last Name", "First Name", "Middle Name", "Student No", "Section", "Course", "Year Level", "Date of Birth", "Sex", "Civil Status", "Address", "Email"];
+const EXPECTED_COLUMNS = ["Last Name", "First Name", "Middle Name", "Student No", "Section", "Course", "Year Level", "School Year", "Date of Birth", "Sex", "Civil Status", "Address", "Email"];
 
 export function ImportStudentsModal({ open, onClose, onImported }: ImportStudentsModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<any[] | null>(null);
   const [totalRows, setTotalRows] = useState(0);
+  const [schoolYear, setSchoolYear] = useState("2025-2026");
   const [isDragging, setIsDragging] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -65,7 +66,7 @@ export function ImportStudentsModal({ open, onClose, onImported }: ImportStudent
     if (!file) return;
     setIsImporting(true);
     try {
-      const res = await api.importStudents(file);
+      const res = await api.importStudents(file, schoolYear);
       setResult(res);
       toast.success(res.summary || "Import complete!");
       onImported();
@@ -78,7 +79,7 @@ export function ImportStudentsModal({ open, onClose, onImported }: ImportStudent
 
   const downloadTemplate = () => {
     const header = EXPECTED_COLUMNS.join(",");
-    const example = ["Dela Cruz", "Juan", "Santos", "2021-00001", "4A", "BSIT", "4th Year", "2002-05-15", "Male", "Single", "Sto. Tomas Pampanga", "jdsdelacruz@psu.edu.ph"].join(",");
+    const example = ["Dela Cruz", "Juan", "Santos", "2021-00001", "4A", "BSIT", "4th Year", "2025-2026", "2002-05-15", "Male", "Single", "Sto. Tomas Pampanga", "jdsdelacruz@psu.edu.ph"].join(",");
     const csv = `${header}\n${example}`;
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -158,6 +159,23 @@ export function ImportStudentsModal({ open, onClose, onImported }: ImportStudent
                 <Button variant="outline" size="sm" onClick={downloadTemplate} className="gap-1.5 border-blue-200 text-blue-700 hover:bg-blue-100">
                   <Download className="h-3.5 w-3.5" /> Template
                 </Button>
+              </div>
+
+              {/* School Year Selection */}
+              <div className="bg-muted/30 border border-border rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-foreground uppercase tracking-wider">Target School Year (S.Y.)</label>
+                  <p className="text-xs text-muted-foreground mt-0.5">Applied to imported students if not specified in the Excel sheet.</p>
+                </div>
+                <div className="w-full sm:w-44">
+                  <input
+                    type="text"
+                    value={schoolYear}
+                    onChange={(e) => setSchoolYear(e.target.value)}
+                    placeholder="e.g. 2025-2026"
+                    className="w-full text-sm font-medium border border-border rounded-lg px-3 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
               </div>
 
               {/* Drop zone */}

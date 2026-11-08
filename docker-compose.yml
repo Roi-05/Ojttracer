@@ -25,14 +25,17 @@ services:
     depends_on:
       - db
 
-  # LibreOffice-backed DOCX -> PDF for journal generation.
+  # LibreOffice-backed DOCX -> PDF for journal/certificate generation.
   # Mapped to 3001 so it does not collide with the Express API on 3000.
+  # The ./fonts volume provides Great Vibes, Lato, and other custom fonts to LibreOffice.
   gotenberg:
     image: gotenberg/gotenberg:8
     container_name: ojttracer-gotenberg
     restart: always
     ports:
       - "3001:3000"
+    volumes:
+      - ./fonts:/usr/local/share/fonts:ro
     command:
       - gotenberg
       - --api-timeout=120s

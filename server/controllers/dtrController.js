@@ -35,6 +35,22 @@ function parseTime(s) {
   return 0;
 }
 
+/**
+ * Calculate how many hours of the break window fall within the clock-in/out range.
+ * Returns deduction in hours (0 if break settings are not set).
+ */
+function calculateBreakDeduction(timeIn, timeOut, breakStart, breakEnd) {
+  if (!breakStart || !breakEnd) return 0;
+  const inMin = parseTime(timeIn);
+  const outMin = parseTime(timeOut);
+  const bStart = parseTime(breakStart);
+  const bEnd = parseTime(breakEnd);
+  const overlapStart = Math.max(inMin, bStart);
+  const overlapEnd = Math.min(outMin, bEnd);
+  const overlap = Math.max(0, overlapEnd - overlapStart);
+  return overlap / 60;
+}
+
 const clockDtr = async (req, res) => {
   try {
     const { date, mode, time, photo, day, deviceToken } = req.body;
@@ -77,12 +93,25 @@ const clockDtr = async (req, res) => {
       let photoUrl = null;
       if (photo) photoUrl = saveBase64Image(photo, 'dtr', `${req.user.id}-${date}-out.jpg`);
 
+      // Fetch the company's break time settings for this student's deployment
+      const depRes = await db.query(
+        `SELECT c.break_start, c.break_end
+         FROM public.deployments d
+         JOIN public.companies c ON c.user_id = d.company_id
+         WHERE d.student_id = $1`,
+        [req.user.id]
+      );
+      const { break_start, break_end } = depRes.rows[0] || {};
+      const breakDeduction = calculateBreakDeduction(existing.time_in, time, break_start, break_end);
+
       const diffMinutes = parseTime(time) - parseTime(existing.time_in);
-      const hours = diffMinutes > 0 ? Math.round((diffMinutes / 60) * 100) / 100 : 0;
+      const rawHours = diffMinutes > 0 ? diffMinutes / 60 : 0;
+      const hours = Math.max(0, Math.round((rawHours - breakDeduction) * 100) / 100);
+      const remarks = hours < 8 ? 'Undertime' : 'Completed';
 
       const upd = await db.query(
-        `UPDATE public.dtr_records SET time_out = $1, time_out_photo_url = $2, hours = $3 WHERE id = $4 RETURNING *`,
-        [time, photoUrl, hours, existing.id]
+        `UPDATE public.dtr_records SET time_out = $1, time_out_photo_url = $2, hours = $3, remarks = $4 WHERE id = $5 RETURNING *`,
+        [time, photoUrl, hours, remarks, existing.id]
       );
       res.json({ success: true, record: upd.rows[0] });
     }
@@ -102,18 +131,25 @@ const getDtr = async (req, res) => {
 
 const getAdminDtr = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    if (!['coordinator','superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Coordinator only' });
+    const isSuperadmin = req.user.role === 'superadmin';
+    const params = [];
+    const courseClause = isSuperadmin
+      ? ''
+      : (() => { params.push(req.user.coordinatorCourse || 'BSIT'); return 'AND s.course = $' + params.length; })();
+
     const result = await db.query(`
       SELECT d.*, TO_CHAR(d.date, 'YYYY-MM-DD') as date_str,
              p.name as student_name, p.id as student_profile_id,
              s.section, s.student_id as student_number,
-             s.first_name, s.last_name
+             s.first_name, s.last_name, s.school_year, s.course
       FROM public.dtr_records d
       JOIN public.profiles p ON p.id = d.student_id
       LEFT JOIN public.students s ON s.user_id = d.student_id
+      WHERE 1=1 ${courseClause}
       ORDER BY d.date DESC
       LIMIT 1000
-    `);
+    `, params);
     res.json(result.rows.map(r => ({
       id: r.id,
       studentId: r.student_id,
@@ -122,6 +158,7 @@ const getAdminDtr = async (req, res) => {
         : r.student_name,
       studentNumber: r.student_number || '—',
       section: r.section || '—',
+      schoolYear: r.school_year || '—',
       date: r.date_str,
       day: r.day,
       timeIn: r.time_in,
@@ -145,7 +182,7 @@ const getCompanyDtr = async (req, res) => {
       SELECT d.*, TO_CHAR(d.date, 'YYYY-MM-DD') as date_str,
              p.name as student_name, p.id as student_profile_id,
              s.section, s.student_id as student_number,
-             s.first_name, s.last_name
+             s.first_name, s.last_name, s.school_year
       FROM public.dtr_records d
       JOIN public.profiles p ON p.id = d.student_id
       JOIN public.deployments dep ON dep.student_id = d.student_id AND dep.company_id = $1
@@ -221,15 +258,25 @@ const setDtrTimeout = async (req, res) => {
     const timeIn = check.rows[0].time_in;
     if (!timeIn) return res.status(400).json({ error: 'No time-in recorded for this entry' });
 
+    // Apply company break deduction for this company's interns
+    const breakRes = await db.query(
+      `SELECT break_start, break_end FROM public.companies WHERE user_id = $1`,
+      [req.user.id]
+    );
+    const { break_start, break_end } = breakRes.rows[0] || {};
+    const breakDeduction = calculateBreakDeduction(timeIn, timeOut, break_start, break_end);
+
     const diffMinutes = parseTime(timeOut) - parseTime(timeIn);
-    const hours = diffMinutes > 0 ? Math.round((diffMinutes / 60) * 100) / 100 : 0;
+    const rawHours = diffMinutes > 0 ? diffMinutes / 60 : 0;
+    const hours = Math.max(0, Math.round((rawHours - breakDeduction) * 100) / 100);
+    const remarks = hours < 8 ? 'Undertime' : 'Completed';
 
     const upd = await db.query(
       `UPDATE public.dtr_records
-       SET time_out = $1, hours = $2, remarks = 'Supervisor-adjusted', status = 'pending'
-       WHERE id = $3
+       SET time_out = $1, hours = $2, remarks = $3, status = 'pending'
+       WHERE id = $4
        RETURNING *`,
-      [timeOut, hours, id]
+      [timeOut, hours, remarks, id]
     );
 
     res.json({ success: true, record: upd.rows[0] });

@@ -108,8 +108,18 @@ export function SettingsTab() {
           </div>
           <div>
             <Label className="text-xs text-muted-foreground">Role</Label>
-            <p className="text-sm font-medium mt-1 capitalize">{user?.role || "Admin"}</p>
+            <p className="text-sm font-medium mt-1 capitalize">{user?.role || "Coordinator"}</p>
           </div>
+          {user?.coordinatorCourse && (
+            <div>
+              <Label className="text-xs text-muted-foreground">Assigned Course Department</Label>
+              <div className="mt-1">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-purple-100 text-purple-700 border border-purple-200">
+                  {user.coordinatorCourse}
+                </span>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

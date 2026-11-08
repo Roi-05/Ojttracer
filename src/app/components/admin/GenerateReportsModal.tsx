@@ -17,6 +17,7 @@ interface GenerateReportsModalProps {
 export function GenerateReportsModal({ open, onClose, students, companies }: GenerateReportsModalProps) {
   const [reportType, setReportType] = useState<"evaluations" | "deployment" | "dtr">("evaluations");
   const [sectionFilter, setSectionFilter] = useState("All");
+  const [schoolYearFilter, setSchoolYearFilter] = useState("All");
 
   const generateReport = () => {
     try {
@@ -29,13 +30,14 @@ export function GenerateReportsModal({ open, onClose, students, companies }: Gen
       let filename = "";
 
       if (reportType === "evaluations") {
-        filename = `Student_Evaluations_Masterlist_${sectionFilter}.xlsx`;
+        filename = `Student_Evaluations_Masterlist_SY${schoolYearFilter}_${sectionFilter}.xlsx`;
         data = targetStudents.map(s => ({
           "Student ID": s.studentId,
           "Last Name": s.lastName,
           "First Name": s.firstName,
           "Middle Name": s.middleName,
           "Course & Section": `${s.course} ${s.section}`,
+          "School Year": s.schoolYear || "—",
           "Company": s.company,
           "Position": s.position,
           "Hours Rendered": s.hoursCompleted,
@@ -45,7 +47,7 @@ export function GenerateReportsModal({ open, onClose, students, companies }: Gen
         }));
       } 
       else if (reportType === "deployment") {
-        filename = `Deployment_Masterlist_${sectionFilter}.xlsx`;
+        filename = `Deployment_Masterlist_SY${schoolYearFilter}_${sectionFilter}.xlsx`;
         data = targetStudents.map(s => {
           // Find company to get contact details if available
           const comp = companies.find(c => c.name === s.company);
@@ -63,7 +65,7 @@ export function GenerateReportsModal({ open, onClose, students, companies }: Gen
         });
       }
       else if (reportType === "dtr") {
-        filename = `Hours_Summary_${sectionFilter}.xlsx`;
+        filename = `Hours_Summary_SY${schoolYearFilter}_${sectionFilter}.xlsx`;
         data = targetStudents.map(s => {
           const remaining = Math.max(0, s.requiredHours - s.hoursCompleted);
           const pct = s.requiredHours > 0 ? Math.round((s.hoursCompleted / s.requiredHours) * 100) : 0;
@@ -103,6 +105,7 @@ export function GenerateReportsModal({ open, onClose, students, companies }: Gen
 
   // Get unique sections from students
   const uniqueSections = ["All", ...Array.from(new Set(students.map(s => s.section))).filter(s => s !== "—").sort()];
+  const uniqueSchoolYears = ["All", ...Array.from(new Set(students.map(s => s.schoolYear))).filter(Boolean).sort().reverse()];
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>

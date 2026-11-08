@@ -10,6 +10,7 @@ import { GraduationCap, Building2, Shield, Loader2, Eye, EyeOff } from "lucide-r
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
 import { signUp } from "../lib/api";
+import { ForgotPasswordModal } from "../components/auth/ForgotPasswordModal";
 
 const SECTIONS = ["4A", "4B", "4C", "4D"];
 
@@ -36,6 +37,7 @@ export function LoginPage() {
       const dest =
         user.role === "student" ? "/student/dashboard" :
         user.role === "company" ? "/company/dashboard" :
+        user.role === "superadmin" ? "/superadmin/dashboard" :
         "/admin/dashboard";
       navigate(dest, { replace: true });
     }
@@ -197,6 +199,7 @@ function LoginForm({
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -235,7 +238,8 @@ function LoginForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
       {isRegistering && (
         <div className="space-y-2">
           <Label htmlFor={`name-${role}`}>
@@ -368,9 +372,17 @@ function LoginForm({
             <input type="checkbox" className="rounded border-border" />
             <span className="text-muted-foreground">Remember me</span>
           </label>
-          <a href="#" className="text-primary hover:underline">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowForgotPassword(true);
+            }}
+            className="text-primary hover:underline font-medium text-xs sm:text-sm"
+          >
             Forgot password?
-          </a>
+          </button>
         </div>
       )}
       <Button
@@ -410,5 +422,17 @@ function LoginForm({
         )}
       </p>
     </form>
+
+    <ForgotPasswordModal
+      open={showForgotPassword}
+      onClose={() => setShowForgotPassword(false)}
+      initialEmail={email}
+      role={role}
+      onSuccess={(resetEmail) => {
+        setEmail(resetEmail);
+        setIsRegistering(false);
+      }}
+    />
+  </>
   );
 }

@@ -12,7 +12,8 @@ const getCompanies = async (req, res) => {
              c.company_name, c.industry, c.company_address, c.website,
              c.hr_contact, c.hr_email, c.phone as company_phone,
              c.description, c.moa_status, c.accredited_until, c.signed_moa_url,
-             c.latitude, c.longitude, c.geofence_radius
+             c.latitude, c.longitude, c.geofence_radius, c.geofence_polygon,
+             c.break_start, c.break_end
       FROM public.profiles p
       LEFT JOIN public.companies c ON c.user_id = p.id
       WHERE p.role = 'company'
@@ -37,6 +38,13 @@ const getCompanies = async (req, res) => {
       latitude: c.latitude != null ? parseFloat(c.latitude) : null,
       longitude: c.longitude != null ? parseFloat(c.longitude) : null,
       geofenceRadius: c.geofence_radius || 200,
+      geofencePolygon: Array.isArray(c.geofence_polygon)
+        ? c.geofence_polygon
+        : (typeof c.geofence_polygon === 'string'
+            ? (() => { try { return JSON.parse(c.geofence_polygon); } catch (_) { return null; } })()
+            : null),
+      breakStart: c.break_start || null,
+      breakEnd: c.break_end || null,
     })));
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -45,7 +53,7 @@ const getCompanies = async (req, res) => {
 
 const verifyCompany = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    if (!['coordinator','superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Coordinator only' });
     const { id } = req.params;
     const { status } = req.body;
     await db.query(`UPDATE public.companies SET moa_status = $1 WHERE user_id = $2`, [status || 'active', id]);
@@ -57,7 +65,7 @@ const verifyCompany = async (req, res) => {
 
 const updateMoa = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    if (!['coordinator','superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Coordinator only' });
     const { id } = req.params;
     const { status, expiryDate } = req.body;
     if (!status) return res.status(400).json({ error: 'status is required' });
@@ -109,7 +117,7 @@ const getInterns = async (req, res) => {
   try {
     if (req.user.role !== 'company') return res.status(403).json({ error: 'Company only' });
     const result = await db.query(`
-      SELECT p.id, p.name, s.course, s.registered_device_token, s.registered_device_name, s.device_reset_requested,
+      SELECT p.id, p.name, s.course, s.registered_device_token, s.registered_device_name, s.device_reset_requested, s.school_year, s.section,
              d.position, d.supervisor, d.start_date, d.end_date, d.required_hours, d.status,
              (SELECT COALESCE(SUM(hours), 0) FROM public.dtr_records WHERE student_id = p.id AND status = 'approved') as completed_hours,
              e.overall_score
@@ -124,6 +132,8 @@ const getInterns = async (req, res) => {
       id: r.id,
       name: r.name,
       course: r.course || 'BSIT',
+      schoolYear: r.school_year || '',
+      section: r.section || '',
       completedHours: parseFloat(r.completed_hours),
       performance: parseFloat(r.overall_score) || 0,
       registeredDeviceToken: r.registered_device_token || null,
@@ -145,15 +155,18 @@ const getInterns = async (req, res) => {
 
 const updateCompanyLocation = async (req, res) => {
   try {
-    if (!['admin', 'company'].includes(req.user.role))
+    if (!['coordinator','superadmin','company'].includes(req.user.role))
       return res.status(403).json({ error: 'Not authorized' });
-    const { latitude, longitude, geofenceRadius } = req.body;
+    const { latitude, longitude, geofenceRadius, geofencePolygon } = req.body;
     if (latitude == null || longitude == null)
       return res.status(400).json({ error: 'latitude and longitude are required' });
-    const targetId = req.user.role === 'admin' ? req.params.id : req.user.id;
+    const targetId = ['coordinator','superadmin'].includes(req.user.role) ? req.params.id : req.user.id;
+    const polygonValue = Array.isArray(geofencePolygon) && geofencePolygon.length >= 3
+      ? JSON.stringify(geofencePolygon)
+      : null;
     await db.query(
-      `UPDATE public.companies SET latitude = $1, longitude = $2, geofence_radius = $3 WHERE user_id = $4`,
-      [latitude, longitude, geofenceRadius || 200, targetId]
+      `UPDATE public.companies SET latitude = $1, longitude = $2, geofence_radius = $3, geofence_polygon = $4 WHERE user_id = $5`,
+      [latitude, longitude, geofenceRadius || 200, polygonValue, targetId]
     );
     res.json({ success: true });
   } catch (err) {
@@ -161,9 +174,29 @@ const updateCompanyLocation = async (req, res) => {
   }
 };
 
+const updateBreakTime = async (req, res) => {
+  try {
+    if (!['coordinator','superadmin','company'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Company only' });
+    }
+    const targetId = ['coordinator','superadmin'].includes(req.user.role) && req.params.id ? req.params.id : req.user.id;
+    const { breakStart, breakEnd } = req.body;
+    const bStart = breakStart ? breakStart.trim() : null;
+    const bEnd = breakEnd ? breakEnd.trim() : null;
+
+    await db.query(
+      `UPDATE public.companies SET break_start = $1, break_end = $2 WHERE user_id = $3`,
+      [bStart, bEnd, targetId]
+    );
+    res.json({ success: true, breakStart: bStart, breakEnd: bEnd });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 const deleteCompany = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    if (!['coordinator','superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Coordinator only' });
     const { id } = req.params;
     await db.query(`DELETE FROM public.profiles WHERE id = $1 AND role = 'company'`, [id]);
     res.json({ success: true });
@@ -180,5 +213,6 @@ module.exports = {
   getMoaTemplate,
   getInterns,
   updateCompanyLocation,
+  updateBreakTime,
   deleteCompany
 };

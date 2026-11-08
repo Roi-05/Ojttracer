@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
-import { Timer, BookOpen, Upload, Calendar, TrendingUp, Camera, Megaphone } from "lucide-react";
+import { Button } from "../ui/button";
+import { Timer, BookOpen, Upload, Calendar, TrendingUp, Camera, Megaphone, Award, Download } from "lucide-react";
 import { DailyAccomplishment, StudentDocument, Announcement } from "../../hooks/useStudentData";
 import { TODAY_LABEL } from "./shared";
 import { StatusBadge } from "./shared";
@@ -14,6 +15,8 @@ interface DashboardTabProps {
   announcementData: Announcement[];
   setActiveSection: (section: string) => void;
   setShowAccomplishmentModal: (show: boolean) => void;
+  isCompleted?: boolean;
+  onExportCertificatePDF?: () => void;
 }
 
 export function DashboardTab({
@@ -25,8 +28,15 @@ export function DashboardTab({
   studentDocs,
   announcementData,
   setActiveSection,
-  setShowAccomplishmentModal
+  setShowAccomplishmentModal,
+  isCompleted = false,
+  onExportCertificatePDF,
 }: DashboardTabProps) {
+  const completed =
+    isCompleted ||
+    effectiveDeployment.status === "completed" ||
+    (effectiveDeployment.requiredHours > 0 && effectiveDeployment.completedHours >= effectiveDeployment.requiredHours);
+
   return (
     <div className="space-y-6">
       <div>
@@ -34,12 +44,35 @@ export function DashboardTab({
         <p className="text-muted-foreground mt-1">Here's your OJT progress overview for today, {TODAY_LABEL}.</p>
       </div>
 
+      {/* Completion Banner */}
+      {completed && onExportCertificatePDF && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-blue-600 text-white shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="h-12 w-12 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center shrink-0 border border-white/30 shadow-inner">
+              <Award className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-base sm:text-lg font-bold leading-tight">OJT Completed! Congratulations! 🎉</h2>
+              <p className="text-xs sm:text-sm text-emerald-50/90 mt-0.5">
+                You have completed all {effectiveDeployment.requiredHours} required hours. Your official Certificate of Completion is ready.
+              </p>
+            </div>
+          </div>
+          <Button
+            onClick={onExportCertificatePDF}
+            className="shrink-0 bg-white text-emerald-800 hover:bg-emerald-50 font-semibold shadow-sm gap-2"
+          >
+            <Download className="h-4 w-4" /> Export E-Certificate (PDF)
+          </Button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Hours Completed", value: `${effectiveDeployment.completedHours}`, total: `/ ${effectiveDeployment.requiredHours} hrs`, icon: <Timer className="h-5 w-5" />, color: "text-blue-600 bg-blue-100", pct: pct },
           { label: "Journal Entries", value: `${accomplishmentList.length}`, total: "logged", icon: <BookOpen className="h-5 w-5" />, color: "text-green-600 bg-green-100", pct: null },
           { label: "Documents", value: `${studentDocs.filter(d => d.status === "approved").length}/${studentDocs.length}`, total: "approved", icon: <Upload className="h-5 w-5" />, color: "text-orange-600 bg-orange-100", pct: null },
-          { label: "Days Remaining", value: "40", total: "until end", icon: <Calendar className="h-5 w-5" />, color: "text-purple-600 bg-purple-100", pct: null },
+          { label: "Days Remaining", value: completed ? "0" : "40", total: completed ? "completed" : "until end", icon: <Calendar className="h-5 w-5" />, color: "text-purple-600 bg-purple-100", pct: null },
         ].map((s, i) => (
           <Card key={i} className="border-0 shadow-sm">
             <CardContent className="p-5">
@@ -98,6 +131,16 @@ export function DashboardTab({
           </CardHeader>
           <CardContent className="space-y-2">
             {[
+              ...(completed && onExportCertificatePDF
+                ? [
+                    {
+                      label: "Export E-Certificate (PDF)",
+                      icon: <Award className="h-4 w-4" />,
+                      action: onExportCertificatePDF,
+                      color: "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-semibold",
+                    },
+                  ]
+                : []),
               { label: "Time In / Out", icon: <Camera className="h-4 w-4" />, action: () => setActiveSection("attendance"), color: "bg-blue-50 text-blue-600 hover:bg-blue-100" },
               { label: "Post Journal Entry", icon: <BookOpen className="h-4 w-4" />, action: () => { setActiveSection("journal"); setShowAccomplishmentModal(true); }, color: "bg-green-50 text-green-600 hover:bg-green-100" },
               { label: "Upload Document", icon: <Upload className="h-4 w-4" />, action: () => setActiveSection("documents"), color: "bg-orange-50 text-orange-600 hover:bg-orange-100" },

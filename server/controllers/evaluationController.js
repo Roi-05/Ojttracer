@@ -63,7 +63,13 @@ const submitEvaluation = async (req, res) => {
 
 const getAllEvaluations = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    if (!['coordinator','superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Coordinator only' });
+    const evalParams = [];
+    let evalCourseClause = '';
+    if (req.user.role === 'coordinator') {
+      evalParams.push(req.user.coordinatorCourse || 'BSIT');
+      evalCourseClause = 'WHERE s.course = $1';
+    }
     const result = await db.query(`
       SELECT e.*,
              p.name as student_name_profile,
@@ -74,8 +80,9 @@ const getAllEvaluations = async (req, res) => {
       LEFT JOIN public.profiles p ON p.id = e.student_id
       LEFT JOIN public.students s ON s.user_id = e.student_id
       LEFT JOIN public.companies c ON c.user_id = e.company_id
+      ${evalCourseClause}
       ORDER BY e.submitted_at DESC
-    `);
+    `, evalParams);
     res.json(result.rows.map(r => ({
       studentId: r.student_id,
       studentName: r.student_name_profile || r.student_name || '—',

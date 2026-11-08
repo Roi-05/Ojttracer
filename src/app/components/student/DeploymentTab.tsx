@@ -1,5 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { MapPin, Building2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
+import { Button } from "../ui/button";
+import { MapPin, Building2, Award, Download, FileText, Lock } from "lucide-react";
 import { StatusBadge } from "./shared";
 
 interface DeploymentTabProps {
@@ -14,12 +15,40 @@ interface DeploymentTabProps {
     requiredHours: number;
     completedHours: number;
     status: string;
+    companyLat?: number | null;
+    companyLng?: number | null;
+    geofenceRadius?: number;
+    geofencePolygon?: any;
+    breakStart?: string | null;
+    breakEnd?: string | null;
   };
   pct: number;
+  isCompleted?: boolean;
+  onExportCertificatePDF?: () => void;
+  onExportCertificateDOCX?: () => void;
 }
 
-export function DeploymentTab({ effectiveDeployment, pct }: DeploymentTabProps) {
+export function DeploymentTab({
+  effectiveDeployment,
+  pct,
+  isCompleted = false,
+  onExportCertificatePDF,
+  onExportCertificateDOCX,
+}: DeploymentTabProps) {
   const companyAddress = (effectiveDeployment.companyAddress || "").trim();
+  const hasPolygon = Array.isArray(effectiveDeployment.geofencePolygon) && effectiveDeployment.geofencePolygon.length >= 3;
+  const hasGps = effectiveDeployment.companyLat != null && effectiveDeployment.companyLng != null;
+  const geofenceText = hasPolygon
+    ? `Polygon Perimeter (${effectiveDeployment.geofencePolygon.length} pts)`
+    : hasGps
+    ? `Circular (${effectiveDeployment.geofenceRadius || 200}m radius)`
+    : "No location restriction";
+
+  const completed =
+    isCompleted ||
+    effectiveDeployment.status === "completed" ||
+    (effectiveDeployment.requiredHours > 0 && effectiveDeployment.completedHours >= effectiveDeployment.requiredHours);
+
   return (
     <div className="space-y-6">
       <div>
@@ -28,6 +57,73 @@ export function DeploymentTab({ effectiveDeployment, pct }: DeploymentTabProps) 
       </div>
 
       <div className="grid gap-6">
+        {/* Certificate of Completion Section */}
+        {completed ? (
+          <Card className="border border-emerald-200 bg-gradient-to-br from-emerald-50/90 via-teal-50/50 to-white shadow-sm overflow-hidden">
+            <CardHeader className="pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                    <Award className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg text-emerald-950 font-bold">Certificate of Completion</CardTitle>
+                    <CardDescription className="text-emerald-800 text-xs mt-0.5">
+                      🎉 Congratulations! You have successfully completed your OJT program. Your official E-Certificate is ready.
+                    </CardDescription>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {onExportCertificatePDF && (
+                    <Button
+                      onClick={onExportCertificatePDF}
+                      className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm font-medium"
+                    >
+                      <Download className="h-4 w-4" /> Export E-Certificate (PDF)
+                    </Button>
+                  )}
+                  {onExportCertificateDOCX && (
+                    <Button
+                      onClick={onExportCertificateDOCX}
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 border-emerald-300 text-emerald-900 hover:bg-emerald-100 bg-white/80"
+                    >
+                      <FileText className="h-3.5 w-3.5" /> Word (.docx)
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <p className="text-xs text-emerald-700/90">
+                Generated from your verified completion record at <span className="font-semibold">{effectiveDeployment.company || "your host training establishment"}</span>. Converted and compiled via official PDF formatting.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border border-dashed border-border bg-muted/20 shadow-none">
+            <CardContent className="p-4 flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-muted text-muted-foreground flex items-center justify-center shrink-0">
+                  <Lock className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                    <Award className="h-4 w-4 text-muted-foreground" /> Certificate of Completion (Locked)
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Will be unlocked once you complete all {effectiveDeployment.requiredHours} required hours ({effectiveDeployment.completedHours} / {effectiveDeployment.requiredHours} hrs done).
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground">
+                {pct}% Completed
+              </span>
+            </CardContent>
+          </Card>
+        )}
+
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -37,7 +133,7 @@ export function DeploymentTab({ effectiveDeployment, pct }: DeploymentTabProps) 
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-4 mb-5 pb-5 border-b border-border">
-              <div className="h-14 w-14 bg-blue-100 rounded-xl flex items-center justify-center">
+              <div className="h-14 w-14 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
                 <Building2 className="h-7 w-7 text-blue-600" />
               </div>
               <div>
@@ -55,6 +151,13 @@ export function DeploymentTab({ effectiveDeployment, pct }: DeploymentTabProps) 
                 { label: "Supervisor Email", value: effectiveDeployment.supervisorEmail },
                 { label: "Start Date", value: effectiveDeployment.startDate },
                 { label: "End Date", value: effectiveDeployment.endDate },
+                { label: "DTR Geofence", value: geofenceText },
+                {
+                  label: "Break Time (DTR)",
+                  value: effectiveDeployment.breakStart && effectiveDeployment.breakEnd
+                    ? `${effectiveDeployment.breakStart} – ${effectiveDeployment.breakEnd} (Unpaid)`
+                    : "No break deduction",
+                },
               ].map((item, i) => (
                 <div key={i}>
                   <p className="text-xs text-muted-foreground">{item.label}</p>

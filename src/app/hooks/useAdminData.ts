@@ -7,7 +7,7 @@ import { REQUIRED_DOC_NAMES } from "./useStudentData";
 export type AdminStudent = {
   id: string | number; name: string; studentId: string;
   lastName: string; firstName: string; middleName: string;
-  course: string; yearLevel: string; section: string;
+  course: string; yearLevel: string; section: string; schoolYear: string;
   dateOfBirth: string | null; civilStatus: string; sex: string;
   email: string; phone: string; address: string;
   company: string; position: string; hoursCompleted: number; requiredHours: number;
@@ -15,13 +15,14 @@ export type AdminStudent = {
   registeredDeviceName?: string | null; deviceRegisteredAt?: string | null;
   deviceResetRequested?: boolean;
 };
-export type AdminCompany = { id: string | number; name: string; industry: string; location: string; activeInterns: number; totalCapacity: number; moaStatus: string; moaExpiry: string; contactPerson: string; verified: boolean; hrContact?: string; hrEmail?: string; signedMoaUrl?: string | null; latitude?: number | null; longitude?: number | null; geofenceRadius?: number };
+export type AdminCompany = { id: string | number; name: string; industry: string; location: string; activeInterns: number; totalCapacity: number; moaStatus: string; moaExpiry: string; contactPerson: string; verified: boolean; hrContact?: string; hrEmail?: string; signedMoaUrl?: string | null; latitude?: number | null; longitude?: number | null; geofenceRadius?: number; geofencePolygon?: [number, number][] | null };
 export type DTRLog = {
   id?: string | number;
   student: string;
   studentId: string | number;
   studentNumber: string;
   section: string;
+  schoolYear?: string;
   date: string;
   day: string;
   timeIn: string;
@@ -34,12 +35,12 @@ export type DTRLog = {
   verificationStatus?: "pending" | "approved" | "rejected";
   reviewNote?: string;
 };
-export type JournalLog = { student: string; section: string; week: string; title: string; submitted: string; status: string };
+export type JournalLog = { student: string; section: string; schoolYear?: string; week: string; title: string; submitted: string; status: string };
 export type Announcement = { id: string | number; title: string; content: string; date: string; category: string; priority: string };
 export type AdminTemplate = { name: string; file: string | null; size: string; uploaded: string; docSlug: string | null };
 export type AdminDocEntry = { name: string; status: string; file: string | null; uploaded: string };
-export type AdminSubmission = { studentId: string | number; name: string; studentNo: string; course: string; section: string; deployed: boolean; assignedCompany: string | null; docs: AdminDocEntry[] };
-export type EvaluationRecord = { studentId: string; studentName: string; studentNumber: string; section: string; companyName: string; scores: Record<string, number>; overallScore: number; comments: string; submittedAt: string; };
+export type AdminSubmission = { studentId: string | number; name: string; studentNo: string; course: string; section: string; schoolYear?: string; deployed: boolean; assignedCompany: string | null; docs: AdminDocEntry[] };
+export type EvaluationRecord = { studentId: string; studentName: string; studentNumber: string; section: string; companyName: string; scores: Record<string, number>; overallScore: number; comments: string; submittedAt: string; schoolYear?: string; };
 
 export function useAdminData() {
   const { user } = useAuth();
@@ -77,6 +78,7 @@ export function useAdminData() {
           lastName: s.lastName || '', firstName: s.firstName || '', middleName: s.middleName || '',
           course: s.course || 'BSIT', yearLevel: s.yearLevel || '4th Year',
           section: s.section || '—',
+          schoolYear: s.schoolYear || '2025-2026',
           dateOfBirth: s.dateOfBirth || null, civilStatus: s.civilStatus || '', sex: s.sex || '',
           phone: s.phone || '', address: s.address || '',
           company: s.deployment?.company || '—', position: s.deployment?.position || '—',
@@ -113,7 +115,8 @@ export function useAdminData() {
             signedMoaUrl: c.signedMoaUrl || null,
             latitude: c.latitude != null ? parseFloat(c.latitude) : null,
             longitude: c.longitude != null ? parseFloat(c.longitude) : null,
-            geofenceRadius: c.geofenceRadius || 200
+            geofenceRadius: c.geofenceRadius || 200,
+            geofencePolygon: c.geofencePolygon || null
           };
         }));
       }
@@ -132,6 +135,7 @@ export function useAdminData() {
           studentId: r.studentId,
           studentNumber: r.studentNumber || '—',
           section: r.section || '—',
+          schoolYear: r.schoolYear || '—',
           date: r.date || '—',
           day: r.day || '—',
           timeIn: r.timeIn || '—',
@@ -151,6 +155,7 @@ export function useAdminData() {
           return {
             student: a.studentName || a.studentId || "—",
             section: matchedStudent?.section || "—",
+            schoolYear: matchedStudent?.schoolYear || "—",
           week: a.date ? new Date(a.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—",
           title: a.details ? (a.details.length > 60 ? a.details.substring(0, 60) + "…" : a.details) : "—",
           submitted: a.createdAt
@@ -168,6 +173,7 @@ export function useAdminData() {
           studentNo: s.studentNo || "—",
           course: "BSIT",
           section: s.section || "—",
+          schoolYear: (stuRes || []).find((x: any) => x.id === s.studentId)?.schoolYear || "—",
           deployed: s.isDeployed || false,
           assignedCompany: s.assignedCompany || null,
           docs: REQUIRED_DOC_NAMES.map((docName) => {
@@ -189,7 +195,13 @@ export function useAdminData() {
       }
 
       if (evalRes) {
-        setEvaluations(evalRes || []);
+        setEvaluations((evalRes || []).map((e: any) => {
+          const matchedStudent = (stuRes || []).find((x: any) => x.id === e.studentId);
+          return {
+            ...e,
+            schoolYear: matchedStudent?.schoolYear || "—",
+          };
+        }));
       }
 
     } catch (err) {

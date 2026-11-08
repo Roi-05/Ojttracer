@@ -11,7 +11,7 @@ const getAnnouncements = async (req, res) => {
 
 const createAnnouncement = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    if (!['coordinator','superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Coordinator only' });
     const { title, content, category, priority } = req.body;
     const id = Date.now().toString();
     const date = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -27,7 +27,7 @@ const createAnnouncement = async (req, res) => {
 
 const deleteAnnouncement = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    if (!['coordinator','superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Coordinator only' });
     await db.query(`DELETE FROM public.announcements WHERE id=$1`, [req.params.id]);
     res.json({ success: true });
   } catch (err) {

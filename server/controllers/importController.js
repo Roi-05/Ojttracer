@@ -103,7 +103,7 @@ const parseDob = (raw) => {
 
 const importStudents = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    if (req.user.role !== 'coordinator') return res.status(403).json({ error: 'Coordinator only' });
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
     const workbook = xlsx.read(req.file.buffer, { type: 'buffer', cellDates: true });
@@ -112,6 +112,7 @@ const importStudents = async (req, res) => {
 
     if (!rows.length) return res.status(400).json({ error: 'Excel file is empty or unreadable' });
 
+    const defaultSchoolYear = (req.body && req.body.schoolYear ? String(req.body.schoolYear).trim() : "") || "2025-2026";
     const results = { created: 0, updated: 0, skipped: 0, errors: [], emailsSent: 0 };
 
     for (const row of rows) {
@@ -125,8 +126,13 @@ const importStudents = async (req, res) => {
       const sex        = String(col(row, 'Sex', 'gender') || '').trim();
       const civilStatus = String(col(row, 'Civil Status', 'civil_status', 'civilstatus') || '').trim();
       const address    = String(col(row, 'Address', 'home address') || '').trim();
-      const course     = String(col(row, 'Course') || '').trim() || 'BSIT';
+      const rawCourse  = String(col(row, 'Course') || '').trim();
+      // For coordinator: enforce their course. For superadmin: use the Excel value or default BSIT.
+      const course     = req.user.role === 'coordinator' && req.user.coordinatorCourse
+        ? req.user.coordinatorCourse
+        : (rawCourse || 'BSIT');
       const yearLevel  = String(col(row, 'Year Level', 'year', 'year_level') || '').trim() || '4th Year';
+      const schoolYear = String(col(row, "School Year", "school_year", "sy", "s.y.", "academic year", "ay") || defaultSchoolYear).trim();
 
       if (!email || !studentNo) {
         results.errors.push({ row: JSON.stringify(row), reason: 'Missing Email or Student No' });
@@ -148,10 +154,9 @@ const importStudents = async (req, res) => {
           `UPDATE public.students SET
             student_id=$1, last_name=$2, first_name=$3, middle_name=$4,
             section=$5, course=$6, year_level=$7, date_of_birth=$8,
-            civil_status=$9, sex=$10, address=$11
-           WHERE user_id=$12`,
-          [studentNo, lastName, firstName, middleName, section, course, yearLevel,
-           dob || null, civilStatus, sex, address, userId]
+            civil_status=$9, sex=$10, address=$11, school_year=$12
+           WHERE user_id=$13`,
+          [studentNo, lastName, firstName, middleName, section, course, yearLevel, dob || null, civilStatus, sex, address, schoolYear, userId]
         );
         results.updated++;
       } else {
@@ -165,10 +170,9 @@ const importStudents = async (req, res) => {
         await db.query(
           `INSERT INTO public.students
             (user_id, student_id, last_name, first_name, middle_name,
-             section, course, year_level, date_of_birth, civil_status, sex, address)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-          [userId, studentNo, lastName, firstName, middleName,
-           section, course, yearLevel, dob || null, civilStatus, sex, address]
+             section, course, year_level, date_of_birth, civil_status, sex, address, school_year)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+          [userId, studentNo, lastName, firstName, middleName, section, course, yearLevel, dob || null, civilStatus, sex, address, schoolYear]
         );
         results.created++;
 
@@ -197,7 +201,7 @@ const importStudents = async (req, res) => {
 // Preview-only: parse and return rows without saving
 const previewImport = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    if (req.user.role !== 'coordinator') return res.status(403).json({ error: 'Coordinator only' });
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
     const workbook = xlsx.read(req.file.buffer, { type: 'buffer', cellDates: true });

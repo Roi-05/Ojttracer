@@ -105,7 +105,12 @@ export function DocumentsTab({
                         <p className="font-medium">{s.name}</p>
                         <p className="text-xs text-muted-foreground">{s.studentNo}</p>
                       </td>
-                      <td className="py-3 px-4 text-xs text-muted-foreground">BSIT {s.section}</td>
+                      <td className="py-3 px-4 text-xs text-muted-foreground">
+                        BSIT {s.section}
+                        {s.schoolYear && s.schoolYear !== "—" && (
+                          <span className="block text-[10px] font-mono text-purple-700 font-semibold mt-0.5">S.Y. {s.schoolYear}</span>
+                        )}
+                      </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2 min-w-[140px]">
                           <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">

@@ -18,6 +18,8 @@ import { JournalTab } from "../components/student/JournalTab";
 import { DocumentsTab } from "../components/student/DocumentsTab";
 import { AnnouncementsTab } from "../components/student/AnnouncementsTab";
 import { EvaluationTab } from "../components/student/EvaluationTab";
+import { generateECertificatePDF } from "../lib/generateECertificatePDF";
+import { generateECertificateDOCX, ECertificateInfo } from "../lib/generateECertificate";
 
 import { LayoutDashboard, User, MapPin, Clock, BookOpen, Upload, Megaphone, Star } from "lucide-react";
 import { TODAY_ISO } from "../components/student/shared";
@@ -42,6 +44,7 @@ const emptyDeploymentInfo = {
   company: "", supervisor: "", supervisorEmail: "", address: "", companyAddress: "",
   startDate: "", endDate: "", requiredHours: 486, completedHours: 0, position: "", status: "pending",
   companyLat: null as number | null, companyLng: null as number | null, geofenceRadius: 200,
+  geofencePolygon: null as [number, number][] | null,
   supervisorSignatureUrl: null as string | null,
 };
 
@@ -55,6 +58,7 @@ export function StudentDashboard() {
     middleName: (user as any)?.middleName || "",
     course: (user as any)?.course || emptyStudentInfo.course,
     year: (user as any)?.yearLevel || emptyStudentInfo.year,
+    schoolYear: (user as any)?.schoolYear || "2025-2026",
     section: (user as any)?.section || emptyStudentInfo.section,
     dateOfBirth: (user as any)?.dateOfBirth || null,
     civilStatus: (user as any)?.civilStatus || "",
@@ -121,9 +125,12 @@ export function StudentDashboard() {
     const companyLat = activeDeployment?.companyLat;
     const companyLng = activeDeployment?.companyLng;
     const radius = activeDeployment?.geofenceRadius || 200;
+    const polygon = (activeDeployment as any)?.geofencePolygon;
 
-    // Grace mode: no GPS set for company — skip geofencing
-    if (companyLat == null || companyLng == null) {
+    const hasPolygon = Array.isArray(polygon) && polygon.length >= 3;
+
+    // Grace mode: no GPS and no polygon set for company — skip geofencing
+    if (!hasPolygon && (companyLat == null || companyLng == null)) {
       setGeofenceStatus("no_gps");
       setCameraModal({ open: true, mode });
       return;
@@ -132,16 +139,23 @@ export function StudentDashboard() {
     setGeofenceStatus("checking");
     try {
       const pos = await getCurrentPosition();
-      const result = checkGeofence(pos.latitude, pos.longitude, companyLat, companyLng, radius);
+      const result = checkGeofence(pos.latitude, pos.longitude, companyLat, companyLng, radius, polygon);
       if (result.allowed) {
         setGeofenceStatus("allowed");
         setCameraModal({ open: true, mode });
       } else {
         setGeofenceStatus("out_of_range");
-        toast.error(
-          `You are ${result.distance}m away from your company. You must be within ${result.radius}m to Time ${mode === "in" ? "In" : "Out"}.`,
-          { duration: 5000 }
-        );
+        if (result.mode === "polygon") {
+          toast.error(
+            `You are outside your company's geofence perimeter (${result.distance ?? 0}m away). You must be inside the company boundary to Time ${mode === "in" ? "In" : "Out"}.`,
+            { duration: 5500 }
+          );
+        } else {
+          toast.error(
+            `You are ${result.distance}m away from your company. You must be within ${result.radius}m to Time ${mode === "in" ? "In" : "Out"}.`,
+            { duration: 5000 }
+          );
+        }
       }
     } catch (err: any) {
       setGeofenceStatus("denied");
@@ -163,10 +177,30 @@ export function StudentDashboard() {
       if (todayRecord?.timeIn) {
         const [inH, inM] = todayRecord.timeIn.split(":").map(Number);
         const [outH, outM] = now.split(":").map(Number);
-        const diffMinutes = (outH * 60 + outM) - (inH * 60 + inM);
-        hours = Math.max(0, parseFloat((diffMinutes / 60).toFixed(2)));
+        const inTotalMin = inH * 60 + inM;
+        const outTotalMin = outH * 60 + outM;
+        const diffMinutes = outTotalMin - inTotalMin;
+        let deductionMinutes = 0;
+
+        if (effectiveDeployment.breakStart && effectiveDeployment.breakEnd) {
+          const [bStartH, bStartM] = effectiveDeployment.breakStart.split(":").map(Number);
+          const [bEndH, bEndM] = effectiveDeployment.breakEnd.split(":").map(Number);
+          const bStartMin = bStartH * 60 + bStartM;
+          const bEndMin = bEndH * 60 + bEndM;
+          const overlapStart = Math.max(inTotalMin, bStartMin);
+          const overlapEnd = Math.min(outTotalMin, bEndMin);
+          deductionMinutes = Math.max(0, overlapEnd - overlapStart);
+        }
+
+        const netMinutes = Math.max(0, diffMinutes - deductionMinutes);
+        hours = Math.max(0, parseFloat((netMinutes / 60).toFixed(2)));
       }
       await clockOut(TODAY_ISO, now, photo, hours);
+      if (hours < 8) {
+        toast.warning(`Timed out: ${hours.toFixed(2)}h recorded (Undertime — less than 8 hours).`, { duration: 5000 });
+      } else {
+        toast.success(`Timed out: ${hours.toFixed(2)}h recorded (Completed — 8 hours or more).`, { duration: 5000 });
+      }
     }
     setCameraModal({ ...cameraModal, open: false });
   };
@@ -185,14 +219,72 @@ export function StudentDashboard() {
     setAccModalOpen(false);
   };
 
+  const isCompleted = effectiveDeployment.status === "completed" || hoursDone;
+
+  const handleExportCertificatePDF = async () => {
+    if (!isCompleted) {
+      toast.error("E-Certificate is only available once your OJT is completed.");
+      return;
+    }
+
+    const payload: ECertificateInfo = {
+      studentName: studentProfile.name || user?.name || "Student",
+      companyName: effectiveDeployment.company || "",
+      position: effectiveDeployment.position || "Intern",
+      schoolYear: studentProfile.schoolYear || effectiveDeployment.schoolYear || "",
+      startDate: effectiveDeployment.startDate || "",
+      endDate: effectiveDeployment.endDate || "",
+      completionDate: effectiveDeployment.endDate || "",
+      supervisorName: effectiveDeployment.supervisor || "",
+      coordinatorName: coordinatorName || "",
+    };
+
+    toast.promise(generateECertificatePDF(payload), {
+      loading: "Compiling Certificate PDF...",
+      success: "E-Certificate PDF downloaded successfully!",
+      error: "Failed to compile Certificate PDF. Please try again.",
+    });
+  };
+
+  const handleExportCertificateDOCX = async () => {
+    if (!isCompleted) {
+      toast.error("E-Certificate is only available once your OJT is completed.");
+      return;
+    }
+
+    const payload: ECertificateInfo = {
+      studentName: studentProfile.name || user?.name || "Student",
+      companyName: effectiveDeployment.company || "",
+      position: effectiveDeployment.position || "Intern",
+      schoolYear: studentProfile.schoolYear || effectiveDeployment.schoolYear || "",
+      startDate: effectiveDeployment.startDate || "",
+      endDate: effectiveDeployment.endDate || "",
+      completionDate: effectiveDeployment.endDate || "",
+      supervisorName: effectiveDeployment.supervisor || "",
+      coordinatorName: coordinatorName || "",
+    };
+
+    toast.promise(generateECertificateDOCX(payload), {
+      loading: "Generating Word Document...",
+      success: "E-Certificate (.docx) downloaded successfully!",
+      error: "Failed to generate Word Document. Please try again.",
+    });
+  };
+
   const sectionMap: Record<string, () => JSX.Element> = {
     dashboard: () => <DashboardTab 
       user={user} studentProfile={studentProfile} effectiveDeployment={effectiveDeployment} pct={pct} 
       accomplishmentList={accomplishments} studentDocs={documents} announcementData={announcements} 
       setActiveSection={setActiveSection} setShowAccomplishmentModal={setAccModalOpen} 
+      isCompleted={isCompleted} onExportCertificatePDF={handleExportCertificatePDF}
     />,
     profile: () => <ProfileTab studentProfile={studentProfile} updateProfileData={updateProfileData} />,
-    deployment: () => <DeploymentTab effectiveDeployment={effectiveDeployment} pct={pct} />,
+    deployment: () => <DeploymentTab 
+      effectiveDeployment={effectiveDeployment} pct={pct} 
+      isCompleted={isCompleted}
+      onExportCertificatePDF={handleExportCertificatePDF}
+      onExportCertificateDOCX={handleExportCertificateDOCX}
+    />,
     attendance: () => !isDeployed ? (
       <div className="p-8 text-center bg-muted/5 border border-border rounded-xl mt-6">
         <p className="font-medium text-lg">Deployment Not Active</p>
@@ -208,6 +300,14 @@ export function StudentDashboard() {
       onRequestResetDevice={requestDeviceReset}
       studentProfile={studentProfile}
       supervisorSignatureUrl={activeDeployment.supervisorSignatureUrl || null}
+      companyLocation={{
+        latitude: activeDeployment.companyLat,
+        longitude: activeDeployment.companyLng,
+        geofenceRadius: activeDeployment.geofenceRadius || 200,
+        geofencePolygon: activeDeployment.geofencePolygon || null,
+        companyName: activeDeployment.company || "Company Office",
+        companyAddress: activeDeployment.companyAddress || activeDeployment.address || "",
+      }}
     />,
     journal: () => !isDeployed ? (
       <div className="p-8 text-center bg-muted/5 border border-border rounded-xl mt-6">

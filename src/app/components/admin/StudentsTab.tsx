@@ -232,7 +232,7 @@ export function StudentsTab({ students, sections, openImportModal, onResetDevice
           <div className="flex items-center gap-4 py-2.5 px-4 bg-muted/50 border-b border-border text-xs font-medium text-muted-foreground">
             <div className="h-9 w-9 shrink-0" />
             <div className="flex-1">Name / Student No.</div>
-            <div className="hidden sm:block w-16 text-center">Course</div>
+            <div className="hidden sm:block w-24 text-center">Course / S.Y.</div>
             <div className="hidden md:block w-10 text-center">Section</div>
             <div className="hidden lg:block w-36">Contact No.</div>
             <div className="w-20 text-right pr-5">Status</div>

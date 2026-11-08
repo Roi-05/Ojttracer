@@ -10,6 +10,7 @@ export interface DTREntry {
   timeOut: string | null;
   hours: number;
   status?: string;
+  remarks?: string;
 }
 
 export interface DTRMonthGroup {
@@ -22,6 +23,7 @@ export interface DTRInfo {
   firstName: string;
   lastName: string;
   middleInitial: string;
+  schoolYear?: string;
   signatureUrl?: string | null;
   supervisorSignatureUrl?: string | null;
   months: DTRMonthGroup[];
@@ -107,6 +109,7 @@ export async function buildDTRDOCXBlob(info: DTRInfo): Promise<Blob> {
       timeIn: e.timeIn || "—",
       timeOut: e.timeOut || "—",
       totalHours: e.hours > 0 ? Number(e.hours).toFixed(2) : "—",
+      remarks: e.remarks || (e.timeOut ? (e.hours < 8 ? "Undertime" : "Completed") : "Regular"),
       studentSignature: studentSigBuffer ? "studentSignature" : "",
       supervisorSignature: supervisorSigBuffer ? "supervisorSignature" : "",
     }));
@@ -122,6 +125,9 @@ export async function buildDTRDOCXBlob(info: DTRInfo): Promise<Blob> {
     lastName: info.lastName || "",
     middleInitial: info.middleInitial || "",
     studentName: info.studentName || "",
+    schoolYear: info.schoolYear || "",
+    sy: info.schoolYear || "",
+    SY: info.schoolYear || "",
     studentSignature: studentSigBuffer ? "studentSignature" : "",
     supervisorSignature: supervisorSigBuffer ? "supervisorSignature" : "",
     months: formattedMonths.length ? formattedMonths : [],

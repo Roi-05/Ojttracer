@@ -42,8 +42,16 @@ const createAccomplishment = async (req, res) => {
 
 const getAccomplishments = async (req, res) => {
   try {
-    if (req.user.role === 'admin') {
-      const result = await db.query(`SELECT a.*, p.name as student_name FROM public.accomplishments a JOIN public.profiles p ON p.id = a.student_id ORDER BY a.created_at DESC`);
+    if (['coordinator','superadmin'].includes(req.user.role)) {
+      const isSuperadmin = req.user.role === 'superadmin';
+      const accParams = [];
+      const accJoin = isSuperadmin
+        ? ''
+        : (() => { accParams.push(req.user.coordinatorCourse || 'BSIT'); return 'JOIN public.students stu ON stu.user_id = a.student_id AND stu.course = $' + accParams.length; })();
+      const result = await db.query(
+        `SELECT a.*, p.name as student_name FROM public.accomplishments a JOIN public.profiles p ON p.id = a.student_id ${accJoin} ORDER BY a.created_at DESC`,
+        accParams
+      );
       return res.json(result.rows.map(r => mapAccomplishment(r, { studentId: r.student_id, studentName: r.student_name, createdAt: r.created_at })));
     }
     if (req.user.role === 'company') {

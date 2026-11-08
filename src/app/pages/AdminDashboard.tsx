@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { useAuth } from "../contexts/AuthContext";
 import { useAdminData } from "../hooks/useAdminData";
@@ -65,10 +65,43 @@ export function AdminDashboard() {
   const [moaModalCompany, setMoaModalCompany] = useState<any | null>(null);
   const [showMoaTemplateUpload, setShowMoaTemplateUpload] = useState(false);
   const [showReportsModal, setShowReportsModal] = useState(false);
+  const [selectedSchoolYear, setSelectedSchoolYear] = useState<string>("all");
+
+  const schoolYears = useMemo(() => {
+    const set = new Set<string>();
+    students.forEach(s => { if (s.schoolYear) set.add(s.schoolYear); });
+    if (set.size === 0) set.add("2025-2026");
+    return Array.from(set).sort().reverse();
+  }, [students]);
+
+  const filteredStudents = useMemo(() => {
+    if (selectedSchoolYear === "all") return students;
+    return students.filter(s => s.schoolYear === selectedSchoolYear);
+  }, [students, selectedSchoolYear]);
+
+  const filteredDtrLogs = useMemo(() => {
+    if (selectedSchoolYear === "all") return dtrLogs;
+    return dtrLogs.filter(d => d.schoolYear === selectedSchoolYear);
+  }, [dtrLogs, selectedSchoolYear]);
+
+  const filteredJournalLogs = useMemo(() => {
+    if (selectedSchoolYear === "all") return journalLogs;
+    return journalLogs.filter(j => j.schoolYear === selectedSchoolYear);
+  }, [journalLogs, selectedSchoolYear]);
+
+  const filteredSubmissions = useMemo(() => {
+    if (selectedSchoolYear === "all") return studentSubmissions;
+    return studentSubmissions.filter(s => s.schoolYear === selectedSchoolYear);
+  }, [studentSubmissions, selectedSchoolYear]);
+
+  const filteredEvaluations = useMemo(() => {
+    if (selectedSchoolYear === "all") return evaluations;
+    return evaluations.filter(e => e.schoolYear === selectedSchoolYear);
+  }, [evaluations, selectedSchoolYear]);
 
   const sectionDistribution = SECTIONS.map((name, i) => ({
     name,
-    value: students.filter(s => s.section === name).length,
+    value: filteredStudents.filter(s => s.section === name).length,
     color: COLORS[i % COLORS.length],
   }));
 
@@ -81,13 +114,13 @@ export function AdminDashboard() {
 
 
   const sectionMap: Record<string, () => JSX.Element> = {
-    dashboard: () => <OverviewTab students={students} companies={companies} setActiveSection={setActiveSection} monthlyPlacementData={monthlyPlacementData} sectionDistribution={sectionDistribution} openReportsModal={() => setShowReportsModal(true)} />,
+    dashboard: () => <OverviewTab students={filteredStudents} companies={companies} setActiveSection={setActiveSection} monthlyPlacementData={monthlyPlacementData} sectionDistribution={sectionDistribution} openReportsModal={() => setShowReportsModal(true)} />,
     students: () => <StudentsTab students={students} sections={SECTIONS} openImportModal={() => setShowImportModal(true)} onResetDevice={resetStudentDevice} onRejectDevice={rejectStudentDevice} />,
     companies: () => <CompaniesTab companies={companies} onManageMoa={(c) => setMoaModalCompany(c)} openUploadMoa={() => setShowMoaTemplateUpload(true)} onDelete={deleteCompany} />,
-    deployment: () => <DeploymentTab students={students} />,
-    attendance: () => <AttendanceTab dtrLogs={dtrLogs} />,
-    journals: () => <JournalsTab journalLogs={journalLogs} />,
-    evaluations: () => <EvaluationsTab evaluations={evaluations} />,
+    deployment: () => <DeploymentTab students={filteredStudents} />,
+    attendance: () => <AttendanceTab dtrLogs={filteredDtrLogs} />,
+    journals: () => <JournalsTab journalLogs={filteredJournalLogs} />,
+    evaluations: () => <EvaluationsTab evaluations={filteredEvaluations} />,
     announcements: () => <AnnouncementsTab announcements={announcements} openAddModal={() => setShowAnnouncementModal(true)} onDelete={deleteAnnouncement} />,
     documents: () => <DocumentsTab 
       templates={templates} studentSubmissions={studentSubmissions} 
@@ -96,7 +129,7 @@ export function AdminDashboard() {
       openReviewSubmission={(id) => setViewSubmissionId(id)} 
       openDeployModal={(id) => setShowDeployModal({ open: true, studentId: id })} 
     />,
-    analytics: () => <AnalyticsTab students={students} companies={companies} overviewStats={[]} hoursProgressData={[]} monthlyPlacementData={[]} sectionDistribution={sectionDistribution} />,
+    analytics: () => <AnalyticsTab students={filteredStudents} companies={companies} overviewStats={[]} hoursProgressData={[]} monthlyPlacementData={[]} sectionDistribution={sectionDistribution} />,
     settings: () => <SettingsTab />,
   };
 
@@ -105,10 +138,48 @@ export function AdminDashboard() {
       menuItems={menuItems}
       activeSection={activeSection}
       onSectionChange={setActiveSection}
-      userRole="coordinator"
-      userName={user?.name || "Admin"}
+      userRole={user?.coordinatorCourse ? `${user.coordinatorCourse} Coordinator` : "Coordinator"}
+      userName={user?.name || "Coordinator"}
     >
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
+        {/* Academic School Year Cohort Banner */}
+        <div className="flex items-center justify-between flex-wrap gap-3 mb-6 bg-card border border-border/70 rounded-xl p-3 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs shrink-0">
+              {user?.coordinatorCourse || "OJT"}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {user?.coordinatorCourse ? `${user.coordinatorCourse} Department • Academic Cohort` : "Academic Cohort Filter"}
+                </p>
+                {user?.coordinatorCourse && (
+                  <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-purple-100 text-purple-700">
+                    {user.coordinatorCourse}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-foreground font-medium">
+                Active View: <strong className="text-blue-700 font-semibold">{selectedSchoolYear === "all" ? "All School Years (Combined)" : `S.Y. ${selectedSchoolYear}`}</strong>
+                <span className="text-muted-foreground ml-2 font-normal">({filteredStudents.length} student{filteredStudents.length !== 1 ? "s" : ""})</span>
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground font-medium hidden sm:inline">Cohort (S.Y.):</span>
+            <select
+              value={selectedSchoolYear}
+              onChange={(e) => setSelectedSchoolYear(e.target.value)}
+              aria-label="Filter by School Year"
+              className="border border-border bg-card text-foreground rounded-lg px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer shadow-xs"
+            >
+              <option value="all">🎓 All School Years</option>
+              {schoolYears.map(sy => (
+                <option key={sy} value={sy}>S.Y. {sy}</option>
+              ))}
+            </select>
+          </div>
+        </div>
         {sectionMap[activeSection] ? sectionMap[activeSection]() : <div>Section not found</div>}
       </div>
 
@@ -146,7 +217,7 @@ export function AdminDashboard() {
         onClose={() => setShowMoaTemplateUpload(false)}
         onSave={uploadTemplate}
       />
-      <GenerateReportsModal open={showReportsModal} onClose={() => setShowReportsModal(false)} students={students} companies={companies} />
+      <GenerateReportsModal open={showReportsModal} onClose={() => setShowReportsModal(false)} students={filteredStudents} companies={companies} />
     </DashboardLayout>
   );
 }

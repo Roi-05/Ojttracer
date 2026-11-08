@@ -45,9 +45,16 @@ const getDeployment = async (req, res) => {
 
 const getStudents = async (req, res) => {
   try {
+    // Coordinators only see students of their own course; superadmin and others are unscoped
+    const params = [];
+    let courseClause = '';
+    if (req.user.role === 'coordinator') {
+      params.push(req.user.coordinatorCourse || 'BSIT');
+      courseClause = 'AND s.course = $1';
+    }
     const result = await db.query(`
       SELECT p.*, s.student_id, s.last_name, s.first_name, s.middle_name,
-             s.section, s.course, s.year_level, s.date_of_birth, s.civil_status, s.sex,
+             s.section, s.course, s.year_level, s.school_year, s.date_of_birth, s.civil_status, s.sex,
              s.phone, s.address, s.skills, s.religion, s.intended_company_id, s.intended_position,
              s.father_name, s.father_occupation, s.father_phone, s.mother_name, s.mother_occupation, s.mother_phone,
              s.guardian_name, s.guardian_relationship, s.guardian_phone,
@@ -65,8 +72,8 @@ const getStudents = async (req, res) => {
         WHERE status = 'approved'
         GROUP BY student_id
       ) dtr_sum ON dtr_sum.student_id = p.id
-      WHERE p.role = 'student'
-    `, []);
+      WHERE p.role = 'student' ${courseClause}
+    `, params);
     res.json(result.rows.map(r => ({
       id: r.id,
       name: r.name,
@@ -117,8 +124,10 @@ const getStudents = async (req, res) => {
 
 const deployStudent = async (req, res) => {
   try {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    if (req.user.role !== 'coordinator') return res.status(403).json({ error: 'Coordinator only' });
     const { studentId } = req.params;
+    const owned = await db.query(`SELECT 1 FROM public.students WHERE user_id = $1 AND course = $2`, [studentId, req.user.coordinatorCourse || 'BSIT']);
+    if (owned.rows.length === 0) return res.status(403).json({ error: 'Student is not in your course' });
     const { companyId, companyName, position, startDate, endDate, requiredHours, supervisor, supervisorEmail, address } = req.body;
     await db.query(
       `INSERT INTO public.deployments (student_id, company_id, company_name, position, start_date, end_date, required_hours, supervisor, supervisor_email, address)
@@ -271,8 +280,8 @@ const requestDeviceReset = async (req, res) => {
 
 const resetStudentDevice = async (req, res) => {
   try {
-    if (!['admin', 'company'].includes(req.user.role)) {
-      return res.status(403).json({ error: 'Admin or Company Supervisor authorization required' });
+    if (!['coordinator', 'superadmin', 'company'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Coordinator or Company Supervisor authorization required' });
     }
 
     const { studentId } = req.params;
@@ -291,8 +300,8 @@ const resetStudentDevice = async (req, res) => {
 
 const rejectDeviceReset = async (req, res) => {
   try {
-    if (!['admin', 'company'].includes(req.user.role)) {
-      return res.status(403).json({ error: 'Admin or Company Supervisor authorization required' });
+    if (!['coordinator', 'superadmin', 'company'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Coordinator or Company Supervisor authorization required' });
     }
 
     const { studentId } = req.params;

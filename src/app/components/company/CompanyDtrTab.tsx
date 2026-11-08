@@ -484,7 +484,27 @@ export function CompanyDtrTab({ dtrLogs, interns = [], onReviewDtr, onSetTimeout
                                   {log.hours > 0 ? `${log.hours.toFixed(2)}h` : "—"}
                                 </td>
 
-                                <td className="py-3 px-4 text-xs text-muted-foreground">{log.remarks || "Regular"}</td>
+                                <td className="py-3 px-4 whitespace-nowrap">
+                                  {log.timeOut && log.timeOut !== "—" ? (
+                                    <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
+                                      (log.remarks === "Undertime" || (!log.remarks && log.hours < 8))
+                                        ? "bg-amber-50 text-amber-700 border-amber-200"
+                                        : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                    }`}>
+                                      {(log.remarks === "Undertime" || (!log.remarks && log.hours < 8)) ? (
+                                        <>
+                                          <AlertCircle className="h-3 w-3 text-amber-600" /> Undertime
+                                        </>
+                                      ) : (
+                                        <>
+                                          <CheckCircle2 className="h-3 w-3 text-emerald-600" /> Completed
+                                        </>
+                                      )}
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">{log.remarks || "Regular"}</span>
+                                  )}
+                                </td>
 
                                 {/* Verification Status badge */}
                                 <td className="py-3 px-4">

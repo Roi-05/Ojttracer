@@ -12,9 +12,10 @@ import { EvaluationsTab } from "../components/company/EvaluationsTab";
 import { MoaTab } from "../components/company/MoaTab";
 import { CompanyDtrTab } from "../components/company/CompanyDtrTab";
 import { LiveTrackerTab } from "../components/company/LiveTrackerTab";
+import { CompanyDocumentsTab } from "../components/company/CompanyDocumentsTab";
 
 import {
-  LayoutDashboard, Building2, Users, Star, FileCheck, ShieldCheck, Clock, MapPin
+  LayoutDashboard, Building2, Users, Star, FileCheck, ShieldCheck, Clock, MapPin, FileText
 } from "lucide-react";
 
 const menuItems = [
@@ -22,6 +23,7 @@ const menuItems = [
   { icon: <Building2 className="h-4 w-4" />, label: "Company Profile", value: "profile" },
   { icon: <ShieldCheck className="h-4 w-4" />, label: "Accreditation", value: "accreditation" },
   { icon: <Users className="h-4 w-4" />, label: "My Interns", value: "interns" },
+  { icon: <FileText className="h-4 w-4" />, label: "Intern Documents", value: "documents" },
   { icon: <MapPin className="h-4 w-4" />, label: "Live Tracker", value: "tracker" },
   { icon: <Clock className="h-4 w-4" />, label: "Attendance (DTR)", value: "attendance" },
   { icon: <FileCheck className="h-4 w-4" />, label: "Accomplishments", value: "accomplishments" },
@@ -52,6 +54,7 @@ export function CompanyDashboard() {
     getEvaluation,
     resetStudentDevice,
     rejectStudentDevice,
+    internDocuments,
   } = useCompanyData();
 
   const handleOpenEvalModal = async (id: string | number) => {
@@ -93,7 +96,17 @@ export function CompanyDashboard() {
         onUploadSigned={uploadSignedMoa}
       />
     ),
-    interns: () => <InternsTab interns={interns} onResetDevice={resetStudentDevice} onRejectDevice={rejectStudentDevice} />,
+    interns: () => (
+      <InternsTab
+        interns={interns}
+        internDocuments={internDocuments}
+        onResetDevice={resetStudentDevice}
+        onRejectDevice={rejectStudentDevice}
+      />
+    ),
+    documents: () => (
+      <CompanyDocumentsTab internDocuments={internDocuments} />
+    ),
     tracker: () => <LiveTrackerTab companyInfo={companyInfo} interns={interns} />,
     attendance: () => (
       <CompanyDtrTab dtrLogs={dtrLogs} interns={interns} onReviewDtr={reviewDTR} onSetTimeout={setDtrTimeout} />

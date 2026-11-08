@@ -18,6 +18,8 @@ export type Intern = {
   requiredHours: number;
   performance: number;
   status: string;
+  schoolYear?: string;
+  section?: string;
   registeredDeviceName?: string | null;
   deviceResetRequested?: boolean;
 };
@@ -31,6 +33,27 @@ export type InternAccomplishment = {
   details: string;
   picture: string | null;
   status: "pending" | "approved" | "rejected";
+};
+
+export type InternDocument = {
+  id?: string | number;
+  name: string;
+  status: string;
+  fileUrl: string | null;
+  uploadedDate: string;
+  reviewNote?: string;
+};
+
+export type InternSubmission = {
+  studentId: string | number;
+  studentName: string;
+  studentNo: string;
+  course: string;
+  section: string;
+  position: string;
+  supervisor: string;
+  deploymentStatus: string;
+  docs: InternDocument[];
 };
 
 export const emptyCompanyInfo = {
@@ -48,6 +71,9 @@ export const emptyCompanyInfo = {
   latitude: null as number | null,
   longitude: null as number | null,
   geofenceRadius: 200,
+  geofencePolygon: null as [number, number][] | null,
+  breakStart: null as string | null,
+  breakEnd: null as string | null,
 };
 
 export function useCompanyData() {
@@ -56,6 +82,7 @@ export function useCompanyData() {
   const [interns, setInterns] = useState<Intern[]>([]);
   const [dtrLogs, setDtrLogs] = useState<DTRLog[]>([]);
   const [accomplishments, setAccomplishments] = useState<InternAccomplishment[]>([]);
+  const [internDocuments, setInternDocuments] = useState<InternSubmission[]>([]);
   const [moaTemplateUrl, setMoaTemplateUrl] = useState<string | null>(null);
   const [signedMoaUrl, setSignedMoaUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,7 +105,10 @@ export function useCompanyData() {
     latitude: (user as any)?.latitude ?? null,
     longitude: (user as any)?.longitude ?? null,
     geofenceRadius: (user as any)?.geofenceRadius || 200,
+    geofencePolygon: ((user as any)?.geofencePolygon as [number, number][] | null) || null,
     signatureUrl: (user as any)?.signatureUrl || null,
+    breakStart: (user as any)?.breakStart || null,
+    breakEnd: (user as any)?.breakEnd || null,
   };
 
   useEffect(() => {
@@ -89,11 +119,12 @@ export function useCompanyData() {
     const loadData = async () => {
       try {
         setLoading(true);
-        const [internsRes, accRes, moaTplRes, dtrRes] = await Promise.all([
+        const [internsRes, accRes, moaTplRes, dtrRes, docsRes] = await Promise.all([
           api.getInterns().catch(() => []),
           api.getAccomplishments().catch(() => []),
           api.getMoaTemplate().catch(() => ({ fileUrl: null })),
           api.getCompanyDTR().catch(() => []),
+          api.getDocuments().catch(() => []),
         ]);
 
         if (!isMounted) return;
@@ -115,8 +146,31 @@ export function useCompanyData() {
             status: ojtHoursComplete(i.completedHours || 0, i.deployment?.requiredHours || 486)
               ? "completed"
               : (i.deployment?.status || "ongoing"),
+            schoolYear: i.schoolYear || '',
+            section: i.section || '',
             registeredDeviceName: i.registeredDeviceName || null,
             deviceResetRequested: i.deviceResetRequested || false,
+          })));
+        }
+
+        if (docsRes) {
+          setInternDocuments((docsRes || []).map((s: any) => ({
+            studentId: s.studentId,
+            studentName: s.studentName,
+            studentNo: s.studentNo || "—",
+            course: s.course || "BSIT",
+            section: s.section || "—",
+            position: s.position || "—",
+            supervisor: s.supervisor || "—",
+            deploymentStatus: s.deploymentStatus || "ongoing",
+            docs: (s.docs || []).map((d: any) => ({
+              id: d.id,
+              name: d.name,
+              status: d.status,
+              fileUrl: d.fileUrl,
+              uploadedDate: d.uploadedDate,
+              reviewNote: d.reviewNote,
+            })),
           })));
         }
 
@@ -313,6 +367,8 @@ export function useCompanyData() {
     setDtrTimeout,
     submitEvaluation,
     getEvaluation,
+    internDocuments,
+    refreshInternDocuments: refreshData,
     resetStudentDevice,
     rejectStudentDevice
   };

@@ -118,8 +118,13 @@ export function JournalsTab({ journalLogs }: JournalsTabProps) {
 
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-foreground">{student}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5 font-medium">
-                          {logs.length} {logs.length === 1 ? "entry" : "entries"}
+                        <p className="text-xs text-muted-foreground mt-0.5 font-medium flex items-center gap-1.5">
+                          <span>{logs.length} {logs.length === 1 ? "entry" : "entries"}</span>
+                          {logs[0]?.schoolYear && logs[0].schoolYear !== "—" && (
+                            <span className="text-[10px] font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200">
+                              S.Y. {logs[0].schoolYear}
+                            </span>
+                          )}
                         </p>
                       </div>
 

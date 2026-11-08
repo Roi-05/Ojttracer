@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import * as api from "../../lib/api";
 import { resolveUploadUrl } from "../../lib/uploads";
 import { useAuth } from "../../contexts/AuthContext";
+import { ChangePasswordCard } from "../common/ChangePasswordCard";
 
 interface ProfileTabProps {
   studentProfile: {
@@ -18,6 +19,7 @@ interface ProfileTabProps {
     middleName?: string;
     course: string;
     year: string;
+    schoolYear?: string;
     section: string;
     dateOfBirth?: string | null;
     civilStatus?: string;
@@ -238,6 +240,7 @@ export function ProfileTab({ studentProfile, updateProfileData }: ProfileTabProp
               </h3>
               <p className="text-muted-foreground text-sm">{formData.course}</p>
               <p className="text-muted-foreground text-sm">{formData.year} • {formData.section}</p>
+              <p className="text-xs font-semibold text-purple-700 bg-purple-50 inline-block px-2 py-0.5 rounded border border-purple-200 mt-1">S.Y. {formData.schoolYear || "2025-2026"}</p>
               <p className="text-xs text-muted-foreground mt-1">ID: {formData.studentId}</p>
 
               <button
@@ -293,6 +296,9 @@ export function ProfileTab({ studentProfile, updateProfileData }: ProfileTabProp
               <p className="text-xs text-muted-foreground mt-1">Clear PNG/JPG with signature · max 5 MB</p>
             </CardContent>
           </Card>
+
+          {/* Change Password Card */}
+          <ChangePasswordCard className="border-0 shadow-sm" />
         </div>
 
         {/* Personal info */}

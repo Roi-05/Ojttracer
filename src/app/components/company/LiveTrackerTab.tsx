@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle, Polygon, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "../../lib/leaflet-setup";
 import * as api from "../../lib/api";
+import { normalizePolygon, getPolygonCentroid } from "../../lib/geolocation";
 import { MapPin, RefreshCw, Users, Wifi, WifiOff, Clock } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -24,6 +25,7 @@ interface CompanyInfo {
   latitude: number | null;
   longitude: number | null;
   geofenceRadius: number;
+  geofencePolygon?: [number, number][] | null;
   name: string;
 }
 
@@ -83,7 +85,10 @@ function MapBoundsFitter({
   const map = useMap();
   useEffect(() => {
     const points: [number, number][] = [];
-    if (companyInfo.latitude && companyInfo.longitude) {
+    const polygon = normalizePolygon(companyInfo.geofencePolygon);
+    if (polygon.length >= 3) {
+      polygon.forEach(p => points.push(p));
+    } else if (companyInfo.latitude && companyInfo.longitude) {
       points.push([companyInfo.latitude, companyInfo.longitude]);
     }
     // Only include interns that have actual coordinates
@@ -97,7 +102,7 @@ function MapBoundsFitter({
     } else if (points.length > 1) {
       map.fitBounds(points, { padding: [60, 60] });
     }
-  }, [locations.length]);
+  }, [locations.length, companyInfo.latitude, companyInfo.longitude, JSON.stringify(companyInfo.geofencePolygon)]);
   return null;
 }
 
@@ -229,48 +234,75 @@ export function LiveTrackerTab({ companyInfo }: Props) {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
 
-            {/* Geofence circle */}
-            {companyInfo.latitude && companyInfo.longitude && (
-              <>
-                <Circle
-                  center={[companyInfo.latitude, companyInfo.longitude]}
-                  radius={companyInfo.geofenceRadius}
-                  pathOptions={{
-                    color: "#3b82f6",
-                    fillColor: "#3b82f6",
-                    fillOpacity: 0.07,
-                    weight: 2,
-                    dashArray: "6 4",
-                  }}
-                />
-                {/* Company pin */}
-                <Marker
-                  position={[companyInfo.latitude, companyInfo.longitude]}
-                  icon={L.divIcon({
-                    className: "",
-                    html: `<div style="
-                      width:40px;height:40px;
-                      background:#3b82f6;
-                      border:3px solid white;
-                      border-radius:8px;
-                      display:flex;align-items:center;justify-content:center;
-                      font-size:18px;
-                      box-shadow:0 2px 8px rgba(0,0,0,0.25);
-                    ">🏢</div>`,
-                    iconSize: [40, 40],
-                    iconAnchor: [20, 40],
-                    popupAnchor: [0, -44],
-                  })}
-                >
-                  <Popup>
-                    <div className="text-sm font-semibold">{companyInfo.name || "Your Company"}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">
-                      Geofence: {companyInfo.geofenceRadius}m radius
-                    </div>
-                  </Popup>
-                </Marker>
-              </>
-            )}
+            {/* Geofence polygon or fallback circle */}
+            {(() => {
+              const poly = normalizePolygon(companyInfo.geofencePolygon);
+              const centroid = getPolygonCentroid(poly);
+              const markerPos: [number, number] | null =
+                companyInfo.latitude && companyInfo.longitude
+                  ? [companyInfo.latitude, companyInfo.longitude]
+                  : centroid;
+
+              return (
+                <>
+                  {poly.length >= 3 ? (
+                    <Polygon
+                      positions={poly}
+                      pathOptions={{
+                        color: "#2563eb",
+                        fillColor: "#3b82f6",
+                        fillOpacity: 0.15,
+                        weight: 2.5,
+                        dashArray: "6 4",
+                      }}
+                    />
+                  ) : companyInfo.latitude && companyInfo.longitude ? (
+                    <Circle
+                      center={[companyInfo.latitude, companyInfo.longitude]}
+                      radius={companyInfo.geofenceRadius}
+                      pathOptions={{
+                        color: "#3b82f6",
+                        fillColor: "#3b82f6",
+                        fillOpacity: 0.07,
+                        weight: 2,
+                        dashArray: "6 4",
+                      }}
+                    />
+                  ) : null}
+
+                  {/* Company pin */}
+                  {markerPos && (
+                    <Marker
+                      position={markerPos}
+                      icon={L.divIcon({
+                        className: "",
+                        html: `<div style="
+                          width:40px;height:40px;
+                          background:#3b82f6;
+                          border:3px solid white;
+                          border-radius:8px;
+                          display:flex;align-items:center;justify-content:center;
+                          font-size:18px;
+                          box-shadow:0 2px 8px rgba(0,0,0,0.25);
+                        ">🏢</div>`,
+                        iconSize: [40, 40],
+                        iconAnchor: [20, 40],
+                        popupAnchor: [0, -44],
+                      })}
+                    >
+                      <Popup>
+                        <div className="text-sm font-semibold">{companyInfo.name || "Your Company"}</div>
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          {poly.length >= 3
+                            ? `Geofence: Custom polygon (${poly.length} vertices)`
+                            : `Geofence: ${companyInfo.geofenceRadius}m radius`}
+                        </div>
+                      </Popup>
+                    </Marker>
+                  )}
+                </>
+              );
+            })()}
 
             {/* Intern pins — only for those with known coordinates */}
             {locatedInterns.map((loc) => {

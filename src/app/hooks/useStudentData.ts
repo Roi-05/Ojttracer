@@ -293,10 +293,11 @@ export function useStudentData() {
   const clockOut = async (date: string, time: string, photo: string | null, hours: number) => {
     try {
       const deviceToken = getOrCreateDeviceToken();
+      const remarks = hours < 8 ? "Undertime" : "Completed";
       await api.clockDTR({ date, mode: "out", time, photo, deviceToken });
       setDtrRecords(records => records.map(r => {
         if (r.date !== date || !r.timeIn) return r;
-        return { ...r, timeOut: time, timeOutPhoto: photo, hours };
+        return { ...r, timeOut: time, timeOutPhoto: photo, hours, remarks };
       }));
       stopLocationTracking(); // End live tracking
     } catch (err: any) {

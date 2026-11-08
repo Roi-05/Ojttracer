@@ -135,6 +135,7 @@ export function DashboardLayout({
     company: "bg-green-600",
     admin: "bg-purple-600",
     coordinator: "bg-purple-600",
+    superadmin: "bg-indigo-600",
   };
 
   const roleBg = roleColors[userRole.toLowerCase()] || "bg-blue-600";

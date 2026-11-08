@@ -1,7 +1,7 @@
 import { Navigate, Outlet, useLocation } from "react-router";
 import { useAuth } from "../contexts/AuthContext";
 
-type Role = "student" | "company" | "admin";
+type Role = "student" | "company" | "coordinator" | "superadmin";
 
 interface ProtectedRouteProps {
   children?: React.ReactNode;
@@ -31,6 +31,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     const redirect =
       user.role === "student" ? "/student/dashboard" :
       user.role === "company" ? "/company/dashboard" :
+      user.role === "superadmin" ? "/superadmin/dashboard" :
       "/admin/dashboard";
     return <Navigate to={redirect} replace />;
   }

@@ -45,6 +45,7 @@ type StudentGroup = {
   name: string;
   studentNumber: string;
   section: string;
+  schoolYear?: string;
   totalHours: number;
   lastActive: string;
   logs: DTRLog[];
@@ -76,6 +77,7 @@ export function AttendanceTab({
           name: log.student,
           studentNumber: log.studentNumber,
           section: log.section,
+          schoolYear: log.schoolYear || "—",
           totalHours: 0,
           lastActive: log.date,
           logs: [],
@@ -198,6 +200,7 @@ export function AttendanceTab({
                     <span className="font-semibold text-sm">{g.name}</span>
                     <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{g.studentNumber}</span>
                     <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">Section {g.section}</span>
+                    <span className="text-xs font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">S.Y. {g.schoolYear || "—"}</span>
                   </div>
                   <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground flex-wrap">
                     <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{g.totalHours.toFixed(1)}h logged</span>
@@ -226,6 +229,7 @@ export function AttendanceTab({
                           <th className="text-left py-2.5 px-4 font-medium text-muted-foreground text-xs">Time In</th>
                           <th className="text-left py-2.5 px-4 font-medium text-muted-foreground text-xs">Time Out</th>
                           <th className="text-left py-2.5 px-4 font-medium text-muted-foreground text-xs">Hours</th>
+                          <th className="text-left py-2.5 px-4 font-medium text-muted-foreground text-xs">Remarks</th>
                           <th className="text-left py-2.5 px-4 font-medium text-muted-foreground text-xs">Verification</th>
                         </tr>
                       </thead>
@@ -236,7 +240,20 @@ export function AttendanceTab({
                             <td className="py-2.5 px-4 text-xs capitalize">{log.timeIn !== "—" ? log.day || "—" : "—"}</td>
                             <td className="py-2.5 px-4 text-xs font-mono">{formatTime(log.timeIn)}</td>
                             <td className="py-2.5 px-4 text-xs font-mono">{formatTime(log.timeOut)}</td>
-                            <td className="py-2.5 px-4 text-xs">{log.hours > 0 ? `${log.hours.toFixed(2)}h` : "—"}</td>
+                            <td className="py-2.5 px-4 text-xs font-semibold">{log.hours > 0 ? `${log.hours.toFixed(2)}h` : "—"}</td>
+                            <td className="py-2.5 px-4 text-xs">
+                              {log.timeOut && log.timeOut !== "—" ? (
+                                <span className={`inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                  (log.remarks === "Undertime" || (!log.remarks && log.hours < 8))
+                                    ? "bg-amber-100 text-amber-800 border-amber-300"
+                                    : "bg-emerald-100 text-emerald-800 border-emerald-300"
+                                }`}>
+                                  {(log.remarks === "Undertime" || (!log.remarks && log.hours < 8)) ? "Undertime" : "Completed"}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">—</span>
+                              )}
+                            </td>
                             <td className="py-2.5 px-4">{verificationBadge(log)}</td>
                           </tr>
                         ))}
@@ -245,7 +262,7 @@ export function AttendanceTab({
                         <tr>
                           <td colSpan={4} className="py-2 px-5 text-xs font-semibold text-muted-foreground">Total</td>
                           <td className="py-2 px-4 text-xs font-bold">{g.totalHours.toFixed(2)}h</td>
-                          <td />
+                          <td colSpan={2} />
                         </tr>
                       </tfoot>
                     </table>

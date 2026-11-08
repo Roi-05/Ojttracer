@@ -1,16 +1,26 @@
+import { useState } from "react";
 import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
-import { MapPin, Smartphone, ShieldAlert, Check, X } from "lucide-react";
-import { Intern } from "../../hooks/useCompanyData";
+import { MapPin, Smartphone, ShieldAlert, Check, X, FileText } from "lucide-react";
+import { Intern, InternSubmission } from "../../hooks/useCompanyData";
 import { StatusBadge } from "../student/shared";
+import { InternDocumentsModal } from "./InternDocumentsModal";
 
 interface InternsTabProps {
   interns: Intern[];
+  internDocuments?: InternSubmission[];
   onResetDevice?: (studentId: string | number, name: string) => Promise<void>;
   onRejectDevice?: (studentId: string | number, name: string) => Promise<void>;
 }
 
-export function InternsTab({ interns, onResetDevice, onRejectDevice }: InternsTabProps) {
+export function InternsTab({
+  interns,
+  internDocuments = [],
+  onResetDevice,
+  onRejectDevice,
+}: InternsTabProps) {
+  const [selectedInternDocs, setSelectedInternDocs] = useState<InternSubmission | null>(null);
+
   return (
     <div className="space-y-6">
       <div>
@@ -30,6 +40,9 @@ export function InternsTab({ interns, onResetDevice, onRejectDevice }: InternsTa
           const pct = intern.requiredHours > 0
             ? Math.min(100, Math.round((intern.hoursCompleted / intern.requiredHours) * 100))
             : 0;
+
+          const matchedDocs = internDocuments.find((d) => String(d.studentId) === String(intern.id));
+
           return (
             <Card key={intern.id} className="border-0 shadow-sm">
               <CardContent className="p-5">
@@ -44,7 +57,9 @@ export function InternsTab({ interns, onResetDevice, onRejectDevice }: InternsTa
                           <h3 className="font-semibold">{intern.name}</h3>
                           <StatusBadge status={intern.status} />
                         </div>
-                        <p className="text-sm text-muted-foreground">{intern.course} — {intern.position}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {intern.course}{intern.section ? ` • ${intern.section}` : ""}{intern.schoolYear ? ` (S.Y. ${intern.schoolYear})` : ""} — {intern.position}
+                        </p>
                         <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
                           <MapPin className="h-3 w-3" /> Supervisor: {intern.supervisor}
                         </p>
@@ -86,7 +101,7 @@ export function InternsTab({ interns, onResetDevice, onRejectDevice }: InternsTa
                       </div>
                     )}
 
-                    <div className="mt-3 grid grid-cols-3 gap-4 pt-3 border-t border-border">
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-border">
                       <div>
                         <p className="text-xs text-muted-foreground">OJT Period</p>
                         <p className="text-xs font-medium mt-0.5">{intern.startDate} — {intern.endDate}</p>
@@ -106,6 +121,41 @@ export function InternsTab({ interns, onResetDevice, onRejectDevice }: InternsTa
                         </div>
                       </div>
                     </div>
+
+                    {/* Complied Documents Action Bar */}
+                    <div className="mt-3 pt-3 border-t border-border flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+                        <span>
+                          {matchedDocs && matchedDocs.docs.length > 0
+                            ? `${matchedDocs.docs.filter((d) => d.status === "approved").length} of ${matchedDocs.docs.length} compliance docs approved`
+                            : "Pre-deployment clearance & compliance"}
+                        </span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2.5 text-xs gap-1.5 border-border hover:bg-primary/5 hover:text-primary hover:border-primary/30"
+                        onClick={() => {
+                          setSelectedInternDocs(
+                            matchedDocs || {
+                              studentId: intern.id,
+                              studentName: intern.name,
+                              studentNo: "—",
+                              course: intern.course,
+                              section: "—",
+                              position: intern.position,
+                              supervisor: intern.supervisor,
+                              deploymentStatus: intern.status,
+                              docs: [],
+                            }
+                          );
+                        }}
+                      >
+                        <FileText className="h-3 w-3" />
+                        <span>View Complied Documents</span>
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -113,6 +163,12 @@ export function InternsTab({ interns, onResetDevice, onRejectDevice }: InternsTa
           );
         })}
       </div>
+
+      <InternDocumentsModal
+        intern={selectedInternDocs}
+        open={!!selectedInternDocs}
+        onClose={() => setSelectedInternDocs(null)}
+      />
     </div>
   );
 }
