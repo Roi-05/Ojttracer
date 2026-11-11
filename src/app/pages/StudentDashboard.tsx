@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { getCurrentPosition, checkGeofence } from "../lib/geolocation";
+import { getCurrentPosition, checkGeofence, normalizePolygon } from "../lib/geolocation";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { useAuth } from "../contexts/AuthContext";
 import { useStudentData } from "../hooks/useStudentData";
@@ -125,9 +125,9 @@ export function StudentDashboard() {
     const companyLat = activeDeployment?.companyLat;
     const companyLng = activeDeployment?.companyLng;
     const radius = activeDeployment?.geofenceRadius || 200;
-    const polygon = (activeDeployment as any)?.geofencePolygon;
+    const polygon = normalizePolygon((activeDeployment as any)?.geofencePolygon);
 
-    const hasPolygon = Array.isArray(polygon) && polygon.length >= 3;
+    const hasPolygon = polygon.length >= 3;
 
     // Grace mode: no GPS and no polygon set for company — skip geofencing
     if (!hasPolygon && (companyLat == null || companyLng == null)) {
@@ -147,7 +147,7 @@ export function StudentDashboard() {
         setGeofenceStatus("out_of_range");
         if (result.mode === "polygon") {
           toast.error(
-            `You are outside your company's geofence perimeter (${result.distance ?? 0}m away). You must be inside the company boundary to Time ${mode === "in" ? "In" : "Out"}.`,
+            `You are outside your company's polygon geofence boundary (${result.distance ?? 0}m away). You must be inside the designated company boundary to Time ${mode === "in" ? "In" : "Out"}.`,
             { duration: 5500 }
           );
         } else {

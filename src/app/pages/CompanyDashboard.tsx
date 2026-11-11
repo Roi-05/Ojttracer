@@ -86,7 +86,7 @@ export function CompanyDashboard() {
 
   const sectionMap: Record<string, () => JSX.Element> = {
     dashboard: () => <DashboardTab companyInfo={companyInfo} interns={interns} setActiveSection={setActiveSection} />,
-    profile: () => <ProfileTab companyInfo={companyInfo} />,
+    profile: () => <ProfileTab companyInfo={companyInfo} onNavigateToTracker={() => setActiveSection("tracker")} />,
     accreditation: () => (
       <MoaTab
         moaStatus={companyInfo.moaStatus || 'pending'}

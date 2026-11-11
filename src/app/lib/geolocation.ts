@@ -34,8 +34,16 @@ export function haversineDistance(
  */
 export function normalizePolygon(raw: any): PolygonPoint[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) {
-    return raw
+  let data = raw;
+  if (typeof raw === 'string') {
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  }
+  if (Array.isArray(data)) {
+    return data
       .map((pt): PolygonPoint | null => {
         if (Array.isArray(pt) && pt.length >= 2) {
           const lat = parseFloat(pt[0]);

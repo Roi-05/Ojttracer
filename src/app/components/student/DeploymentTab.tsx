@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui
 import { Button } from "../ui/button";
 import { MapPin, Building2, Award, Download, FileText, Lock } from "lucide-react";
 import { StatusBadge } from "./shared";
+import { normalizePolygon } from "../../lib/geolocation";
 
 interface DeploymentTabProps {
   effectiveDeployment: {
@@ -36,10 +37,11 @@ export function DeploymentTab({
   onExportCertificateDOCX,
 }: DeploymentTabProps) {
   const companyAddress = (effectiveDeployment.companyAddress || "").trim();
-  const hasPolygon = Array.isArray(effectiveDeployment.geofencePolygon) && effectiveDeployment.geofencePolygon.length >= 3;
+  const normalizedPoly = normalizePolygon(effectiveDeployment.geofencePolygon);
+  const hasPolygon = normalizedPoly.length >= 3;
   const hasGps = effectiveDeployment.companyLat != null && effectiveDeployment.companyLng != null;
   const geofenceText = hasPolygon
-    ? `Polygon Perimeter (${effectiveDeployment.geofencePolygon.length} pts)`
+    ? `Polygon Boundary (${normalizedPoly.length} vertices)`
     : hasGps
     ? `Circular (${effectiveDeployment.geofenceRadius || 200}m radius)`
     : "No location restriction";
