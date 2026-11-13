@@ -13,20 +13,20 @@ Architecture:
 - [x] **Storage -> New bucket** -> name `uploads` -> turn **Public bucket ON**.
 - [x] **Project Settings -> API Keys** -> copy *Project URL* (`SUPABASE_URL`) and the *Secret key* (`SUPABASE_SERVICE_ROLE_KEY`).
 
-## 2. Gotenberg service (Render) — CURRENT STEP
-- [ ] Commit and push your repo (including the `gotenberg/` folder) to GitHub.
-- [ ] On Render: **New +** -> **Web Service** -> select your GitHub repo.
-- [ ] Set **Root Directory**: `gotenberg`
-- [ ] Set **Runtime**: **Docker**
-- [ ] Set **Region**: Singapore, **Instance Type**: Free
-- [ ] Add Environment Variable: `PORT=3000`
-- [ ] Deploy and copy its URL (e.g. `https://ojt-gotenberg.onrender.com`) -> use this as `GOTENBERG_URL` in Step 3.
+## 2. Gotenberg service (Render) (Completed)
+- [x] Commit and push your repo (including the `gotenberg/` folder) to GitHub.
+- [x] On Render: **New +** -> **Web Service** -> select your GitHub repo.
+- [x] Set **Root Directory**: `gotenberg`
+- [x] Set **Runtime**: **Docker**
+- [x] Set **Region**: Singapore, **Instance Type**: Free
+- [x] Add Environment Variable: `PORT=3000`
+- [x] Deploy and copy its URL (e.g. `https://ojt-gotenberg.onrender.com`) -> use this as `GOTENBERG_URL` in Step 3.
 > If it crashes with out-of-memory (free = 512 MB, LibreOffice is heavy), upgrade only this service to Starter (~\$7/mo), or run Gotenberg on a laptop via ngrok during survey sessions.
 
-## 3. Main app service (Render)
+## 3. Main app service (Render) — CURRENT STEP
 - [ ] On Render: **New +** -> **Web Service** -> select the same repo
 - [ ] Set **Runtime**: **Node**, **Region**: Singapore, **Instance Type**: Free
-- [ ] **Build command**: `pnpm install && pnpm build && npm install --prefix server`
+- [ ] **Build command**: `pnpm install --no-frozen-lockfile && pnpm build && npm install --prefix server`
 - [ ] **Start command**: `node server/index.js`
 - [ ] **Health check path** (under Advanced): `/health`
 - [ ] Add Environment Variables from [.env.example](.env.example):
