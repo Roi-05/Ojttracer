@@ -1,7 +1,11 @@
 const fs = require('fs');
 const path = require('path');
 
-const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+// Strip trailing slash and any accidental /rest/v1 suffix copied from the Data API settings page
+const SUPABASE_URL = (process.env.SUPABASE_URL || '')
+  .trim()
+  .replace(/\/+$/, '')
+  .replace(/\/rest\/v1$/i, '');
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const BUCKET = process.env.SUPABASE_BUCKET || 'uploads';
 
