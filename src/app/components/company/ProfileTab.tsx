@@ -86,11 +86,7 @@ export function ProfileTab({ companyInfo, onNavigateToTracker }: ProfileTabProps
         hrEmail: profileForm.hrEmail,
         description: profileForm.description,
         companyAddress: profileForm.address,
-        breakStart: profileForm.breakStart || null,
-        breakEnd: profileForm.breakEnd || null,
       });
-
-      await api.updateBreakTime(profileForm.breakStart || null, profileForm.breakEnd || null);
 
       await refreshProfile();
       toast.success("Company profile saved successfully!");
@@ -183,53 +179,6 @@ export function ProfileTab({ companyInfo, onNavigateToTracker }: ProfileTabProps
                   ? `Circular Geofence (${companyInfo.geofenceRadius || 200}m)`
                   : "No Geofence Set"}
               </div>
-            </CardContent>
-          </Card>
-
-          {/* DTR Break Schedule Card */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Coffee className="h-4 w-4 text-primary" />
-                DTR Break Schedule
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-xs text-muted-foreground">
-                Set unpaid lunch/break hours. This window is automatically deducted when interns clock out.
-              </p>
-
-              <div>
-                <Label className="text-xs font-medium">Break Start Time</Label>
-                <Input
-                  type="time"
-                  value={profileForm.breakStart}
-                  onChange={(e) => setProfileForm((p) => ({ ...p, breakStart: e.target.value }))}
-                  className="mt-1"
-                />
-              </div>
-
-              <div>
-                <Label className="text-xs font-medium">Break End Time</Label>
-                <Input
-                  type="time"
-                  value={profileForm.breakEnd}
-                  onChange={(e) => setProfileForm((p) => ({ ...p, breakEnd: e.target.value }))}
-                  className="mt-1"
-                />
-              </div>
-
-              {(profileForm.breakStart || profileForm.breakEnd) && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="w-full h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 gap-1.5"
-                  onClick={() => setProfileForm((p) => ({ ...p, breakStart: "", breakEnd: "" }))}
-                >
-                  <Trash2 className="h-3 w-3" /> Clear Break Time
-                </Button>
-              )}
             </CardContent>
           </Card>
         </div>

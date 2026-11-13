@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
-import { MapPin, Smartphone, ShieldAlert, Check, X, FileText } from "lucide-react";
+import { Input } from "../ui/input";
+import { MapPin, Smartphone, ShieldAlert, Check, X, FileText, Coffee, Trash2 } from "lucide-react";
 import { Intern, InternSubmission } from "../../hooks/useCompanyData";
 import { StatusBadge } from "../student/shared";
 import { InternDocumentsModal } from "./InternDocumentsModal";
@@ -11,6 +12,7 @@ interface InternsTabProps {
   internDocuments?: InternSubmission[];
   onResetDevice?: (studentId: string | number, name: string) => Promise<void>;
   onRejectDevice?: (studentId: string | number, name: string) => Promise<void>;
+  onUpdateBreakTime?: (studentId: string | number, breakStart: string | null, breakEnd: string | null) => Promise<void>;
 }
 
 export function InternsTab({
@@ -18,14 +20,49 @@ export function InternsTab({
   internDocuments = [],
   onResetDevice,
   onRejectDevice,
+  onUpdateBreakTime,
 }: InternsTabProps) {
   const [selectedInternDocs, setSelectedInternDocs] = useState<InternSubmission | null>(null);
+  const [editingBreakId, setEditingBreakId] = useState<string | number | null>(null);
+  const [breakForm, setBreakForm] = useState<{ start: string; end: string }>({ start: "", end: "" });
+  const [savingBreak, setSavingBreak] = useState(false);
+
+  const openBreakEditor = (intern: Intern) => {
+    setEditingBreakId(intern.id);
+    setBreakForm({
+      start: intern.breakStart || "",
+      end: intern.breakEnd || "",
+    });
+  };
+
+  const handleSaveBreak = async (studentId: string | number) => {
+    if (!onUpdateBreakTime) return;
+    setSavingBreak(true);
+    try {
+      await onUpdateBreakTime(studentId, breakForm.start || null, breakForm.end || null);
+      setEditingBreakId(null);
+    } finally {
+      setSavingBreak(false);
+    }
+  };
+
+  const handleClearBreak = async (studentId: string | number) => {
+    if (!onUpdateBreakTime) return;
+    setSavingBreak(true);
+    try {
+      await onUpdateBreakTime(studentId, null, null);
+      setBreakForm({ start: "", end: "" });
+      setEditingBreakId(null);
+    } finally {
+      setSavingBreak(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">My Interns</h1>
-        <p className="text-muted-foreground mt-1">Monitor assigned interns, their progress, and device registrations</p>
+        <p className="text-muted-foreground mt-1">Monitor assigned interns, their progress, break schedules, and device registrations</p>
       </div>
 
       <div className="grid gap-4">
@@ -42,6 +79,7 @@ export function InternsTab({
             : 0;
 
           const matchedDocs = internDocuments.find((d) => String(d.studentId) === String(intern.id));
+          const isEditingBreak = editingBreakId === intern.id;
 
           return (
             <Card key={intern.id} className="border-0 shadow-sm">
@@ -101,7 +139,7 @@ export function InternsTab({
                       </div>
                     )}
 
-                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-border">
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-4 gap-4 pt-3 border-t border-border">
                       <div>
                         <p className="text-xs text-muted-foreground">OJT Period</p>
                         <p className="text-xs font-medium mt-0.5">{intern.startDate} — {intern.endDate}</p>
@@ -114,6 +152,26 @@ export function InternsTab({
                         </p>
                       </div>
                       <div>
+                        <p className="text-xs text-muted-foreground">DTR Break Schedule</p>
+                        <div className="text-xs font-medium mt-0.5 flex items-center gap-2">
+                          <Coffee className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <span>
+                            {intern.breakStart && intern.breakEnd
+                              ? `${intern.breakStart} – ${intern.breakEnd}`
+                              : <span className="text-muted-foreground italic">Not set</span>}
+                          </span>
+                          {!isEditingBreak && onUpdateBreakTime && (
+                            <button
+                              type="button"
+                              onClick={() => openBreakEditor(intern)}
+                              className="text-[11px] text-primary hover:underline font-medium ml-1"
+                            >
+                              {intern.breakStart && intern.breakEnd ? "Edit" : "Set"}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <div>
                         <p className="text-xs text-muted-foreground">Hours Completed</p>
                         <p className="text-xs font-medium mt-0.5">{intern.hoursCompleted}/{intern.requiredHours} hrs</p>
                         <div className="h-1.5 bg-muted rounded-full overflow-hidden mt-1">
@@ -121,6 +179,60 @@ export function InternsTab({
                         </div>
                       </div>
                     </div>
+
+                    {/* Individual Intern Break Schedule Editor */}
+                    {isEditingBreak && (
+                      <div className="mt-3 p-3 rounded-lg bg-muted/40 border border-border flex flex-wrap items-end gap-3">
+                        <div>
+                          <label className="text-[11px] font-medium text-muted-foreground block">Break Start</label>
+                          <Input
+                            type="time"
+                            value={breakForm.start}
+                            onChange={e => setBreakForm(f => ({ ...f, start: e.target.value }))}
+                            className="h-8 text-xs mt-1 w-32 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-medium text-muted-foreground block">Break End</label>
+                          <Input
+                            type="time"
+                            value={breakForm.end}
+                            onChange={e => setBreakForm(f => ({ ...f, end: e.target.value }))}
+                            className="h-8 text-xs mt-1 w-32 bg-white"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            className="h-8 text-xs bg-primary hover:bg-primary/90 text-white"
+                            disabled={savingBreak}
+                            onClick={() => handleSaveBreak(intern.id)}
+                          >
+                            {savingBreak ? "Saving..." : "Save Break"}
+                          </Button>
+                          {(intern.breakStart || intern.breakEnd || breakForm.start || breakForm.end) && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 gap-1"
+                              disabled={savingBreak}
+                              onClick={() => handleClearBreak(intern.id)}
+                            >
+                              <Trash2 className="h-3 w-3" /> Clear
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 text-xs"
+                            disabled={savingBreak}
+                            onClick={() => setEditingBreakId(null)}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Complied Documents Action Bar */}
                     <div className="mt-3 pt-3 border-t border-border flex items-center justify-between flex-wrap gap-2">

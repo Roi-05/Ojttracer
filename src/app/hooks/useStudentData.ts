@@ -320,8 +320,8 @@ export function useStudentData() {
         setDocuments(list => list.map(d => d.name === docName
           ? { ...d, file: result.fileUrl } : d));
       }
-    } catch (err) {
-      toast.error("Failed to submit document to server.");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to submit document to server.");
       throw err;
     }
   };

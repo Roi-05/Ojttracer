@@ -110,12 +110,28 @@ const getMoaTemplate = async (req, res) => {
   }
 };
 
+let deploymentBreakColumnsEnsured = false;
+async function ensureDeploymentBreakColumns() {
+  if (deploymentBreakColumnsEnsured) return;
+  try {
+    await db.query(`
+      ALTER TABLE public.deployments ADD COLUMN IF NOT EXISTS break_start text DEFAULT null;
+      ALTER TABLE public.deployments ADD COLUMN IF NOT EXISTS break_end text DEFAULT null;
+    `);
+    deploymentBreakColumnsEnsured = true;
+  } catch (err) {
+    console.warn('[DB] deployments break_start/break_end check:', err.message);
+  }
+}
+ensureDeploymentBreakColumns().catch(() => {});
+
 const getInterns = async (req, res) => {
   try {
     if (req.user.role !== 'company') return res.status(403).json({ error: 'Company only' });
+    await ensureDeploymentBreakColumns();
     const result = await db.query(`
       SELECT p.id, p.name, s.course, s.registered_device_token, s.registered_device_name, s.device_reset_requested, s.school_year, s.section,
-             d.position, d.supervisor, d.start_date, d.end_date, d.required_hours, d.status,
+             d.position, d.supervisor, d.start_date, d.end_date, d.required_hours, d.status, d.break_start, d.break_end,
              (SELECT COALESCE(SUM(hours), 0) FROM public.dtr_records WHERE student_id = p.id AND status = 'approved') as completed_hours,
              e.overall_score
       FROM public.deployments d 
@@ -136,12 +152,16 @@ const getInterns = async (req, res) => {
       registeredDeviceToken: r.registered_device_token || null,
       registeredDeviceName: r.registered_device_name || null,
       deviceResetRequested: r.device_reset_requested || false,
+      breakStart: r.break_start || null,
+      breakEnd: r.break_end || null,
       deployment: {
         position: r.position,
         supervisor: r.supervisor,
         startDate: r.start_date,
         endDate: r.end_date,
         requiredHours: r.required_hours,
+        breakStart: r.break_start || null,
+        breakEnd: r.break_end || null,
         status: deploymentStatusFromHours(r.completed_hours, r.required_hours, r.status)
       }
     })));
@@ -191,6 +211,28 @@ const updateBreakTime = async (req, res) => {
   }
 };
 
+const updateInternBreakTime = async (req, res) => {
+  try {
+    if (req.user.role !== 'company') return res.status(403).json({ error: 'Company only' });
+    await ensureDeploymentBreakColumns();
+    const { studentId } = req.params;
+    const { breakStart, breakEnd } = req.body;
+    const bStart = breakStart ? breakStart.trim() : null;
+    const bEnd = breakEnd ? breakEnd.trim() : null;
+
+    const upd = await db.query(
+      `UPDATE public.deployments SET break_start = $1, break_end = $2 WHERE student_id = $3 AND company_id = $4 RETURNING student_id`,
+      [bStart, bEnd, studentId, req.user.id]
+    );
+    if (!upd.rows.length) {
+      return res.status(404).json({ error: 'Intern deployment not found for this company' });
+    }
+    res.json({ success: true, studentId, breakStart: bStart, breakEnd: bEnd });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 const deleteCompany = async (req, res) => {
   try {
     if (!['coordinator','superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Coordinator only' });
@@ -211,5 +253,6 @@ module.exports = {
   getInterns,
   updateCompanyLocation,
   updateBreakTime,
+  updateInternBreakTime,
   deleteCompany
 };

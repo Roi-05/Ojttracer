@@ -25,6 +25,19 @@ const MIME = {
 };
 const mimeFor = (name) => MIME[path.extname(name).toLowerCase()] || 'application/octet-stream';
 
+let bucketEnsured = false;
+async function ensureBucket() {
+  if (!enabled || bucketEnsured) return;
+  try {
+    await fetch(`${SUPABASE_URL}/storage/v1/bucket`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: BUCKET, name: BUCKET, public: true }),
+    });
+    bucketEnsured = true;
+  } catch (_) {}
+}
+
 /** URL stored in the DB / sent to the browser. */
 function publicUrl(folder, filename) {
   return enabled
@@ -40,7 +53,8 @@ async function saveBuffer(folder, filename, buffer) {
     fs.writeFileSync(path.join(dir, filename), buffer);
     return publicUrl(folder, filename);
   }
-  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${folder}/${filename}`, {
+  await ensureBucket();
+  let res = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${folder}/${filename}`, {
     method: 'POST',
     headers: {
       ...authHeaders(),
@@ -49,6 +63,20 @@ async function saveBuffer(folder, filename, buffer) {
     },
     body: buffer,
   });
+  // If Bucket not found, force-create and retry once
+  if (!res.ok && res.status === 404) {
+    bucketEnsured = false;
+    await ensureBucket();
+    res = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${folder}/${filename}`, {
+      method: 'POST',
+      headers: {
+        ...authHeaders(),
+        'Content-Type': mimeFor(filename),
+        'x-upsert': 'true',
+      },
+      body: buffer,
+    });
+  }
   if (!res.ok) throw new Error(`Storage upload failed (${res.status}): ${await res.text()}`);
   return publicUrl(folder, filename);
 }

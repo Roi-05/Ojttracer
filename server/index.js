@@ -63,5 +63,11 @@ if (process.env.NODE_ENV === 'production') {
 } else {
   app.use('/', api);
 }
+// Global error handler (turns Multer / storage errors into clean JSON instead of HTML)
+app.use((err, req, res, next) => {
+  console.error('[Server Error]:', err.message || err);
+  res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
+});
+
 const port = process.env.PORT || 3000;
 app.listen(port, '0.0.0.0', () => console.log(`Server listening on port ${port}`));

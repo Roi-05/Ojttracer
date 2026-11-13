@@ -93,11 +93,12 @@ const clockDtr = async (req, res) => {
       let photoUrl = null;
       if (photo) photoUrl = await saveBase64Image(photo, 'dtr', `${req.user.id}-${date}-out.jpg`);
 
-      // Fetch the company's break time settings for this student's deployment
+      // Fetch the intern's deployment break time settings (fallback to company break time)
       const depRes = await db.query(
-        `SELECT c.break_start, c.break_end
+        `SELECT COALESCE(d.break_start, c.break_start) AS break_start,
+                COALESCE(d.break_end, c.break_end) AS break_end
          FROM public.deployments d
-         JOIN public.companies c ON c.user_id = d.company_id
+         LEFT JOIN public.companies c ON c.user_id = d.company_id
          WHERE d.student_id = $1`,
         [req.user.id]
       );
@@ -246,7 +247,7 @@ const setDtrTimeout = async (req, res) => {
 
     // Verify the record belongs to an intern deployed at this company and has no time_out yet
     const check = await db.query(
-      `SELECT d.time_in, d.time_out
+      `SELECT d.time_in, d.time_out, dep.break_start AS intern_break_start, dep.break_end AS intern_break_end
        FROM public.dtr_records d
        JOIN public.deployments dep ON dep.student_id = d.student_id AND dep.company_id = $1
        WHERE d.id = $2`,
@@ -258,12 +259,13 @@ const setDtrTimeout = async (req, res) => {
     const timeIn = check.rows[0].time_in;
     if (!timeIn) return res.status(400).json({ error: 'No time-in recorded for this entry' });
 
-    // Apply company break deduction for this company's interns
+    // Apply intern-specific break deduction (with fallback to company default if unset)
     const breakRes = await db.query(
       `SELECT break_start, break_end FROM public.companies WHERE user_id = $1`,
       [req.user.id]
     );
-    const { break_start, break_end } = breakRes.rows[0] || {};
+    const break_start = check.rows[0].intern_break_start || breakRes.rows[0]?.break_start;
+    const break_end = check.rows[0].intern_break_end || breakRes.rows[0]?.break_end;
     const breakDeduction = calculateBreakDeduction(timeIn, timeOut, break_start, break_end);
 
     const diffMinutes = parseTime(timeOut) - parseTime(timeIn);

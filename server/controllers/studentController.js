@@ -5,7 +5,10 @@ const { normalizeUploadUrl } = require('../utils/uploadUrl');
 const getDeployment = async (req, res) => {
   try {
     const result = await db.query(`
-      SELECT d.*, c.company_address, c.latitude, c.longitude, c.geofence_radius, c.geofence_polygon, c.break_start, c.break_end, c.signature_url AS supervisor_signature_url,
+      SELECT d.*, c.company_address, c.latitude, c.longitude, c.geofence_radius, c.geofence_polygon,
+             COALESCE(d.break_start, c.break_start) AS break_start,
+             COALESCE(d.break_end, c.break_end) AS break_end,
+             c.signature_url AS supervisor_signature_url,
              (SELECT COALESCE(SUM(hours), 0) FROM public.dtr_records WHERE student_id = d.student_id AND status = 'approved') AS completed_hours
       FROM public.deployments d
       LEFT JOIN public.companies c ON (c.user_id = d.company_id OR (d.company_id IS NULL AND LOWER(c.company_name) = LOWER(d.company_name)))

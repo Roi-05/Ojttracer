@@ -452,61 +452,6 @@ export function ProfileTab({ studentProfile, updateProfileData }: ProfileTabProp
             </div>
           </CardContent>
         </Card>
-
-        {/* Skills */}
-        <Card className="lg:col-span-3 border-0 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Skills &amp; Competencies</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Add skill input */}
-            <div className="flex gap-2">
-              <Input
-                placeholder="Type a skill and press Add or Enter..."
-                value={newSkill}
-                onChange={e => setNewSkill(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAddSkill(); } }}
-                className="flex-1"
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5 px-4"
-                onClick={handleAddSkill}
-                disabled={!newSkill.trim()}
-              >
-                <Plus className="h-3.5 w-3.5" /> Add
-              </Button>
-            </div>
-
-            {/* Skill tags */}
-            <div className="flex flex-wrap gap-2">
-              {formData.skills?.length > 0 ? (
-                formData.skills.map((skill, i) => (
-                  <span
-                    key={i}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-medium"
-                  >
-                    {skill}
-                    <button
-                      onClick={() => handleRemoveSkill(skill)}
-                      className="text-blue-400 hover:text-blue-700 transition-colors ml-0.5"
-                      title={`Remove ${skill}`}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </span>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">No skills added yet. Type a skill above and press Add.</p>
-              )}
-            </div>
-
-            <p className="text-xs text-muted-foreground">
-              Skills are saved when you click <strong>Save Changes</strong> above.
-            </p>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

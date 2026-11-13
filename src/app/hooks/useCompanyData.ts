@@ -22,6 +22,8 @@ export type Intern = {
   section?: string;
   registeredDeviceName?: string | null;
   deviceResetRequested?: boolean;
+  breakStart?: string | null;
+  breakEnd?: string | null;
 };
 
 export type InternAccomplishment = {
@@ -150,6 +152,8 @@ export function useCompanyData() {
             section: i.section || '',
             registeredDeviceName: i.registeredDeviceName || null,
             deviceResetRequested: i.deviceResetRequested || false,
+            breakStart: i.breakStart ?? i.deployment?.breakStart ?? null,
+            breakEnd: i.breakEnd ?? i.deployment?.breakEnd ?? null,
           })));
         }
 
@@ -351,6 +355,19 @@ export function useCompanyData() {
     }
   };
 
+  const updateInternBreakTime = async (studentId: string | number, breakStart: string | null, breakEnd: string | null) => {
+    try {
+      await api.updateInternBreakTime(studentId, breakStart, breakEnd);
+      setInterns(list => list.map(i => String(i.id) === String(studentId)
+        ? { ...i, breakStart: breakStart || null, breakEnd: breakEnd || null }
+        : i));
+      toast.success("Intern break time schedule updated.");
+    } catch (err: any) {
+      toast.error(`Failed to update break time: ${err.message}`);
+      throw err;
+    }
+  };
+
   return {
     loading,
     companyInfo,
@@ -370,6 +387,7 @@ export function useCompanyData() {
     internDocuments,
     refreshInternDocuments: refreshData,
     resetStudentDevice,
-    rejectStudentDevice
+    rejectStudentDevice,
+    updateInternBreakTime
   };
 }

@@ -274,15 +274,39 @@ export async function updateMoa(id: string | number, status: string, expiryDate?
 }
 
 export async function updateCompanyLocation(
-  id: string | number,
-  latitude: number,
-  longitude: number,
-  geofenceRadius: number,
+  idOrPayload:
+    | string
+    | number
+    | {
+        id?: string | number;
+        latitude: number;
+        longitude: number;
+        geofenceRadius: number;
+        geofencePolygon?: [number, number][] | null;
+      },
+  latitude?: number,
+  longitude?: number,
+  geofenceRadius?: number,
   geofencePolygon?: [number, number][] | null
 ) {
-  return apiFetch(`/companies/${id}/location`, {
+  if (typeof idOrPayload === "object" && idOrPayload !== null) {
+    const { id, ...body } = idOrPayload;
+    const url = id ? `/companies/${id}/location` : `/companies/location/me`;
+    return apiFetch(url, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+  }
+  return apiFetch(`/companies/${idOrPayload}/location`, {
     method: "PUT",
     body: JSON.stringify({ latitude, longitude, geofenceRadius, geofencePolygon }),
+  });
+}
+
+export async function updateInternBreakTime(studentId: string | number, breakStart: string | null, breakEnd: string | null) {
+  return apiFetch(`/interns/${studentId}/break-time`, {
+    method: "PUT",
+    body: JSON.stringify({ breakStart, breakEnd }),
   });
 }
 

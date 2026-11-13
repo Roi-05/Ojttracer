@@ -54,6 +54,7 @@ export function CompanyDashboard() {
     getEvaluation,
     resetStudentDevice,
     rejectStudentDevice,
+    updateInternBreakTime,
     internDocuments,
   } = useCompanyData();
 
@@ -102,6 +103,7 @@ export function CompanyDashboard() {
         internDocuments={internDocuments}
         onResetDevice={resetStudentDevice}
         onRejectDevice={rejectStudentDevice}
+        onUpdateBreakTime={updateInternBreakTime}
       />
     ),
     documents: () => (
