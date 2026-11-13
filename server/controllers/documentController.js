@@ -128,11 +128,8 @@ const submitDocument = async (req, res) => {
       // Base64 fallback
       const ext = req.body.fileName ? path.extname(req.body.fileName) : '.pdf';
       const fname = `${Date.now()}${ext}`;
-      const docDir = path.join(UPLOADS_DIR, 'documents');
-      if (!fs.existsSync(docDir)) fs.mkdirSync(docDir, { recursive: true });
       const base64 = req.body.fileData.includes(',') ? req.body.fileData.split(',')[1] : req.body.fileData;
-      fs.writeFileSync(path.join(docDir, fname), Buffer.from(base64, 'base64'));
-      fileUrl = publicUploadPath('documents', fname);
+      fileUrl = await require('../utils/storage').saveBuffer('documents', fname, Buffer.from(base64, 'base64'));
       fileName = req.body.fileName || fname;
     } else {
       return res.status(400).json({ error: 'No file provided' });

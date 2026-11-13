@@ -28,7 +28,7 @@ const createAccomplishment = async (req, res) => {
     }
 
     let photoUrl = null;
-    if (photo) photoUrl = saveBase64Image(photo, 'accomplishments', `${req.user.id}-${Date.now()}.jpg`);
+    if (photo) photoUrl = await saveBase64Image(photo, 'accomplishments', `${req.user.id}-${Date.now()}.jpg`);
     const id = Date.now().toString();
     const result = await db.query(
       `INSERT INTO public.accomplishments (id, student_id, date, hours, details, photo_url) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,

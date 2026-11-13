@@ -1,14 +1,10 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { publicUploadPath } = require('../utils/uploadUrl');
+const storage = require('../utils/storage');
+const { UPLOADS_DIR } = storage;
 
-const UPLOADS_DIR = path.join(__dirname, '../uploads');
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR);
-}
-
-const makeStorage = (subfolder) => multer.diskStorage({
+const makeDiskStorage = (subfolder) => multer.diskStorage({
   destination: (req, file, cb) => {
     const dir = path.join(UPLOADS_DIR, subfolder);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -19,6 +15,9 @@ const makeStorage = (subfolder) => multer.diskStorage({
     cb(null, uniqueSuffix + path.extname(file.originalname));
   }
 });
+
+// Supabase Storage in production (when SUPABASE_URL + key are set), local disk otherwise
+const makeStorage = (subfolder) => storage.enabled ? storage.supabaseMulterStorage(subfolder) : makeDiskStorage(subfolder);
 
 const uploadTemplate = multer({ storage: makeStorage('templates'), limits: { fileSize: 20 * 1024 * 1024 } });
 const uploadDoc     = multer({ storage: makeStorage('documents'), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -40,15 +39,9 @@ const uploadSignature = multer({
   fileFilter: imageFilter,
 });
 
-function saveBase64Image(dataUrl, folder, filename) {
-  const baseDir = path.join(UPLOADS_DIR, folder);
-  if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true });
-  
+async function saveBase64Image(dataUrl, folder, filename) {
   const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
-  const buffer = Buffer.from(base64, 'base64');
-  const filepath = path.join(baseDir, filename);
-  fs.writeFileSync(filepath, buffer);
-  return publicUploadPath(folder, filename);
+  return storage.saveBuffer(folder, filename, Buffer.from(base64, 'base64'));
 }
 
 module.exports = {

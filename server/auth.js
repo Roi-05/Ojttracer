@@ -1,6 +1,9 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = 'your-super-secret-key-for-local-dev';
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-for-local-dev';
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET must be set in production');
+}
 
 function generateToken(user) {
   return jwt.sign(

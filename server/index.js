@@ -34,21 +34,34 @@ app.use('/uploads', express.static(UPLOADS_DIR));
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 // Mount Routes
-app.use('/auth', authRoutes);
-app.use('/profile', profileRoutes);
-app.use('/', dtrRoutes); // handles /dtr, /dtr/clock, /admin/dtr
-app.use('/documents', documentRoutes);
-app.use('/templates', templateRoutes);
-app.use('/announcements', announcementRoutes);
-app.use('/students', studentRoutes);
-app.use('/deployment', deploymentRoutes);
-app.use('/companies', companyRoutes);
-app.use('/interns', internRoutes);
-app.use('/accomplishments', accomplishmentRoutes);
-app.use('/evaluations', evaluationRoutes);
-app.use('/import', importRoutes);
-app.use('/location', locationRoutes);
-app.use('/coordinators', coordinatorRoutes);
+// Dev: the Vite proxy strips "/api", so routes are served at the root.
+// Prod: the browser calls "/api/*" directly, and the root is reserved for the React app.
+const api = express.Router();
+api.use('/auth', authRoutes);
+api.use('/profile', profileRoutes);
+api.use('/', dtrRoutes); // handles /dtr, /dtr/clock, /admin/dtr
+api.use('/documents', documentRoutes);
+api.use('/templates', templateRoutes);
+api.use('/announcements', announcementRoutes);
+api.use('/students', studentRoutes);
+api.use('/deployment', deploymentRoutes);
+api.use('/companies', companyRoutes);
+api.use('/interns', internRoutes);
+api.use('/accomplishments', accomplishmentRoutes);
+api.use('/evaluations', evaluationRoutes);
+api.use('/import', importRoutes);
+api.use('/location', locationRoutes);
+api.use('/coordinators', coordinatorRoutes);
 
+app.use('/api', api);
+
+if (process.env.NODE_ENV === 'production') {
+  // Serve the built React app (vite build -> ../dist) with SPA fallback
+  const distDir = path.join(__dirname, '../dist');
+  app.use(express.static(distDir));
+  app.get('/{*splat}', (req, res) => res.sendFile(path.join(distDir, 'index.html')));
+} else {
+  app.use('/', api);
+}
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`Server listening on port ${port}`));
+app.listen(port, '0.0.0.0', () => console.log(`Server listening on port ${port}`));

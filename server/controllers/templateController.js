@@ -28,12 +28,9 @@ const uploadTemplate = async (req, res) => {
     } else if (req.body.fileData) {
       const ext = req.body.fileName ? path.extname(req.body.fileName) : '.pdf';
       const fname = `${Date.now()}${ext}`;
-      const tplDir = path.join(UPLOADS_DIR, 'templates');
-      if (!fs.existsSync(tplDir)) fs.mkdirSync(tplDir, { recursive: true });
       const base64 = req.body.fileData.includes(',') ? req.body.fileData.split(',')[1] : req.body.fileData;
       const buf = Buffer.from(base64, 'base64');
-      fs.writeFileSync(path.join(tplDir, fname), buf);
-      fileUrl = publicUploadPath('templates', fname);
+      fileUrl = await require('../utils/storage').saveBuffer('templates', fname, buf);
       fileSize = `${(buf.length / 1024).toFixed(0)} KB`;
     } else {
       return res.status(400).json({ error: 'No file provided' });
@@ -59,11 +56,7 @@ const deleteTemplate = async (req, res) => {
     if (!['coordinator','superadmin'].includes(req.user.role)) return res.status(403).json({ error: 'Coordinator only' });
     const result = await db.query(`DELETE FROM public.templates WHERE doc_slug=$1 RETURNING file_url`, [req.params.slug]);
     const row = result.rows[0];
-    if (row?.file_url) {
-      const rel = normalizeUploadUrl(row.file_url)?.replace(/^\/uploads\//, '') || '';
-      const fullPath = path.join(UPLOADS_DIR, rel);
-      if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
-    }
+    if (row?.file_url) await require('../utils/storage').removeByUrl(row.file_url);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

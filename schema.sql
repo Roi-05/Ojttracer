@@ -1,191 +1,199 @@
--- ── PROFILES ──────────────────────────────────
-create table if not exists public.profiles (
-  id          uuid primary key default gen_random_uuid(),
-  email       text not null unique,
-  password_hash text not null,
-  name        text not null,
-  role        text not null check (role in ('student','company','coordinator','superadmin')),
-  coordinator_course text,
-  avatar_url  text,
-  created_at  timestamptz not null default now()
-);
+  -- ── PROFILES ──────────────────────────────────
+  create table if not exists public.profiles (
+    id          uuid primary key default gen_random_uuid(),
+    email       text not null unique,
+    password_hash text not null,
+    name        text not null,
+    role        text not null check (role in ('student','company','coordinator','superadmin')),
+    coordinator_course text,
+    avatar_url  text,
+    created_at  timestamptz not null default now()
+  );
 
--- ── STUDENT-SPECIFIC FIELDS ────────────────────────────────────────────────
-create table if not exists public.students (
-  user_id            uuid primary key references public.profiles(id) on delete cascade,
-  student_id         text default '',
-  last_name          text default '',
-  first_name         text default '',
-  middle_name        text default '',
-  section            text default '',
-  course             text default 'BSIT',
-  year_level         text default '4th Year',
-  school_year        text default '2025-2026',
-  date_of_birth      date,
-  civil_status       text default '',
-  sex                text default '',
-  phone              text default '',
-  address            text default '',
-  skills             jsonb not null default '[]'::jsonb,
-  religion           text default '',
-  intended_company_id uuid references public.companies(user_id),
-  intended_position   text default '',
-  father_name        text default '',
-  father_occupation  text default '',
-  father_phone       text default '',
-  mother_name        text default '',
-  mother_occupation  text default '',
-  mother_phone       text default '',
-  guardian_name      text default '',
-  guardian_relationship text default '',
-  guardian_phone     text default '',
-  registered_device_token text default null,
-  registered_device_name text default null,
-  device_registered_at timestamptz default null,
-  device_reset_requested boolean not null default false,
-  signature_url text default null
-);
+  -- ── STUDENT-SPECIFIC FIELDS ────────────────────────────────────────────────
+  create table if not exists public.students (
+    user_id            uuid primary key references public.profiles(id) on delete cascade,
+    student_id         text default '',
+    last_name          text default '',
+    first_name         text default '',
+    middle_name        text default '',
+    section            text default '',
+    course             text default 'BSIT',
+    year_level         text default '4th Year',
+    school_year        text default '2025-2026',
+    date_of_birth      date,
+    civil_status       text default '',
+    sex                text default '',
+    phone              text default '',
+    address            text default '',
+    skills             jsonb not null default '[]'::jsonb,
+    religion           text default '',
+    intended_company_id uuid,
+    intended_position   text default '',
+    father_name        text default '',
+    father_occupation  text default '',
+    father_phone       text default '',
+    mother_name        text default '',
+    mother_occupation  text default '',
+    mother_phone       text default '',
+    guardian_name      text default '',
+    guardian_relationship text default '',
+    guardian_phone     text default '',
+    registered_device_token text default null,
+    registered_device_name text default null,
+    device_registered_at timestamptz default null,
+    device_reset_requested boolean not null default false,
+    signature_url text default null
+  );
 
--- ── COMPANY-SPECIFIC FIELDS ────────────────────────────────────────────────
-create table if not exists public.companies (
-  user_id           uuid primary key references public.profiles(id) on delete cascade,
-  company_name      text default '',
-  industry          text default '',
-  company_address   text default '',
-  website           text default '',
-  hr_contact        text default '',
-  hr_email          text default '',
-  phone             text default '',
-  description       text default '',
-  moa_status        text default 'pending',
-  signed_moa_url    text,
-  accredited_until  text default '',
-  latitude          numeric(10, 7),
-  longitude         numeric(10, 7),
-  geofence_radius   int not null default 200,
-  geofence_polygon  jsonb default null,
-  signature_url     text,
-  break_start       text default null,
-  break_end         text default null
-);
+  -- ── COMPANY-SPECIFIC FIELDS ────────────────────────────────────────────────
+  create table if not exists public.companies (
+    user_id           uuid primary key references public.profiles(id) on delete cascade,
+    company_name      text default '',
+    industry          text default '',
+    company_address   text default '',
+    website           text default '',
+    hr_contact        text default '',
+    hr_email          text default '',
+    phone             text default '',
+    description       text default '',
+    moa_status        text default 'pending',
+    signed_moa_url    text,
+    accredited_until  text default '',
+    latitude          numeric(10, 7),
+    longitude         numeric(10, 7),
+    geofence_radius   int not null default 200,
+    geofence_polygon  jsonb default null,
+    signature_url     text,
+    break_start       text default null,
+    break_end         text default null
+  );
 
--- ── DAILY TIME RECORDS ─────────────────────────────────────────────────────
-create table if not exists public.dtr_records (
-  id                  bigserial primary key,
-  student_id          uuid not null references public.profiles(id) on delete cascade,
-  date                date not null,
-  day                 text default '',
-  time_in             text,
-  time_out            text,
-  time_in_photo_url   text,
-  time_out_photo_url  text,
-  hours               numeric not null default 0,
-  remarks             text not null default 'Regular', -- 'Regular' (active/pending timeout), 'Completed' (>=8h), 'Undertime' (<8h)
-  status              text default 'pending',
-  review_note         text default '',
-  unique (student_id, date)
-);
-create index if not exists idx_dtr_student_date on public.dtr_records(student_id, date desc);
+  -- students -> companies FK (added here because companies is created after students)
+  do $$ begin
+    if not exists (select 1 from pg_constraint where conname = 'students_intended_company_fk') then
+      alter table public.students add constraint students_intended_company_fk
+        foreign key (intended_company_id) references public.companies(user_id);
+    end if;
+  end $$;
 
--- ── DAILY ACCOMPLISHMENTS ──────────────────────────────────────────────────
-create table if not exists public.accomplishments (
-  id           text primary key,                  -- millisecond timestamp string
-  student_id   uuid not null references public.profiles(id) on delete cascade,
-  date         date not null,
-  hours        numeric not null,
-  details      text not null,
-  photo_url    text,
-  status       text not null default 'pending' check (status in ('pending','approved','rejected')),
-  review_note  text default '',
-  created_at   timestamptz not null default now()
-);
-create index if not exists idx_acc_student_date on public.accomplishments(student_id, date desc);
+  -- ── DAILY TIME RECORDS ─────────────────────────────────────────────────────
+  create table if not exists public.dtr_records (
+    id                  bigserial primary key,
+    student_id          uuid not null references public.profiles(id) on delete cascade,
+    date                date not null,
+    day                 text default '',
+    time_in             text,
+    time_out            text,
+    time_in_photo_url   text,
+    time_out_photo_url  text,
+    hours               numeric not null default 0,
+    remarks             text not null default 'Regular', -- 'Regular' (active/pending timeout), 'Completed' (>=8h), 'Undertime' (<8h)
+    status              text default 'pending',
+    review_note         text default '',
+    unique (student_id, date)
+  );
+  create index if not exists idx_dtr_student_date on public.dtr_records(student_id, date desc);
 
--- ── STUDENT DOCUMENT SUBMISSIONS ───────────────────────────────────────────
-create table if not exists public.documents (
-  id             bigserial primary key,
-  student_id     uuid not null references public.profiles(id) on delete cascade,
-  name           text not null,
-  status         text not null default 'pending' check (status in ('pending','approved','rejected','missing')),
-  file_url       text,
-  uploaded_date  text default '—',
-  review_note    text default '',
-  unique (student_id, name)
-);
+  -- ── DAILY ACCOMPLISHMENTS ──────────────────────────────────────────────────
+  create table if not exists public.accomplishments (
+    id           text primary key,                  -- millisecond timestamp string
+    student_id   uuid not null references public.profiles(id) on delete cascade,
+    date         date not null,
+    hours        numeric not null,
+    details      text not null,
+    photo_url    text,
+    status       text not null default 'pending' check (status in ('pending','approved','rejected')),
+    review_note  text default '',
+    created_at   timestamptz not null default now()
+  );
+  create index if not exists idx_acc_student_date on public.accomplishments(student_id, date desc);
 
--- ── ADMIN-UPLOADED TEMPLATES ───────────────────────────────────────────────
-create table if not exists public.templates (
-  doc_slug       text primary key,
-  name           text not null,
-  file_url       text,
-  size           text default '—',
-  uploaded_date  text default '—'
-);
+  -- ── STUDENT DOCUMENT SUBMISSIONS ───────────────────────────────────────────
+  create table if not exists public.documents (
+    id             bigserial primary key,
+    student_id     uuid not null references public.profiles(id) on delete cascade,
+    name           text not null,
+    status         text not null default 'pending' check (status in ('pending','approved','rejected','missing')),
+    file_url       text,
+    uploaded_date  text default '—',
+    review_note    text default '',
+    unique (student_id, name)
+  );
 
--- ── ANNOUNCEMENTS ──────────────────────────────────────────────────────────
-create table if not exists public.announcements (
-  id          text primary key,
-  title       text not null,
-  content     text not null,
-  category    text not null default 'update',
-  priority    text not null default 'normal',
-  date        text,
-  created_at  timestamptz not null default now()
-);
+  -- ── ADMIN-UPLOADED TEMPLATES ───────────────────────────────────────────────
+  create table if not exists public.templates (
+    doc_slug       text primary key,
+    name           text not null,
+    file_url       text,
+    size           text default '—',
+    uploaded_date  text default '—'
+  );
 
--- ── DEPLOYMENTS (student ↔ company assignment) ─────────────────────────────
-create table if not exists public.deployments (
-  student_id        uuid primary key references public.profiles(id) on delete cascade,
-  company_id        uuid references public.profiles(id) on delete set null,
-  company_name      text,
-  supervisor        text default '',
-  supervisor_email  text default '',
-  address           text default '',
-  start_date        text,
-  end_date          text,
-  required_hours    int not null default 486,
-  position          text,
-  status            text not null default 'ongoing',
-  deployed_at       timestamptz not null default now()
-);
-create index if not exists idx_deployments_company on public.deployments(company_id);
+  -- ── ANNOUNCEMENTS ──────────────────────────────────────────────────────────
+  create table if not exists public.announcements (
+    id          text primary key,
+    title       text not null,
+    content     text not null,
+    category    text not null default 'update',
+    priority    text not null default 'normal',
+    date        text,
+    created_at  timestamptz not null default now()
+  );
 
--- ── EVALUATIONS (one per student) ──────────────────────────────────────────
-create table if not exists public.evaluations (
-  student_id     uuid primary key references public.profiles(id) on delete cascade,
-  student_name   text,
-  company_id     uuid references public.profiles(id) on delete set null,
-  scores         jsonb not null default '{}'::jsonb,
-  overall_score  numeric not null default 0,
-  comments       text default '',
-  submitted_at   timestamptz not null default now()
-);
+  -- ── DEPLOYMENTS (student ↔ company assignment) ─────────────────────────────
+  create table if not exists public.deployments (
+    student_id        uuid primary key references public.profiles(id) on delete cascade,
+    company_id        uuid references public.profiles(id) on delete set null,
+    company_name      text,
+    supervisor        text default '',
+    supervisor_email  text default '',
+    address           text default '',
+    start_date        text,
+    end_date          text,
+    required_hours    int not null default 486,
+    position          text,
+    status            text not null default 'ongoing',
+    deployed_at       timestamptz not null default now()
+  );
+  create index if not exists idx_deployments_company on public.deployments(company_id);
 
--- ── LIVE LOCATION PINGS (for Live Map Tracker) ─────────────────────────────
-create table if not exists public.location_pings (
-  id          bigserial primary key,
-  student_id  uuid not null references public.profiles(id) on delete cascade,
-  latitude    numeric(10, 7) not null,
-  longitude   numeric(10, 7) not null,
-  accuracy    int,
-  pinged_at   timestamptz not null default now()
-);
-create index if not exists idx_location_pings_student_pinged
-  on public.location_pings(student_id, pinged_at desc);
+  -- ── EVALUATIONS (one per student) ──────────────────────────────────────────
+  create table if not exists public.evaluations (
+    student_id     uuid primary key references public.profiles(id) on delete cascade,
+    student_name   text,
+    company_id     uuid references public.profiles(id) on delete set null,
+    scores         jsonb not null default '{}'::jsonb,
+    overall_score  numeric not null default 0,
+    comments       text default '',
+    submitted_at   timestamptz not null default now()
+  );
 
-alter table if exists public.companies add column if not exists break_start text default null;
-alter table if exists public.companies add column if not exists break_end text default null;
+  -- ── LIVE LOCATION PINGS (for Live Map Tracker) ─────────────────────────────
+  create table if not exists public.location_pings (
+    id          bigserial primary key,
+    student_id  uuid not null references public.profiles(id) on delete cascade,
+    latitude    numeric(10, 7) not null,
+    longitude   numeric(10, 7) not null,
+    accuracy    int,
+    pinged_at   timestamptz not null default now()
+  );
+  create index if not exists idx_location_pings_student_pinged
+    on public.location_pings(student_id, pinged_at desc);
 
-alter table if exists public.students add column if not exists school_year text default '2025-2026';
+  alter table if exists public.companies add column if not exists break_start text default null;
+  alter table if exists public.companies add column if not exists break_end text default null;
 
--- ── PASSWORD RESET TOKENS ──────────────────────────────────────────────────
-create table if not exists public.password_reset_tokens (
-  id          serial primary key,
-  email       text not null,
-  code        text not null,
-  token       text not null,
-  expires_at  timestamptz not null,
-  used        boolean not null default false,
-  created_at  timestamptz not null default now()
-);
-create index if not exists idx_pwd_reset_email on public.password_reset_tokens(email);
+  alter table if exists public.students add column if not exists school_year text default '2025-2026';
+
+  -- ── PASSWORD RESET TOKENS ──────────────────────────────────────────────────
+  create table if not exists public.password_reset_tokens (
+    id          serial primary key,
+    email       text not null,
+    code        text not null,
+    token       text not null,
+    expires_at  timestamptz not null,
+    used        boolean not null default false,
+    created_at  timestamptz not null default now()
+  );
+  create index if not exists idx_pwd_reset_email on public.password_reset_tokens(email);

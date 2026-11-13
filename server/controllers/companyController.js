@@ -87,11 +87,8 @@ const uploadSignedMoa = async (req, res) => {
 
     const ext = fileName ? path.extname(fileName) : '.pdf';
     const fname = `${req.user.id}-signed-moa-${Date.now()}${ext}`;
-    const moaDir = path.join(UPLOADS_DIR, 'moa');
-    if (!fs.existsSync(moaDir)) fs.mkdirSync(moaDir, { recursive: true });
     const base64 = fileData.includes(',') ? fileData.split(',')[1] : fileData;
-    fs.writeFileSync(path.join(moaDir, fname), Buffer.from(base64, 'base64'));
-    const fileUrl = publicUploadPath('moa', fname);
+    const fileUrl = await require('../utils/storage').saveBuffer('moa', fname, Buffer.from(base64, 'base64'));
 
     await db.query(
       `UPDATE public.companies SET signed_moa_url = $1, moa_status = 'submitted' WHERE user_id = $2`,

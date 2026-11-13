@@ -80,7 +80,7 @@ const clockDtr = async (req, res) => {
     if (mode === 'in') {
       if (existing?.time_in) return res.status(400).json({ error: 'Already timed in' });
       let photoUrl = null;
-      if (photo) photoUrl = saveBase64Image(photo, 'dtr', `${req.user.id}-${date}-in.jpg`);
+      if (photo) photoUrl = await saveBase64Image(photo, 'dtr', `${req.user.id}-${date}-in.jpg`);
 
       const insert = await db.query(
         `INSERT INTO public.dtr_records (student_id, date, day, time_in, time_in_photo_url) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
@@ -91,7 +91,7 @@ const clockDtr = async (req, res) => {
       if (!existing?.time_in) return res.status(400).json({ error: 'Must time in first' });
       if (existing.time_out) return res.status(400).json({ error: 'Already timed out' });
       let photoUrl = null;
-      if (photo) photoUrl = saveBase64Image(photo, 'dtr', `${req.user.id}-${date}-out.jpg`);
+      if (photo) photoUrl = await saveBase64Image(photo, 'dtr', `${req.user.id}-${date}-out.jpg`);
 
       // Fetch the company's break time settings for this student's deployment
       const depRes = await db.query(
