@@ -226,7 +226,7 @@ export function DocumentsTab({ studentDocs, templateData, activeCompanies, inten
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{doc.name}</p>
                   <p className="text-xs text-muted-foreground truncate">
-                    {doc.file ? `${doc.file} • Uploaded ${doc.uploadedDate}` : "Not yet submitted"}
+                    {doc.file ? `${doc.file.split("/").pop()} • Uploaded ${doc.uploadedDate}` : "Not yet submitted"}
                   </p>
                 </div>
                 <StatusBadge status={doc.status} />

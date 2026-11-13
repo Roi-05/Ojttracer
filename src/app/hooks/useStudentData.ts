@@ -310,16 +310,14 @@ export function useStudentData() {
     try {
       const today = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
       const tempFileName = file instanceof File ? file.name : (fileName || "document");
-      
-      setDocuments(list => list.map(d => d.name === docName
-        ? { ...d, status: "pending", file: tempFileName, uploadedDate: today }
-        : d));
-        
+
       const result = await api.submitDocument(docName, file as any, fileName);
-      if (result?.fileUrl) {
-        setDocuments(list => list.map(d => d.name === docName
-          ? { ...d, file: result.fileUrl } : d));
-      }
+      const uploadedUrl = result?.fileUrl || tempFileName;
+
+      setDocuments(list => list.map(d => d.name === docName
+        ? { ...d, status: "pending", file: uploadedUrl, uploadedDate: today }
+        : d));
+      toast.success(`${docName} uploaded successfully!`);
     } catch (err: any) {
       toast.error(err?.message || "Failed to submit document to server.");
       throw err;
