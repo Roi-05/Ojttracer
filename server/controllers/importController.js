@@ -1,26 +1,11 @@
 const db = require('../db');
 const bcrypt = require('bcrypt');
 const xlsx = require('xlsx');
-const nodemailer = require('nodemailer');
-
-// ── Gmail transporter ───────────────────────────────────────────────────────
-// Configure via environment variables: GMAIL_USER, GMAIL_APP_PASSWORD
-const createTransporter = () => nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD, // Gmail App Password (not account password)
-  },
-});
+const { sendMail } = require('../utils/email');
 
 const sendCredentialEmail = async (to, name, studentNo, password) => {
-  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-    console.warn('[Import] Gmail not configured — skipping email for:', to);
-    return;
-  }
-  const transporter = createTransporter();
-  await transporter.sendMail({
-    from: `"OJT Coordinator – Pampanga State University" <${process.env.GMAIL_USER}>`,
+  await sendMail({
+    fromName: 'OJT Coordinator � Pampanga State University',
     to,
     subject: 'Your OJT Tracker Account Credentials',
     html: `

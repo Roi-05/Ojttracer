@@ -13,18 +13,43 @@ const createTransporter = () => {
   });
 };
 
-const sendPasswordResetEmail = async (to, name, code) => {
+/**
+ * Sends an email via Google Apps Script HTTPS relay (if GMAIL_SCRIPT_URL is set,
+ * bypassing Render Free SMTP port blocks) or falls back to Nodemailer SMTP locally.
+ */
+const sendMail = async ({ to, subject, html, fromName = 'OJT Tracker – Pampanga State University' }) => {
+  const scriptUrl = process.env.GMAIL_SCRIPT_URL;
+  if (scriptUrl) {
+    const res = await fetch(scriptUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, subject, html, fromName }),
+      redirect: 'follow',
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`Apps Script email relay failed (${res.status}): ${text}`);
+    }
+    return true;
+  }
+
   const transporter = createTransporter();
   if (!transporter) {
-    console.warn('[Email] Gmail credentials not configured — skipping password reset email to:', to);
+    console.warn('[Email]Neither GMAIL_SCRIPT_URL nor Gmail SMTP credentials configured — skipping email to:', to);
     return false;
   }
 
   await transporter.sendMail({
-    from: `"OJT Tracker – Pampanga State University" <${process.env.GMAIL_USER}>`,
+    from: `"${fromName}" <${process.env.GMAIL_USER}>`,
     to,
-    subject: 'Password Reset Verification Code - OJT Tracker',
-    html: `
+    subject,
+    html,
+  });
+  return true;
+};
+
+const sendPasswordResetEmail = async (to, name, code) => {
+  const html = `
       <div style="font-family: Arial, sans-serif; max-width: 560px; margin: auto; padding: 32px; border: 1px solid #e5e7eb; border-radius: 12px; background-color: #ffffff;">
         <div style="text-align: center; margin-bottom: 24px;">
           <h2 style="color: #1d4ed8; margin: 0 0 6px 0; font-size: 22px;">OJT Tracker</h2>
@@ -40,13 +65,18 @@ const sendPasswordResetEmail = async (to, name, code) => {
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
         <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">This email was sent automatically by the OJT Monitoring System.</p>
       </div>
-    `,
+    `;
+
+  return sendMail({
+    to,
+    subject: 'Password Reset Verification Code - OJT Tracker',
+    html,
+    fromName: 'OJT Tracker – Pampanga State University',
   });
-  return true;
 };
 
 module.exports = {
   createTransporter,
+  sendMail,
   sendPasswordResetEmail,
 };
-
