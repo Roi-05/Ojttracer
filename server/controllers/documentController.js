@@ -9,7 +9,7 @@ const getDocuments = async (req, res) => {
   try {
     const { studentId } = req.query;
     // Admin can query all students; student can only see their own; company can query their assigned interns
-    if (['coordinator','superadmin'].includes(req.user.role)) {
+    if (['coordinator', 'superadmin'].includes(req.user.role)) {
       if (studentId) {
         // Per-student docs (for review modal)
         const docsRes = await db.query(`SELECT d.*, p.name as student_name FROM public.documents d JOIN public.profiles p ON p.id = d.student_id WHERE d.student_id = $1`, [studentId]);
@@ -22,7 +22,7 @@ const getDocuments = async (req, res) => {
         ? ''
         : (() => { docParams.push(req.user.coordinatorCourse || 'BSIT'); return 'AND s.course = $' + docParams.length; })();
       const profiles = await db.query(`
-        SELECT p.id, p.name, s.student_id as student_no, s.section, s.course, d.company_name
+        SELECT p.id, p.name, s.student_id as student_no, s.section, s.course, s.school_year, d.company_name
         FROM public.profiles p 
         LEFT JOIN public.students s ON s.user_id = p.id 
         LEFT JOIN public.deployments d ON d.student_id = p.id
@@ -31,14 +31,15 @@ const getDocuments = async (req, res) => {
       const all = [];
       for (const prof of profiles.rows) {
         const docsRes = await db.query(`SELECT * FROM public.documents WHERE student_id = $1`, [prof.id]);
-        all.push({ 
-          studentId: prof.id, 
-          studentName: prof.name, 
-          studentNo: prof.student_no || '—', 
-          section: prof.section || '—', 
+        all.push({
+          studentId: prof.id,
+          studentName: prof.name,
+          studentNo: prof.student_no || '—',
+          section: prof.section || '—',
+          schoolYear: prof.school_year || '2025-2026',
           isDeployed: !!prof.company_name,
           assignedCompany: prof.company_name || null,
-          docs: docsRes.rows.map(r => ({ name: r.name, status: r.status, fileUrl: r.file_url, uploadedDate: r.uploaded_date, reviewNote: r.review_note })) 
+          docs: docsRes.rows.map(r => ({ name: r.name, status: r.status, fileUrl: r.file_url, uploadedDate: r.uploaded_date, reviewNote: r.review_note }))
         });
       }
       return res.json(all);
@@ -181,7 +182,7 @@ const warmUpGotenberg = () => {
   if (now - lastGotenbergWarmup < 60_000) return;
   lastGotenbergWarmup = now;
   const url = getGotenbergUrl();
-  fetch(`${url}/health`, { signal: AbortSignal.timeout(30_000) }).catch(() => {});
+  fetch(`${url}/health`, { signal: AbortSignal.timeout(30_000) }).catch(() => { });
 };
 
 const getSofficeCmd = () => {
@@ -227,7 +228,7 @@ const convertWithGotenberg = async (docxBuffer) => {
       // Retry on Render cold-start / gateway statuses (502, 503, 504, 429, 500)
       if ([429, 500, 502, 503, 504].includes(res.status) && attempt < maxAttempts) {
         console.warn(`Gotenberg attempt ${attempt} returned ${res.status}, waiting before retry...`);
-        await fetch(`${gotenbergUrl}/health`, { signal: AbortSignal.timeout(15_000) }).catch(() => {});
+        await fetch(`${gotenbergUrl}/health`, { signal: AbortSignal.timeout(15_000) }).catch(() => { });
         await new Promise((r) => setTimeout(r, attempt * 3000));
         continue;
       }

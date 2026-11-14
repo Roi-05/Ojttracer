@@ -97,6 +97,7 @@ const getStudents = async (req, res) => {
       section: r.section,
       course: r.course || 'BSIT',
       yearLevel: r.year_level || '4th Year',
+      schoolYear: r.school_year || '2025-2026',
       dateOfBirth: r.date_of_birth || null,
       civilStatus: r.civil_status || '',
       sex: r.sex || '',

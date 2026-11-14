@@ -44,7 +44,7 @@ export type EvaluationRecord = { studentId: string; studentName: string; student
 
 export function useAdminData() {
   const { user } = useAuth();
-  
+
   const [students, setStudents] = useState<AdminStudent[]>([]);
   const [companies, setCompanies] = useState<AdminCompany[]>([]);
   const [dtrLogs, setDtrLogs] = useState<DTRLog[]>([]);
@@ -151,17 +151,17 @@ export function useAdminData() {
 
       if (Array.isArray(jrnRes)) {
         setJournalLogs(jrnRes.map((a: any) => {
-          const matchedStudent = (stuRes || []).find((s: any) => s.id === a.studentId);
+          const matchedStudent = (stuRes || []).find((s: any) => String(s.id) === String(a.studentId));
           return {
             student: a.studentName || a.studentId || "—",
             section: matchedStudent?.section || "—",
-            schoolYear: matchedStudent?.schoolYear || "—",
-          week: a.date ? new Date(a.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—",
-          title: a.details ? (a.details.length > 60 ? a.details.substring(0, 60) + "…" : a.details) : "—",
-          submitted: a.createdAt
-            ? new Date(a.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-            : "—",
-          status: a.status === "rejected" ? "not_submitted" : "submitted",
+            schoolYear: a.schoolYear || matchedStudent?.schoolYear || "—",
+            week: a.date ? new Date(a.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—",
+            title: a.details ? (a.details.length > 60 ? a.details.substring(0, 60) + "…" : a.details) : "—",
+            submitted: a.createdAt
+              ? new Date(a.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+              : "—",
+            status: a.status === "rejected" ? "not_submitted" : "submitted",
           };
         }));
       }
@@ -173,7 +173,7 @@ export function useAdminData() {
           studentNo: s.studentNo || "—",
           course: "BSIT",
           section: s.section || "—",
-          schoolYear: (stuRes || []).find((x: any) => x.id === s.studentId)?.schoolYear || "—",
+          schoolYear: s.schoolYear || (stuRes || []).find((x: any) => String(x.id) === String(s.studentId))?.schoolYear || "—",
           deployed: s.isDeployed || false,
           assignedCompany: s.assignedCompany || null,
           docs: REQUIRED_DOC_NAMES.map((docName) => {
@@ -196,10 +196,10 @@ export function useAdminData() {
 
       if (Array.isArray(evalRes)) {
         setEvaluations(evalRes.map((e: any) => {
-          const matchedStudent = (stuRes || []).find((x: any) => x.id === e.studentId);
+          const matchedStudent = (stuRes || []).find((x: any) => String(x.id) === String(e.studentId));
           return {
             ...e,
-            schoolYear: matchedStudent?.schoolYear || "—",
+            schoolYear: e.schoolYear || matchedStudent?.schoolYear || "—",
           };
         }));
       }

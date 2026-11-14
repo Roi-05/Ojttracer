@@ -10,23 +10,28 @@ interface ImportStudentsModalProps {
   onImported: () => void;
 }
 
-const EXPECTED_COLUMNS = ["Last Name", "First Name", "Middle Name", "Student No", "Section", "Course", "Year Level", "School Year", "Date of Birth", "Sex", "Civil Status", "Address", "Email"];
+const EXPECTED_COLUMNS = ["Last Name", "First Name", "Middle Name", "Student No", "Section", "Course", "Year Level", "Date of Birth", "Sex", "Civil Status", "Address", "Email"];
 
 export function ImportStudentsModal({ open, onClose, onImported }: ImportStudentsModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<any[] | null>(null);
   const [totalRows, setTotalRows] = useState(0);
-  const [schoolYear, setSchoolYear] = useState("2025-2026");
+  const [schoolYear, setSchoolYear] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [result, setResult] = useState<any | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const trimmedSy = schoolYear.trim();
+  const syMatch = /^(\d{4})-(\d{4})$/.exec(trimmedSy);
+  const isValidSchoolYear = !!syMatch && Number(syMatch[2]) === Number(syMatch[1]) + 1;
+
   const reset = () => {
     setFile(null);
     setPreview(null);
     setTotalRows(0);
+    setSchoolYear("");
     setResult(null);
     setIsPreviewing(false);
     setIsImporting(false);
@@ -64,9 +69,17 @@ export function ImportStudentsModal({ open, onClose, onImported }: ImportStudent
 
   const handleImport = async () => {
     if (!file) return;
+    if (!trimmedSy) {
+      toast.error("Please enter the Target School Year (e.g. 2025-2026) before importing.");
+      return;
+    }
+    if (!isValidSchoolYear) {
+      toast.error("Invalid School Year format. Use YYYY-YYYY (e.g. 2025-2026 or 2026-2027).");
+      return;
+    }
     setIsImporting(true);
     try {
-      const res = await api.importStudents(file, schoolYear);
+      const res = await api.importStudents(file, trimmedSy);
       setResult(res);
       toast.success(res.summary || "Import complete!");
       onImported();
@@ -79,7 +92,7 @@ export function ImportStudentsModal({ open, onClose, onImported }: ImportStudent
 
   const downloadTemplate = () => {
     const header = EXPECTED_COLUMNS.join(",");
-    const example = ["Dela Cruz", "Juan", "Santos", "2021-00001", "4A", "BSIT", "4th Year", "2025-2026", "2002-05-15", "Male", "Single", "Sto. Tomas Pampanga", "jdsdelacruz@psu.edu.ph"].join(",");
+    const example = ["Dela Cruz", "Juan", "Santos", "2022300001", "4A", "BSIT", "4th Year", "2002-05-15", "Male", "Single", "Sto. Tomas Pampanga", "jdsdelacruz@psu.edu.ph"].join(",");
     const csv = `${header}\n${example}`;
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -164,16 +177,28 @@ export function ImportStudentsModal({ open, onClose, onImported }: ImportStudent
               {/* School Year Selection */}
               <div className="bg-muted/30 border border-border rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-foreground uppercase tracking-wider">Target School Year (S.Y.)</label>
-                  <p className="text-xs text-muted-foreground mt-0.5">Applied to imported students if not specified in the Excel sheet.</p>
+                  <label className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                    Target School Year (S.Y.) <span className="text-red-500">*</span>
+                  </label>
+                  <p className="text-xs text-muted-foreground mt-0.5">Required — format YYYY-YYYY (e.g. 2025-2026 or 2026-2027).</p>
+                  {trimmedSy && !isValidSchoolYear && (
+                    <p className="text-xs text-red-600 font-medium mt-1">
+                      Format must be YYYY-YYYY with consecutive years (e.g. 2025-2026).
+                    </p>
+                  )}
                 </div>
                 <div className="w-full sm:w-44">
                   <input
                     type="text"
                     value={schoolYear}
                     onChange={(e) => setSchoolYear(e.target.value)}
-                    placeholder="e.g. 2025-2026"
-                    className="w-full text-sm font-medium border border-border rounded-lg px-3 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    placeholder="2025-2026"
+                    className={`w-full text-sm font-medium border rounded-lg px-3 py-1.5 bg-card focus:outline-none focus:ring-2 ${trimmedSy && !isValidSchoolYear
+                        ? "border-red-400 focus:ring-red-300"
+                        : isValidSchoolYear
+                          ? "border-green-500 focus:ring-green-300"
+                          : "border-border focus:ring-primary/30"
+                      }`}
                   />
                 </div>
               </div>

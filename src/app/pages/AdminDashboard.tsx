@@ -115,19 +115,19 @@ export function AdminDashboard() {
 
   const sectionMap: Record<string, () => JSX.Element> = {
     dashboard: () => <OverviewTab students={filteredStudents} companies={companies} setActiveSection={setActiveSection} monthlyPlacementData={monthlyPlacementData} sectionDistribution={sectionDistribution} openReportsModal={() => setShowReportsModal(true)} />,
-    students: () => <StudentsTab students={students} sections={SECTIONS} openImportModal={() => setShowImportModal(true)} onResetDevice={resetStudentDevice} onRejectDevice={rejectStudentDevice} />,
+    students: () => <StudentsTab students={filteredStudents} sections={SECTIONS} openImportModal={() => setShowImportModal(true)} onResetDevice={resetStudentDevice} onRejectDevice={rejectStudentDevice} />,
     companies: () => <CompaniesTab companies={companies} onManageMoa={(c) => setMoaModalCompany(c)} openUploadMoa={() => setShowMoaTemplateUpload(true)} onDelete={deleteCompany} />,
     deployment: () => <DeploymentTab students={filteredStudents} />,
     attendance: () => <AttendanceTab dtrLogs={filteredDtrLogs} />,
     journals: () => <JournalsTab journalLogs={filteredJournalLogs} />,
     evaluations: () => <EvaluationsTab evaluations={filteredEvaluations} />,
     announcements: () => <AnnouncementsTab announcements={announcements} openAddModal={() => setShowAnnouncementModal(true)} onDelete={deleteAnnouncement} />,
-    documents: () => <DocumentsTab 
-      templates={templates} studentSubmissions={studentSubmissions} 
-      openTemplateUpload={(name) => setTemplateUploadModal({ open: true, templateName: name })} 
+    documents: () => <DocumentsTab
+      templates={templates} studentSubmissions={filteredSubmissions}
+      openTemplateUpload={(name) => setTemplateUploadModal({ open: true, templateName: name })}
       deleteTemplate={deleteTemplate}
-      openReviewSubmission={(id) => setViewSubmissionId(id)} 
-      openDeployModal={(id) => setShowDeployModal({ open: true, studentId: id })} 
+      openReviewSubmission={(id) => setViewSubmissionId(id)}
+      openDeployModal={(id) => setShowDeployModal({ open: true, studentId: id })}
     />,
     analytics: () => <AnalyticsTab students={filteredStudents} companies={companies} overviewStats={[]} hoursProgressData={[]} monthlyPlacementData={[]} sectionDistribution={sectionDistribution} />,
     settings: () => <SettingsTab />,
@@ -192,19 +192,19 @@ export function AdminDashboard() {
         onClose={() => setTemplateUploadModal(prev => ({ ...prev, open: false }))}
         onSave={uploadTemplate}
       />
-      <ViewSubmissionModal 
-        viewSub={viewSub} onClose={() => setViewSubmissionId(null)} 
-        onApproveDoc={reviewDocument} onRejectDoc={reviewDocument} 
-        onOpenDeploy={(id) => setShowDeployModal({ open: true, studentId: id })} 
-        allDocsApproved={allDocsApproved} 
+      <ViewSubmissionModal
+        viewSub={viewSub} onClose={() => setViewSubmissionId(null)}
+        onApproveDoc={reviewDocument} onRejectDoc={reviewDocument}
+        onOpenDeploy={(id) => setShowDeployModal({ open: true, studentId: id })}
+        allDocsApproved={allDocsApproved}
       />
-      <DeployStudentModal 
-        open={showDeployModal.open} studentId={showDeployModal.studentId} 
-        companyList={companies} 
+      <DeployStudentModal
+        open={showDeployModal.open} studentId={showDeployModal.studentId}
+        companyList={companies}
         intendedCompanyId={students.find(s => s.id === showDeployModal.studentId)?.intendedCompanyId}
         intendedPosition={students.find(s => s.id === showDeployModal.studentId)?.intendedPosition}
-        onClose={() => setShowDeployModal({ open: false, studentId: "" })} 
-        onDeploy={deployStudent} 
+        onClose={() => setShowDeployModal({ open: false, studentId: "" })}
+        onDeploy={deployStudent}
       />
       <UpdateMoaModal
         open={!!moaModalCompany}

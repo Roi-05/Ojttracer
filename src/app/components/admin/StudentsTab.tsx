@@ -51,201 +51,202 @@ function StudentRow({ s, onResetDevice, onRejectDevice }: { s: AdminStudent; onR
           </div>
           <p className="text-xs text-muted-foreground font-mono">{s.studentId}</p>
         </div>
-        <div className="hidden sm:block text-xs text-muted-foreground text-center w-16">
-          <span className="font-medium text-foreground">{s.course}</span>
-          <br />{s.yearLevel}
+          <div className="hidden sm:block text-xs text-muted-foreground text-center w-24">
+            <span className="font-medium text-foreground">{s.course}</span>
+            <br />
+            <span className="text-[11px] font-mono text-purple-700 font-semibold">{s.schoolYear || "—"}</span>
+          </div>
+          <div className="hidden md:block text-xs text-muted-foreground text-center w-10">
+            {s.section || "—"}
+          </div>
+          <div className="hidden lg:flex items-center gap-1 text-xs text-muted-foreground w-36 truncate">
+            <Phone className="h-3 w-3 shrink-0" />{s.phone || "—"}
+          </div>
+          <div className="shrink-0">
+            <StatusBadge status={s.status} />
+          </div>
+          {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
         </div>
-        <div className="hidden md:block text-xs text-muted-foreground text-center w-10">
-          {s.section || "—"}
-        </div>
-        <div className="hidden lg:flex items-center gap-1 text-xs text-muted-foreground w-36 truncate">
-          <Phone className="h-3 w-3 shrink-0" />{s.phone || "—"}
-        </div>
-        <div className="shrink-0">
-          <StatusBadge status={s.status} />
-        </div>
-        {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
-      </div>
 
-      {expanded && (
-        <div className="px-4 pb-4 pt-1 bg-muted/10">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-3 text-sm ml-13 pl-[52px]">
-            {s.deviceResetRequested && (
-              <div className="sm:col-span-2 lg:col-span-3 p-3 rounded-lg bg-amber-50 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-1">
-                <div className="flex items-center gap-2 text-xs font-medium text-amber-900">
-                  <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0" />
-                  <span>Student requested to reset registered device (<strong className="font-semibold">{s.registeredDeviceName || "Registered Phone"}</strong>)</span>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {onResetDevice && (
-                    <Button
-                      size="sm"
-                      className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onResetDevice(s.id, s.name);
-                      }}
-                    >
-                      <Check className="h-3.5 w-3.5" /> Approve Reset
-                    </Button>
-                  )}
-                  {onRejectDevice && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 border-rose-200 text-rose-700 hover:bg-rose-50 text-xs gap-1.5"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRejectDevice(s.id, s.name);
-                      }}
-                    >
-                      <X className="h-3.5 w-3.5" /> Reject
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
-            <div>
-              <p className="text-xs text-muted-foreground mb-0.5">Full Name</p>
-              <p className="font-medium">{[s.firstName, s.middleName, s.lastName].filter(Boolean).join(" ") || s.name}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-0.5">Student No.</p>
-              <p className="font-mono">{s.studentId || "—"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-0.5">Course / Year / Section</p>
-              <p>{s.course} {s.yearLevel} — {s.section || "—"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-0.5">Date of Birth / Age</p>
-              <p>{s.dateOfBirth ? new Date(s.dateOfBirth).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "—"} / {age(s.dateOfBirth)} yrs</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-0.5">Sex / Civil Status</p>
-              <p>{s.sex || "—"} / {s.civilStatus || "—"}</p>
-            </div>
-            <div className="flex items-start gap-1.5">
-              <Phone className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">Contact No.</p>
-                <p>{s.phone || "—"}</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-1.5 sm:col-span-2">
-              <MapPin className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">Address</p>
-                <p>{s.address || "—"}</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-1.5 sm:col-span-2 lg:col-span-1">
-              <Mail className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">PSU Email</p>
-                <p className="text-blue-600 break-all">{s.email || "—"}</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-1.5 sm:col-span-2 lg:col-span-3 pt-2 border-t border-border/40 mt-1">
-              <Smartphone className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-              <div className="flex-1 flex items-center justify-between flex-wrap gap-2">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-0.5">Registered DTR Device</p>
-                  <p className="text-sm font-medium">
-                    {s.registeredDeviceName ? (
-                      <span className="text-emerald-700 font-semibold">{s.registeredDeviceName}</span>
-                    ) : (
-                      <span className="text-muted-foreground italic">No device registered</span>
+        {expanded && (
+          <div className="px-4 pb-4 pt-1 bg-muted/10">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-3 text-sm ml-13 pl-[52px]">
+              {s.deviceResetRequested && (
+                <div className="sm:col-span-2 lg:col-span-3 p-3 rounded-lg bg-amber-50 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-1">
+                  <div className="flex items-center gap-2 text-xs font-medium text-amber-900">
+                    <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0" />
+                    <span>Student requested to reset registered device (<strong className="font-semibold">{s.registeredDeviceName || "Registered Phone"}</strong>)</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {onResetDevice && (
+                      <Button
+                        size="sm"
+                        className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onResetDevice(s.id, s.name);
+                        }}
+                      >
+                        <Check className="h-3.5 w-3.5" /> Approve Reset
+                      </Button>
                     )}
-                  </p>
+                    {onRejectDevice && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 border-rose-200 text-rose-700 hover:bg-rose-50 text-xs gap-1.5"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRejectDevice(s.id, s.name);
+                        }}
+                      >
+                        <X className="h-3.5 w-3.5" /> Reject
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                {s.registeredDeviceName && onResetDevice && !s.deviceResetRequested && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50 gap-1.5"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirm(`Reset registered device for ${s.name}? They will be able to register a new phone on their next DTR entry.`)) {
-                        onResetDevice(s.id, s.name);
-                      }
-                    }}
-                  >
-                    <RefreshCw className="h-3 w-3" /> Reset Device
-                  </Button>
-                )}
+              )}
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Full Name</p>
+                <p className="font-medium">{[s.firstName, s.middleName, s.lastName].filter(Boolean).join(" ") || s.name}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Student No.</p>
+                <p className="font-mono">{s.studentId || "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Course / Year / Section</p>
+                <p>{s.course} {s.yearLevel} — {s.section || "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Date of Birth / Age</p>
+                <p>{s.dateOfBirth ? new Date(s.dateOfBirth).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "—"} / {age(s.dateOfBirth)} yrs</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Sex / Civil Status</p>
+                <p>{s.sex || "—"} / {s.civilStatus || "—"}</p>
+              </div>
+              <div className="flex items-start gap-1.5">
+                <Phone className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Contact No.</p>
+                  <p>{s.phone || "—"}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-1.5 sm:col-span-2">
+                <MapPin className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Address</p>
+                  <p>{s.address || "—"}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-1.5 sm:col-span-2 lg:col-span-1">
+                <Mail className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">PSU Email</p>
+                  <p className="text-blue-600 break-all">{s.email || "—"}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-1.5 sm:col-span-2 lg:col-span-3 pt-2 border-t border-border/40 mt-1">
+                <Smartphone className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                <div className="flex-1 flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">Registered DTR Device</p>
+                    <p className="text-sm font-medium">
+                      {s.registeredDeviceName ? (
+                        <span className="text-emerald-700 font-semibold">{s.registeredDeviceName}</span>
+                      ) : (
+                        <span className="text-muted-foreground italic">No device registered</span>
+                      )}
+                    </p>
+                  </div>
+                  {s.registeredDeviceName && onResetDevice && !s.deviceResetRequested && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50 gap-1.5"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm(`Reset registered device for ${s.name}? They will be able to register a new phone on their next DTR entry.`)) {
+                          onResetDevice(s.id, s.name);
+                        }
+                      }}
+                    >
+                      <RefreshCw className="h-3 w-3" /> Reset Device
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
+        )}
+      </div>
+      );
 }
 
-export function StudentsTab({ students, sections, openImportModal, onResetDevice, onRejectDevice }: StudentsTabProps) {
+      export function StudentsTab({students, sections, openImportModal, onResetDevice, onRejectDevice}: StudentsTabProps) {
   const [search, setSearch] = useState("");
-  const [sectionFilter, setSectionFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+      const [sectionFilter, setSectionFilter] = useState("all");
+      const [statusFilter, setStatusFilter] = useState("all");
 
   const filtered = students.filter(s =>
-    (sectionFilter === "all" || s.section === sectionFilter) &&
-    (statusFilter === "all" || s.status === statusFilter) &&
-    (search === "" ||
+      (sectionFilter === "all" || s.section === sectionFilter) &&
+      (statusFilter === "all" || s.status === statusFilter) &&
+      (search === "" ||
       s.name.toLowerCase().includes(search.toLowerCase()) ||
       s.studentId.toLowerCase().includes(search.toLowerCase()) ||
       s.email?.toLowerCase().includes(search.toLowerCase()))
-  );
+      );
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Student Directory</h1>
-          <p className="text-muted-foreground mt-1">{students.length} registered student{students.length !== 1 ? "s" : ""}</p>
-        </div>
-        <Button className="bg-green-600 hover:bg-green-700 text-white gap-2" onClick={openImportModal}>
-          <Upload className="h-4 w-4" /> Import Students (Excel)
-        </Button>
-      </div>
-
-      <div className="flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search by name, student no, or email…" className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
-        </div>
-        <select className="border border-border rounded-lg px-3 text-sm bg-card" value={sectionFilter} onChange={e => setSectionFilter(e.target.value)}>
-          <option value="all">All Sections</option>
-          {sections.map(s => <option key={s} value={s}>BSIT {s}</option>)}
-        </select>
-        <select className="border border-border rounded-lg px-3 text-sm bg-card" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-          <option value="all">All Status</option>
-          <option value="ongoing">Ongoing</option>
-          <option value="completed">Completed</option>
-          <option value="pending">Pending</option>
-        </select>
-      </div>
-
-      {/* Column headers */}
-      <Card className="border-0 shadow-sm">
-        <CardContent className="p-0">
-          <div className="flex items-center gap-4 py-2.5 px-4 bg-muted/50 border-b border-border text-xs font-medium text-muted-foreground">
-            <div className="h-9 w-9 shrink-0" />
-            <div className="flex-1">Name / Student No.</div>
-            <div className="hidden sm:block w-24 text-center">Course / S.Y.</div>
-            <div className="hidden md:block w-10 text-center">Section</div>
-            <div className="hidden lg:block w-36">Contact No.</div>
-            <div className="w-20 text-right pr-5">Status</div>
+      return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-2xl font-bold">Student Directory</h1>
+            <p className="text-muted-foreground mt-1">{students.length} registered student{students.length !== 1 ? "s" : ""}</p>
           </div>
-          {filtered.length === 0 ? (
-            <div className="py-12 text-center text-muted-foreground text-sm">
-              {students.length === 0 ? "No students yet. Use \"Import Students\" to add them." : "No students match your search."}
+          <Button className="bg-green-600 hover:bg-green-700 text-white gap-2" onClick={openImportModal}>
+            <Upload className="h-4 w-4" /> Import Students (Excel)
+          </Button>
+        </div>
+
+        <div className="flex gap-3 flex-wrap">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search by name, student no, or email…" className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          <select className="border border-border rounded-lg px-3 text-sm bg-card" value={sectionFilter} onChange={e => setSectionFilter(e.target.value)}>
+            <option value="all">All Sections</option>
+            {sections.map(s => <option key={s} value={s}>BSIT {s}</option>)}
+          </select>
+          <select className="border border-border rounded-lg px-3 text-sm bg-card" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+            <option value="all">All Status</option>
+            <option value="ongoing">Ongoing</option>
+            <option value="completed">Completed</option>
+            <option value="pending">Pending</option>
+          </select>
+        </div>
+
+        {/* Column headers */}
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-0">
+            <div className="flex items-center gap-4 py-2.5 px-4 bg-muted/50 border-b border-border text-xs font-medium text-muted-foreground">
+              <div className="h-9 w-9 shrink-0" />
+              <div className="flex-1">Name / Student No.</div>
+              <div className="hidden sm:block w-24 text-center">Course / S.Y.</div>
+              <div className="hidden md:block w-10 text-center">Section</div>
+              <div className="hidden lg:block w-36">Contact No.</div>
+              <div className="w-20 text-right pr-5">Status</div>
             </div>
-          ) : (
-            filtered.map(s => <StudentRow key={s.id} s={s} onResetDevice={onResetDevice} onRejectDevice={onRejectDevice} />)
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
+            {filtered.length === 0 ? (
+              <div className="py-12 text-center text-muted-foreground text-sm">
+                {students.length === 0 ? "No students yet. Use \"Import Students\" to add them." : "No students match your search."}
+              </div>
+            ) : (
+              filtered.map(s => <StudentRow key={s.id} s={s} onResetDevice={onResetDevice} onRejectDevice={onRejectDevice} />)
+            )}
+          </CardContent>
+        </Card>
+      </div>
+      );
 }

@@ -50,11 +50,10 @@ export default defineConfig({
     open: true,
     allowedHosts: true,
     proxy: {
-      // Forward all /api requests to the Express backend and strip the /api prefix
+      // Forward all /api requests to the Express backend
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
       },
       // Forward /uploads (photos) to the backend too
       '/uploads': {

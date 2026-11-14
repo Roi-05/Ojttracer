@@ -5,13 +5,13 @@ const { sendMail } = require('../utils/email');
 
 const sendCredentialEmail = async (to, name, studentNo, password) => {
   await sendMail({
-    fromName: 'OJT Coordinator � Pampanga State University',
+    fromName: 'OJT Coordinator - Pampanga State University',
     to,
     subject: 'Your OJT Tracker Account Credentials',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 560px; margin: auto; padding: 32px; border: 1px solid #e5e7eb; border-radius: 12px;">
         <h2 style="color: #1d4ed8; margin-bottom: 4px;">Welcome to OJT Tracker</h2>
-        <p style="color: #6b7280; font-size: 14px; margin-top: 0;">Pampanga State University – OJT Monitoring System</p>
+        <p style="color: #6b7280; font-size: 14px; margin-top: 0;">Pampanga State University - OJT Monitoring System</p>
         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
         <p>Hi <strong>${name}</strong>,</p>
         <p>Your OJT Tracker account has been created by the OJT Coordinator. Use the credentials below to log in:</p>
@@ -31,12 +31,12 @@ const sendCredentialEmail = async (to, name, studentNo, password) => {
   });
 };
 
-// ── Excel column map (case-insensitive header matching) ──────────────────────
+// -- Excel column map (case-insensitive header matching) ----------------------
 const col = (row, ...keys) => {
   for (const k of keys) {
     const found = Object.keys(row).find(h => h.trim().toLowerCase() === k.toLowerCase());
     if (found && row[found] !== undefined && row[found] !== null && row[found] !== '') {
-      return row[found]; // Return raw value — callers stringify as needed
+      return row[found]; // Return raw value - callers stringify as needed
     }
   }
   return '';
@@ -61,7 +61,7 @@ const parseDob = (raw) => {
   // Already ISO-like: YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
 
-  // Common PH format: MM/DD/YYYY or DD/MM/YYYY — try both, prefer MM/DD/YYYY
+  // Common PH format: MM/DD/YYYY or DD/MM/YYYY - try both, prefer MM/DD/YYYY
   const slashParts = s.split('/');
   if (slashParts.length === 3) {
     const [a, b, c] = slashParts.map(Number);
@@ -97,27 +97,31 @@ const importStudents = async (req, res) => {
 
     if (!rows.length) return res.status(400).json({ error: 'Excel file is empty or unreadable' });
 
-    const defaultSchoolYear = (req.body && req.body.schoolYear ? String(req.body.schoolYear).trim() : "") || "2025-2026";
+    const modalSchoolYear = req.body && req.body.schoolYear ? String(req.body.schoolYear).trim() : "";
+    const syMatch = /^(\d{4})-(\d{4})$/.exec(modalSchoolYear);
+    if (!syMatch || Number(syMatch[2]) !== Number(syMatch[1]) + 1) {
+      return res.status(400).json({ error: 'Valid Target School Year (e.g. 2025-2026) is required.' });
+    }
     const results = { created: 0, updated: 0, skipped: 0, errors: [], emailsSent: 0 };
 
     for (const row of rows) {
-      const lastName   = String(col(row, 'Last Name', 'lastname', 'last_name') || '').trim();
-      const firstName  = String(col(row, 'First Name', 'firstname', 'first_name') || '').trim();
+      const lastName = String(col(row, 'Last Name', 'lastname', 'last_name') || '').trim();
+      const firstName = String(col(row, 'First Name', 'firstname', 'first_name') || '').trim();
       const middleName = String(col(row, 'Middle Name', 'middlename', 'middle_name') || '').trim();
-      const studentNo  = String(col(row, 'Student No', 'student_no', 'studentno', 'student_id', 'id') || '').trim();
-      const section    = String(col(row, 'Section', 'sec') || '').trim();
-      const email      = String(col(row, 'Email', 'psu email', 'email address') || '').trim();
-      const dob        = parseDob(col(row, 'Date of Birth', 'dob', 'birthdate'));
-      const sex        = String(col(row, 'Sex', 'gender') || '').trim();
+      const studentNo = String(col(row, 'Student No', 'student_no', 'studentno', 'student_id', 'id') || '').trim();
+      const section = String(col(row, 'Section', 'sec') || '').trim();
+      const email = String(col(row, 'Email', 'psu email', 'email address') || '').trim();
+      const dob = parseDob(col(row, 'Date of Birth', 'dob', 'birthdate'));
+      const sex = String(col(row, 'Sex', 'gender') || '').trim();
       const civilStatus = String(col(row, 'Civil Status', 'civil_status', 'civilstatus') || '').trim();
-      const address    = String(col(row, 'Address', 'home address') || '').trim();
-      const rawCourse  = String(col(row, 'Course') || '').trim();
+      const address = String(col(row, 'Address', 'home address') || '').trim();
+      const rawCourse = String(col(row, 'Course') || '').trim();
       // For coordinator: enforce their course. For superadmin: use the Excel value or default BSIT.
-      const course     = req.user.role === 'coordinator' && req.user.coordinatorCourse
+      const course = req.user.role === 'coordinator' && req.user.coordinatorCourse
         ? req.user.coordinatorCourse
         : (rawCourse || 'BSIT');
-      const yearLevel  = String(col(row, 'Year Level', 'year', 'year_level') || '').trim() || '4th Year';
-      const schoolYear = String(col(row, "School Year", "school_year", "sy", "s.y.", "academic year", "ay") || defaultSchoolYear).trim();
+      const yearLevel = String(col(row, 'Year Level', 'year', 'year_level') || '').trim() || '4th Year';
+      const schoolYear = modalSchoolYear;
 
       if (!email || !studentNo) {
         results.errors.push({ row: JSON.stringify(row), reason: 'Missing Email or Student No' });
