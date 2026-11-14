@@ -73,76 +73,80 @@ export function InternDocumentsModal({
                 return (
                   <div
                     key={d.id || i}
-                    className="flex items-center gap-3 p-3.5 rounded-xl border border-border bg-card hover:bg-muted/10 transition-colors shadow-2xs"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3.5 rounded-xl border border-border bg-card hover:bg-muted/10 transition-colors shadow-2xs overflow-hidden"
                   >
-                    <div
-                      className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${
-                        isApproved
-                          ? "bg-emerald-100 text-emerald-600"
-                          : isPending
-                          ? "bg-amber-100 text-amber-600"
-                          : "bg-slate-100 text-slate-400"
-                      }`}
-                    >
-                      <FileCheck className="h-4 w-4" />
-                    </div>
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div
+                        className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${
+                          isApproved
+                            ? "bg-emerald-100 text-emerald-600"
+                            : isPending
+                            ? "bg-amber-100 text-amber-600"
+                            : "bg-slate-100 text-slate-400"
+                        }`}
+                      >
+                        <FileCheck className="h-4 w-4" />
+                      </div>
 
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{d.name}</p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                        {d.uploadedDate ? (
-                          <span>Uploaded: {d.uploadedDate}</span>
-                        ) : (
-                          <span className="italic">Not yet submitted</span>
-                        )}
-                        {d.reviewNote && (
-                          <span className="text-amber-700 truncate" title={d.reviewNote}>
-                            • Note: {d.reviewNote}
-                          </span>
-                        )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{d.name}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                          {d.uploadedDate ? (
+                            <span>Uploaded: {d.uploadedDate}</span>
+                          ) : (
+                            <span className="italic">Not yet submitted</span>
+                          )}
+                          {d.reviewNote && (
+                            <span className="text-amber-700 truncate" title={d.reviewNote}>
+                              • Note: {d.reviewNote}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
-                    {/* Status Badge */}
-                    <span
-                      className={`text-xs px-2.5 py-0.5 rounded-full font-medium border shrink-0 ${
-                        isApproved
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          : isPending
-                          ? "bg-amber-50 text-amber-700 border-amber-200"
-                          : "bg-slate-100 text-slate-600 border-slate-200"
-                      }`}
-                    >
-                      {isApproved ? "Approved by Coordinator" : isPending ? "Pending Review" : "Missing"}
-                    </span>
+                    <div className="flex items-center justify-between sm:justify-end gap-2 pl-12 sm:pl-0 shrink-0 flex-wrap">
+                      {/* Status Badge */}
+                      <span
+                        className={`text-xs px-2.5 py-0.5 rounded-full font-medium border shrink-0 ${
+                          isApproved
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : isPending
+                            ? "bg-amber-50 text-amber-700 border-amber-200"
+                            : "bg-slate-100 text-slate-600 border-slate-200"
+                        }`}
+                      >
+                        {isApproved ? "Approved by Coordinator" : isPending ? "Pending Review" : "Missing"}
+                      </span>
 
-                    {/* Actions */}
-                    {resolvedUrl ? (
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                          onClick={() => setViewer({ url: resolvedUrl, title: d.name })}
-                          title="Preview document in browser"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                          asChild
-                          title="Download document file"
-                        >
-                          <a href={resolvedUrl} download target="_blank" rel="noopener noreferrer">
-                            <Download className="h-4 w-4" />
-                          </a>
-                        </Button>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground italic shrink-0 px-2">—</span>
-                    )}
+                      {/* Actions */}
+                      {resolvedUrl ? (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                            onClick={() => setViewer({ url: resolvedUrl, title: d.name })}
+                            title="Preview document in browser"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                            asChild
+                            title="Download document file"
+                          >
+                            <a href={resolvedUrl} download target="_blank" rel="noopener noreferrer">
+                              <Download className="h-4 w-4" />
+                            </a>
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic shrink-0 px-2">—</span>
+                      )}
+                    </div>
                   </div>
                 );
               })

@@ -249,6 +249,8 @@ export function LiveTrackerTab({ companyInfo }: Props) {
   useEffect(() => {
     if (companyInfo.latitude != null && companyInfo.longitude != null) {
       setLocation({ lat: Number(companyInfo.latitude), lng: Number(companyInfo.longitude) });
+    } else {
+      setLocation(null);
     }
     setGeofenceRadius(companyInfo.geofenceRadius || 200);
     setPolygonPoints(normalizePolygon(companyInfo.geofencePolygon));
@@ -328,6 +330,29 @@ export function LiveTrackerTab({ companyInfo }: Props) {
   const handleClearPolygon = () => {
     setPolygonPoints([]);
     toast.info("Polygon perimeter cleared. Circular geofence fallback restored.");
+  };
+
+  const handleRemoveGeofence = async () => {
+    setIsSavingLocation(true);
+    try {
+      await api.updateCompanyLocation({
+        latitude: null,
+        longitude: null,
+        geofenceRadius: 200,
+        geofencePolygon: null,
+        clear: true,
+      });
+      setLocation(null);
+      setPolygonPoints([]);
+      await refreshProfile();
+      toast.success("Geofence removed completely. Interns can now clock in without location restriction.");
+      setIsEditingGeofence(false);
+      setAddPointMode(false);
+    } catch (err: any) {
+      toast.error(`Failed to remove geofence: ${err.message}`);
+    } finally {
+      setIsSavingLocation(false);
+    }
   };
 
   const handleGenerateShape = () => {
@@ -544,6 +569,19 @@ export function LiveTrackerTab({ companyInfo }: Props) {
             >
               <Trash2 className="h-3.5 w-3.5" /> Clear Polygon
             </Button>
+
+            {(location != null || polygonPoints.length > 0 || companyInfo.latitude != null) && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1 text-xs text-rose-700 hover:bg-rose-50 hover:text-rose-800 border-rose-300 bg-card font-medium"
+                onClick={handleRemoveGeofence}
+                disabled={isSavingLocation}
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Remove Geofence
+              </Button>
+            )}
 
             {/* Fallback Radius Controls */}
             <div className="flex items-center gap-1.5 ml-auto text-xs">

@@ -174,10 +174,20 @@ const updateCompanyLocation = async (req, res) => {
   try {
     if (!['coordinator','superadmin','company'].includes(req.user.role))
       return res.status(403).json({ error: 'Not authorized' });
-    const { latitude, longitude, geofenceRadius, geofencePolygon } = req.body;
+    const { latitude, longitude, geofenceRadius, geofencePolygon, clear } = req.body;
+    const targetId = ['coordinator','superadmin'].includes(req.user.role) ? req.params.id : req.user.id;
+
+    // Allow completely removing/disabling the company geofence
+    if (clear === true || (latitude === null && longitude === null)) {
+      await db.query(
+        `UPDATE public.companies SET latitude = NULL, longitude = NULL, geofence_radius = 200, geofence_polygon = NULL WHERE user_id = $1`,
+        [targetId]
+      );
+      return res.json({ success: true, cleared: true });
+    }
+
     if (latitude == null || longitude == null)
       return res.status(400).json({ error: 'latitude and longitude are required' });
-    const targetId = ['coordinator','superadmin'].includes(req.user.role) ? req.params.id : req.user.id;
     const polygonValue = Array.isArray(geofencePolygon) && geofencePolygon.length >= 3
       ? JSON.stringify(geofencePolygon)
       : null;

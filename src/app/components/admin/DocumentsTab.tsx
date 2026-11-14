@@ -29,7 +29,7 @@ export function DocumentsTab({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold">Document Management</h1>
           <p className="text-muted-foreground mt-1">Upload templates and review student-submitted OJT documents</p>
@@ -47,16 +47,18 @@ export function DocumentsTab({
         <CardContent>
           <div className="grid md:grid-cols-2 gap-3">
             {templates.map((t, i) => (
-              <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/10">
-                <div className={`h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 ${t.file ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-400"}`}>
-                  <FileText className="h-5 w-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{t.name}</p>
-                  <p className="text-xs text-muted-foreground">{t.file ? `${t.size} • ${t.uploaded}` : "No template uploaded"}</p>
+              <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-lg border border-border bg-muted/10 min-w-0 overflow-hidden">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className={`h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 ${t.file ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-400"}`}>
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{t.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{t.file ? `${t.size} • ${t.uploaded}` : "No template uploaded"}</p>
+                  </div>
                 </div>
                 {t.file ? (
-                  <div className="flex gap-1.5">
+                  <div className="flex items-center gap-1.5 pl-13 sm:pl-0 flex-shrink-0 flex-wrap">
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setViewer({ url: t.file!, title: t.name })}>
                       <Eye className="h-3.5 w-3.5" />
                     </Button>
@@ -67,9 +69,11 @@ export function DocumentsTab({
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-400 hover:text-red-600" onClick={() => deleteTemplate(t.name, t.docSlug)}><Trash2 className="h-3.5 w-3.5" /></Button>
                   </div>
                 ) : (
-                  <Button size="sm" className="h-7 text-xs gap-1 bg-primary hover:bg-primary/90 text-white" onClick={() => openTemplateUpload(t.name)}>
-                    <Upload className="h-3 w-3" /> Upload
-                  </Button>
+                  <div className="pl-13 sm:pl-0 flex-shrink-0">
+                    <Button size="sm" className="h-7 text-xs gap-1 bg-primary hover:bg-primary/90 text-white" onClick={() => openTemplateUpload(t.name)}>
+                      <Upload className="h-3 w-3" /> Upload
+                    </Button>
+                  </div>
                 )}
               </div>
             ))}

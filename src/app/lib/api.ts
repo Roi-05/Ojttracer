@@ -279,10 +279,11 @@ export async function updateCompanyLocation(
     | number
     | {
         id?: string | number;
-        latitude: number;
-        longitude: number;
-        geofenceRadius: number;
+        latitude: number | null;
+        longitude: number | null;
+        geofenceRadius?: number;
         geofencePolygon?: [number, number][] | null;
+        clear?: boolean;
       },
   latitude?: number,
   longitude?: number,

@@ -142,12 +142,12 @@ export function DocumentsTab({ studentDocs, templateData, activeCompanies, inten
           </div>
 
           {selectedCompanyId && signedMoaUrl ? (
-            <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border bg-card">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg border border-border bg-card overflow-hidden">
               <div className="min-w-0">
-                <p className="text-sm font-medium">Signed MOA — {selectedCompany?.name || "Selected company"}</p>
+                <p className="text-sm font-medium truncate">Signed MOA — {selectedCompany?.name || "Selected company"}</p>
                 <p className="text-xs text-muted-foreground">Download the accredited company&apos;s signed memorandum of agreement.</p>
               </div>
-              <div className="flex gap-1.5 flex-shrink-0">
+              <div className="flex gap-1.5 flex-shrink-0 flex-wrap">
                 <Button variant="ghost" size="sm" className="h-8 gap-1" onClick={() => setViewer({ url: signedMoaUrl!, title: `Signed MOA — ${selectedCompany?.name || "Company"}` })}>
                   <Eye className="h-3.5 w-3.5" /> View
                 </Button>
@@ -181,7 +181,7 @@ export function DocumentsTab({ studentDocs, templateData, activeCompanies, inten
         <CardContent>
           <div className="grid md:grid-cols-2 gap-3">
             {templateData.map((t, i) => (
-              <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/10">
+              <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/10 min-w-0 overflow-hidden">
                 <div className={`h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 ${t.file ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-400"}`}>
                   <FileText className="h-5 w-5" />
                 </div>
@@ -190,7 +190,7 @@ export function DocumentsTab({ studentDocs, templateData, activeCompanies, inten
                   <p className="text-xs text-muted-foreground truncate">{t.file ? `${t.size} • ${t.uploaded}` : "Not uploaded yet"}</p>
                 </div>
                 {t.file ? (
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 flex-shrink-0">
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setViewer({ url: t.file!, title: t.name })}>
                       <Eye className="h-3.5 w-3.5" />
                     </Button>
@@ -199,7 +199,7 @@ export function DocumentsTab({ studentDocs, templateData, activeCompanies, inten
                     </Button>
                   </div>
                 ) : (
-                  <span className="text-xs text-muted-foreground italic">Coming soon</span>
+                  <span className="text-xs text-muted-foreground italic flex-shrink-0">Coming soon</span>
                 )}
               </div>
             ))}
@@ -215,40 +215,46 @@ export function DocumentsTab({ studentDocs, templateData, activeCompanies, inten
         <CardContent>
           <div className="space-y-2">
             {studentDocs.map((doc, i) => (
-              <div key={i} className="flex items-center gap-4 p-3 rounded-lg border border-border hover:bg-muted/30">
-                <div className={`h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                  doc.status === "approved" ? "bg-green-100 text-green-600" :
-                  doc.status === "pending" ? "bg-orange-100 text-orange-600" :
-                  "bg-red-100 text-red-500"
-                }`}>
-                  <FileCheck className="h-4 w-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{doc.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {doc.file ? `${doc.file.split("/").pop()} • Uploaded ${doc.uploadedDate}` : "Not yet submitted"}
-                  </p>
-                </div>
-                <StatusBadge status={doc.status} />
-                {doc.file && (
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setViewer({ url: doc.file!, title: doc.name })}>
-                      <Eye className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
-                      <a href={doc.file} download><Download className="h-3.5 w-3.5" /></a>
-                    </Button>
+              <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-lg border border-border hover:bg-muted/30 overflow-hidden">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className={`h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                    doc.status === "approved" ? "bg-green-100 text-green-600" :
+                    doc.status === "pending" ? "bg-orange-100 text-orange-600" :
+                    "bg-red-100 text-red-500"
+                  }`}>
+                    <FileCheck className="h-4 w-4" />
                   </div>
-                )}
-                {doc.status === "missing" ? (
-                  <Button size="sm" className="h-8 text-xs gap-1 bg-primary hover:bg-primary/90 text-white" onClick={() => openDocUpload(doc.name)}>
-                    <Upload className="h-3.5 w-3.5" /> Upload
-                  </Button>
-                ) : doc.status !== "approved" ? (
-                  <Button size="sm" variant="outline" className="h-8 text-xs gap-1" onClick={() => openDocUpload(doc.name)}>
-                    <Upload className="h-3.5 w-3.5" /> Replace
-                  </Button>
-                ) : null}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{doc.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {doc.file ? `${doc.file.split("/").pop()} • Uploaded ${doc.uploadedDate}` : "Not yet submitted"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between sm:justify-end gap-2 pl-12 sm:pl-0 flex-shrink-0 flex-wrap">
+                  <StatusBadge status={doc.status} />
+                  <div className="flex items-center gap-1.5">
+                    {doc.file && (
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setViewer({ url: doc.file!, title: doc.name })}>
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" asChild>
+                          <a href={doc.file} download><Download className="h-3.5 w-3.5" /></a>
+                        </Button>
+                      </div>
+                    )}
+                    {doc.status === "missing" ? (
+                      <Button size="sm" className="h-8 text-xs gap-1 bg-primary hover:bg-primary/90 text-white" onClick={() => openDocUpload(doc.name)}>
+                        <Upload className="h-3.5 w-3.5" /> Upload
+                      </Button>
+                    ) : doc.status !== "approved" ? (
+                      <Button size="sm" variant="outline" className="h-8 text-xs gap-1" onClick={() => openDocUpload(doc.name)}>
+                        <Upload className="h-3.5 w-3.5" /> Replace
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
               </div>
             ))}
           </div>
