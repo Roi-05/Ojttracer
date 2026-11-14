@@ -57,22 +57,22 @@ export function useAdminData() {
   const [evaluations, setEvaluations] = useState<EvaluationRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadData = async () => {
+  const loadData = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const [stuRes, compRes, annRes, dtrRes, jrnRes, docRes, tplRes, evalRes] = await Promise.all([
-        api.getStudents().catch(() => []),
-        api.getCompanies().catch(() => []),
-        api.getAnnouncements().catch(() => []),
-        api.getAdminDTR().catch(() => []),
-        api.getAccomplishments().catch(() => []),
-        api.getDocuments().catch(() => []),
-        api.getTemplates().catch(() => []),
-        api.getAllEvaluations().catch(() => [])
+        api.getStudents().catch(() => null),
+        api.getCompanies().catch(() => null),
+        api.getAnnouncements().catch(() => null),
+        api.getAdminDTR().catch(() => null),
+        api.getAccomplishments().catch(() => null),
+        api.getDocuments().catch(() => null),
+        api.getTemplates().catch(() => null),
+        api.getAllEvaluations().catch(() => null)
       ]);
 
-      if (stuRes) {
-        setStudents((stuRes || []).map((s: any) => ({
+      if (Array.isArray(stuRes)) {
+        setStudents(stuRes.map((s: any) => ({
           id: s.id, name: s.name, email: s.email || '',
           studentId: s.studentId || '—',
           lastName: s.lastName || '', firstName: s.firstName || '', middleName: s.middleName || '',
@@ -95,8 +95,8 @@ export function useAdminData() {
         })));
       }
 
-      if (compRes) {
-        setCompanies((compRes || []).map((c: any) => {
+      if (Array.isArray(compRes)) {
+        setCompanies(compRes.map((c: any) => {
           const compName = c.companyName || c.name;
           const internsCount = (stuRes || []).filter((s: any) => s.deployment?.company === compName).length;
           return {
@@ -121,15 +121,15 @@ export function useAdminData() {
         }));
       }
 
-      if (annRes) {
-        setAnnouncements((annRes || []).map((a: any) => ({
+      if (Array.isArray(annRes)) {
+        setAnnouncements(annRes.map((a: any) => ({
           id: a.id, title: a.title, content: a.content, date: a.date,
           category: a.category, priority: a.priority,
         })));
       }
 
-      if (dtrRes) {
-        setDtrLogs((dtrRes || []).map((r: any) => ({
+      if (Array.isArray(dtrRes)) {
+        setDtrLogs(dtrRes.map((r: any) => ({
           id: r.id,
           student: r.studentName || '—',
           studentId: r.studentId,
@@ -149,8 +149,8 @@ export function useAdminData() {
         })));
       }
 
-      if (jrnRes) {
-        setJournalLogs((jrnRes || []).map((a: any) => {
+      if (Array.isArray(jrnRes)) {
+        setJournalLogs(jrnRes.map((a: any) => {
           const matchedStudent = (stuRes || []).find((s: any) => s.id === a.studentId);
           return {
             student: a.studentName || a.studentId || "—",
@@ -166,8 +166,8 @@ export function useAdminData() {
         }));
       }
 
-      if (docRes) {
-        setStudentSubmissions((docRes || []).map((s: any) => ({
+      if (Array.isArray(docRes)) {
+        setStudentSubmissions(docRes.map((s: any) => ({
           studentId: s.studentId,
           name: s.studentName || "—",
           studentNo: s.studentNo || "—",
@@ -185,17 +185,17 @@ export function useAdminData() {
         })));
       }
 
-      if (tplRes) {
+      if (Array.isArray(tplRes)) {
         setTemplates(REQUIRED_DOC_NAMES.map((name) => {
-          const found = (tplRes || []).find((t: any) => t.name === name);
+          const found = tplRes.find((t: any) => t.name === name);
           return found
             ? { name, file: found.fileUrl || null, size: found.size || "—", uploaded: found.uploadedDate || "—", docSlug: found.docSlug || null }
             : { name, file: null, size: "—", uploaded: "—", docSlug: null };
         }));
       }
 
-      if (evalRes) {
-        setEvaluations((evalRes || []).map((e: any) => {
+      if (Array.isArray(evalRes)) {
+        setEvaluations(evalRes.map((e: any) => {
           const matchedStudent = (stuRes || []).find((x: any) => x.id === e.studentId);
           return {
             ...e,
@@ -207,13 +207,33 @@ export function useAdminData() {
     } catch (err) {
       console.error("Failed to load admin data", err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     if (!user) return;
-    loadData();
+    loadData(false);
+
+    const pollInterval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        loadData(true);
+      }
+    }, 15_000);
+
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === "visible") {
+        loadData(true);
+      }
+    };
+    window.addEventListener("focus", handleVisibilityOrFocus);
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+
+    return () => {
+      clearInterval(pollInterval);
+      window.removeEventListener("focus", handleVisibilityOrFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+    };
   }, [user]);
 
   const verifyCompany = async (id: string | number, name: string) => {

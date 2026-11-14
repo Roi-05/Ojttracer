@@ -117,26 +117,31 @@ export function useCompanyData() {
     if (!user) return;
     
     let isMounted = true;
+    let isFetching = false;
     
-    const loadData = async () => {
+    const loadData = async (silent = false) => {
+      if (isFetching) return;
+      isFetching = true;
       try {
-        setLoading(true);
+        if (!silent && refreshKey === 0) setLoading(true);
         const [internsRes, accRes, moaTplRes, dtrRes, docsRes] = await Promise.all([
-          api.getInterns().catch(() => []),
-          api.getAccomplishments().catch(() => []),
-          api.getMoaTemplate().catch(() => ({ fileUrl: null })),
-          api.getCompanyDTR().catch(() => []),
-          api.getDocuments().catch(() => []),
+          api.getInterns().catch(() => null),
+          api.getAccomplishments().catch(() => null),
+          api.getMoaTemplate().catch(() => null),
+          api.getCompanyDTR().catch(() => null),
+          api.getDocuments().catch(() => null),
         ]);
 
         if (!isMounted) return;
 
         if (moaTplRes) setMoaTemplateUrl(moaTplRes.fileUrl || null);
         // Signed MOA url comes from the company profile
-        setSignedMoaUrl((user as any)?.signedMoaUrl || null);
+        if (!silent) {
+          setSignedMoaUrl((user as any)?.signedMoaUrl || null);
+        }
 
-        if (internsRes) {
-          setInterns((internsRes || []).map((i: any) => ({
+        if (Array.isArray(internsRes)) {
+          setInterns(internsRes.map((i: any) => ({
             id: i.id, name: i.name, course: "BSIT",
             position: i.deployment?.position || "—",
             supervisor: i.deployment?.supervisor || "—",
@@ -157,8 +162,8 @@ export function useCompanyData() {
           })));
         }
 
-        if (docsRes) {
-          setInternDocuments((docsRes || []).map((s: any) => ({
+        if (Array.isArray(docsRes)) {
+          setInternDocuments(docsRes.map((s: any) => ({
             studentId: s.studentId,
             studentName: s.studentName,
             studentNo: s.studentNo || "—",
@@ -178,8 +183,8 @@ export function useCompanyData() {
           })));
         }
 
-        if (dtrRes) {
-          setDtrLogs((dtrRes || []).map((r: any) => ({
+        if (Array.isArray(dtrRes)) {
+          setDtrLogs(dtrRes.map((r: any) => ({
             id: r.id,
             student: r.studentName || "—",
             studentId: r.studentId,
@@ -199,8 +204,8 @@ export function useCompanyData() {
           })));
         }
 
-        if (accRes) {
-          setAccomplishments((accRes || []).map((a: any) => ({
+        if (Array.isArray(accRes)) {
+          setAccomplishments(accRes.map((a: any) => ({
             id: a.id, internId: a.internId || a.studentId, internName: a.internName || a.studentName || "—",
             date: a.date, hours: a.hours, details: a.details, picture: resolveUploadUrl(a.photoUrl), status: a.status,
           })));
@@ -209,12 +214,33 @@ export function useCompanyData() {
       } catch (err) {
         console.error("Failed to load company data", err);
       } finally {
+        isFetching = false;
         if (isMounted) setLoading(false);
       }
     };
 
-    loadData();
-    return () => { isMounted = false; };
+    loadData(refreshKey > 0);
+
+    const pollInterval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        loadData(true);
+      }
+    }, 15_000);
+
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === "visible") {
+        loadData(true);
+      }
+    };
+    window.addEventListener("focus", handleVisibilityOrFocus);
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+
+    return () => {
+      isMounted = false;
+      clearInterval(pollInterval);
+      window.removeEventListener("focus", handleVisibilityOrFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+    };
   }, [user, refreshKey]);
 
   const updateCompanyProfile = async (profileData: any) => {

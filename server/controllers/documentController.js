@@ -5,6 +5,7 @@ const fs = require('fs');
 const { UPLOADS_DIR } = require('../middleware/upload');
 
 const getDocuments = async (req, res) => {
+  warmUpGotenberg();
   try {
     const { studentId } = req.query;
     // Admin can query all students; student can only see their own; company can query their assigned interns
@@ -165,7 +166,22 @@ const reviewDocument = async (req, res) => {
   }
 };
 
-const GOTENBERG_URL = (process.env.GOTENBERG_URL || 'http://localhost:3001').replace(/\/$/, '');
+const getGotenbergUrl = () => {
+  let raw = (process.env.GOTENBERG_URL || 'http://localhost:3001').trim().replace(/\/+$/, '');
+  if (raw && !/^https?:\/\//i.test(raw)) {
+    raw = `https://${raw}`;
+  }
+  return raw;
+};
+
+let lastGotenbergWarmup = 0;
+const warmUpGotenberg = () => {
+  const now = Date.now();
+  if (now - lastGotenbergWarmup < 60_000) return;
+  lastGotenbergWarmup = now;
+  const url = getGotenbergUrl();
+  fetch(`${url}/health`, { signal: AbortSignal.timeout(30_000) }).catch(() => {});
+};
 
 const getSofficeCmd = () => {
   if (process.platform === 'win32') {
@@ -179,27 +195,53 @@ const getSofficeCmd = () => {
 };
 
 const convertWithGotenberg = async (docxBuffer) => {
-  const form = new FormData();
-  form.append(
-    'files',
-    new Blob([docxBuffer], {
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    }),
-    'journal.docx'
-  );
+  const gotenbergUrl = getGotenbergUrl();
+  const maxAttempts = 3;
+  let lastErr = null;
 
-  const res = await fetch(`${GOTENBERG_URL}/forms/libreoffice/convert`, {
-    method: 'POST',
-    body: form,
-    signal: AbortSignal.timeout(120000),
-  });
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const form = new FormData();
+      form.append(
+        'files',
+        new Blob([docxBuffer], {
+          type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        }),
+        'journal.docx'
+      );
 
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(`Gotenberg ${res.status}: ${detail.slice(0, 300)}`);
+      const res = await fetch(`${gotenbergUrl}/forms/libreoffice/convert`, {
+        method: 'POST',
+        body: form,
+        signal: AbortSignal.timeout(90_000),
+      });
+
+      if (res.ok) {
+        return Buffer.from(await res.arrayBuffer());
+      }
+
+      const detail = await res.text().catch(() => '');
+      lastErr = new Error(`Gotenberg ${res.status}: ${detail.slice(0, 300)}`);
+
+      // Retry on Render cold-start / gateway statuses (502, 503, 504, 429, 500)
+      if ([429, 500, 502, 503, 504].includes(res.status) && attempt < maxAttempts) {
+        console.warn(`Gotenberg attempt ${attempt} returned ${res.status}, waiting before retry...`);
+        await fetch(`${gotenbergUrl}/health`, { signal: AbortSignal.timeout(15_000) }).catch(() => {});
+        await new Promise((r) => setTimeout(r, attempt * 3000));
+        continue;
+      }
+      throw lastErr;
+    } catch (err) {
+      lastErr = err;
+      if (attempt < maxAttempts) {
+        console.warn(`Gotenberg attempt ${attempt} failed (${err.message}), retrying...`);
+        await new Promise((r) => setTimeout(r, attempt * 3000));
+        continue;
+      }
+    }
   }
 
-  return Buffer.from(await res.arrayBuffer());
+  throw lastErr || new Error('Gotenberg conversion failed');
 };
 
 const convertWithLibreOffice = (inputPath, tmpDir) =>
@@ -237,7 +279,7 @@ const convertDocxToPdf = async (req, res) => {
 
     try {
       const pdfBuffer = await convertWithGotenberg(docxBuffer);
-      console.log(`PDF converted via Gotenberg (${GOTENBERG_URL})`);
+      console.log(`PDF converted via Gotenberg (${getGotenbergUrl()})`);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${outputFilename}"`);
       return res.send(pdfBuffer);

@@ -121,18 +121,21 @@ export function useStudentData() {
     if (!user) return;
     
     let isMounted = true;
+    let isFetching = false;
     
-    const loadAllData = async () => {
+    const loadAllData = async (silent = false) => {
+      if (isFetching) return;
+      isFetching = true;
       try {
-        setLoading(true);
+        if (!silent) setLoading(true);
         const [dtrRes, accRes, docRes, depRes, annRes, tplRes, compRes, evalRes, deviceRes] = await Promise.all([
-          api.getDTR().catch(() => []),
-          api.getAccomplishments().catch(() => []),
-          api.getDocuments().catch(() => []),
+          api.getDTR().catch(() => null),
+          api.getAccomplishments().catch(() => null),
+          api.getDocuments().catch(() => null),
           api.getDeployment().catch(() => null),
-          api.getAnnouncements().catch(() => []),
-          api.getTemplates().catch(() => []),
-          api.getCompanies().catch(() => []),
+          api.getAnnouncements().catch(() => null),
+          api.getTemplates().catch(() => null),
+          api.getCompanies().catch(() => null),
           api.getEvaluation((user as any)?.id).catch(() => null),
           api.getDeviceStatus().catch(() => null)
         ]);
@@ -148,11 +151,13 @@ export function useStudentData() {
           });
         }
 
-        setIntendedCompanyId((user as any)?.intendedCompanyId || null);
-        setIntendedPosition((user as any)?.intendedPosition || "");
-        if (compRes) {
+        if (!silent) {
+          setIntendedCompanyId((user as any)?.intendedCompanyId || null);
+          setIntendedPosition((user as any)?.intendedPosition || "");
+        }
+        if (Array.isArray(compRes)) {
           setActiveCompanies(
-            (compRes || [])
+            compRes
               .filter((c: { moaStatus?: string }) => c.moaStatus === "active")
               .map((c: { id: string; companyName?: string; name?: string; industry?: string; companyAddress?: string; description?: string; signedMoaUrl?: string | null }) => ({
                 id: c.id,
@@ -165,7 +170,7 @@ export function useStudentData() {
           );
         }
 
-        if (dtrRes?.length) {
+        if (Array.isArray(dtrRes)) {
           setDtrRecords(dtrRes.map((r: any) => ({
             date: r.date, day: r.day || "", timeIn: r.timeIn || null, timeOut: r.timeOut || null,
             timeInPhoto: resolveUploadUrl(r.timeInPhotoUrl),
@@ -176,16 +181,16 @@ export function useStudentData() {
           })));
         }
 
-        if (accRes?.length) {
+        if (Array.isArray(accRes)) {
           setAccomplishments(accRes.map((r: any) => ({
             id: r.id, date: r.date, hours: parseFloat(r.hours) || 0, details: r.details,
             picture: resolveUploadUrl(r.photoUrl), status: r.status,
           })));
         }
 
-        if (docRes !== null) {
+        if (Array.isArray(docRes)) {
           setDocuments(REQUIRED_DOC_NAMES.map((name) => {
-            const found = (docRes || []).find((d: any) => d.name === name);
+            const found = docRes.find((d: any) => d.name === name);
             return found ? { name, status: found.status, file: found.fileUrl || found.file || null, uploadedDate: found.uploadedDate || "—" }
               : { name, status: "missing", file: null, uploadedDate: "—" };
           }));
@@ -193,14 +198,17 @@ export function useStudentData() {
 
         if (depRes) setDeployment(depRes);
 
-        if (annRes?.length) {
-          setAnnouncements(annRes.map((a: any) => ({
-            id: a.id, title: a.title, content: a.content, date: a.date,
-            category: a.category, priority: a.priority, read: false,
-          })));
+        if (Array.isArray(annRes)) {
+          setAnnouncements(prev => {
+            const readIds = new Set(prev.filter(p => p.read).map(p => String(p.id)));
+            return annRes.map((a: any) => ({
+              id: a.id, title: a.title, content: a.content, date: a.date,
+              category: a.category, priority: a.priority, read: readIds.has(String(a.id)),
+            }));
+          });
         }
 
-        if (tplRes?.length) {
+        if (Array.isArray(tplRes)) {
           setTemplates(REQUIRED_DOC_NAMES.map((name) => {
             const found = tplRes.find((t: any) => t.name === name);
             return found ? { name, file: found.fileUrl || name.replace(/\s+/g, "_") + "_Template.pdf", size: found.size || "—", uploaded: found.uploadedDate || "—" }
@@ -215,13 +223,34 @@ export function useStudentData() {
       } catch (err) {
         console.error("Error loading student data", err);
       } finally {
-        if (isMounted) setLoading(false);
+        isFetching = false;
+        if (isMounted && !silent) setLoading(false);
       }
     };
 
-    loadAllData();
+    loadAllData(false);
 
-    return () => { isMounted = false; stopLocationTracking(); };
+    const pollInterval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        loadAllData(true);
+      }
+    }, 15_000);
+
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === "visible") {
+        loadAllData(true);
+      }
+    };
+    window.addEventListener("focus", handleVisibilityOrFocus);
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+
+    return () => {
+      isMounted = false;
+      clearInterval(pollInterval);
+      window.removeEventListener("focus", handleVisibilityOrFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+      stopLocationTracking();
+    };
   }, [user]);
 
   // Auto-resume tracking if already clocked in (page reload / tab switch)
