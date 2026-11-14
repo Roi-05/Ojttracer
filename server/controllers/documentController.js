@@ -176,6 +176,7 @@ const getGotenbergUrl = () => {
 
 let lastGotenbergWarmup = 0;
 const warmUpGotenberg = () => {
+  if (!process.env.GOTENBERG_URL) return;
   const now = Date.now();
   if (now - lastGotenbergWarmup < 60_000) return;
   lastGotenbergWarmup = now;
@@ -244,12 +245,25 @@ const convertWithGotenberg = async (docxBuffer) => {
   throw lastErr || new Error('Gotenberg conversion failed');
 };
 
-const convertWithLibreOffice = (inputPath, tmpDir) =>
+const convertWithLibreOffice = (inputPath, tmpDir, profileDir) =>
   new Promise((resolve, reject) => {
     const { execFile } = require('child_process');
+    const profileUri = 'file:///' + profileDir.replace(/\\/g, '/').replace(/^\/+/, '');
     execFile(
       getSofficeCmd(),
-      ['--headless', '--convert-to', 'pdf', inputPath, '--outdir', tmpDir],
+      [
+        `-env:UserInstallation=${profileUri}`,
+        '--headless',
+        '--nologo',
+        '--nodefault',
+        '--nofirststartwizard',
+        '--convert-to',
+        'pdf',
+        inputPath,
+        '--outdir',
+        tmpDir,
+      ],
+      { timeout: 90_000 },
       (err) => {
         if (err) return reject(err);
         resolve();
@@ -260,6 +274,7 @@ const convertWithLibreOffice = (inputPath, tmpDir) =>
 const convertDocxToPdf = async (req, res) => {
   let inputPath = null;
   let pdfPath = null;
+  let profileDir = null;
   const tmpDir = path.join(__dirname, '../tmp');
 
   try {
@@ -277,14 +292,16 @@ const convertDocxToPdf = async (req, res) => {
 
     const outputFilename = (req.file?.originalname || 'document.docx').replace(/\.docx$/i, '.pdf');
 
-    try {
-      const pdfBuffer = await convertWithGotenberg(docxBuffer);
-      console.log(`PDF converted via Gotenberg (${getGotenbergUrl()})`);
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${outputFilename}"`);
-      return res.send(pdfBuffer);
-    } catch (gotenbergErr) {
-      console.warn('Gotenberg conversion failed, trying local LibreOffice:', gotenbergErr.message);
+    if (process.env.GOTENBERG_URL) {
+      try {
+        const pdfBuffer = await convertWithGotenberg(docxBuffer);
+        console.log(`PDF converted via Gotenberg (${getGotenbergUrl()})`);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${outputFilename}"`);
+        return res.send(pdfBuffer);
+      } catch (gotenbergErr) {
+        console.warn('Gotenberg conversion failed, trying local LibreOffice:', gotenbergErr.message);
+      }
     }
 
     if (!fs.existsSync(tmpDir)) {
@@ -293,9 +310,10 @@ const convertDocxToPdf = async (req, res) => {
 
     const fileId = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     inputPath = path.join(tmpDir, `convert_${fileId}.docx`);
+    profileDir = path.join(tmpDir, `lo_profile_${fileId}`);
     fs.writeFileSync(inputPath, docxBuffer);
 
-    await convertWithLibreOffice(inputPath, tmpDir);
+    await convertWithLibreOffice(inputPath, tmpDir, profileDir);
 
     pdfPath = path.join(tmpDir, `convert_${fileId}.pdf`);
     if (!fs.existsSync(pdfPath)) {
@@ -314,6 +332,7 @@ const convertDocxToPdf = async (req, res) => {
     try {
       if (inputPath && fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
       if (pdfPath && fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
+      if (profileDir && fs.existsSync(profileDir)) fs.rmSync(profileDir, { recursive: true, force: true });
     } catch (e) {
       // ignore cleanup error
     }
