@@ -4,7 +4,7 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import {
   Bell, Menu, X, LogOut, GraduationCap,
-  User, ChevronRight
+  User, ChevronRight, HelpCircle
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import { getAnnouncements } from "../lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { cn } from "./ui/utils";
 import { resolveUploadUrl } from "../lib/uploads";
+import { OnboardingGuideModal } from "./shared/OnboardingGuideModal";
 
 interface MenuItem {
   icon: ReactNode;
@@ -66,9 +67,19 @@ export function DashboardLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
   const { signOut, user } = useAuth();
   const avatarUrl = resolveUploadUrl(avatarUrlProp ?? user?.avatarUrl ?? null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const key = `ojt_guide_seen_${user.id}`;
+    if (!localStorage.getItem(key)) {
+      setIsGuideOpen(true);
+      localStorage.setItem(key, "1");
+    }
+  }, [user?.id]);
 
   const handleSignOut = async () => {
     try {
@@ -169,6 +180,17 @@ export function DashboardLayout({
 
             {/* Right: Actions */}
             <div className="flex items-center gap-1.5">
+              {/* How It Works Guide Button */}
+              <button
+                type="button"
+                onClick={() => setIsGuideOpen(true)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/15 transition-colors"
+                title="How the OJT System Works"
+              >
+                <HelpCircle className="h-4 w-4" />
+                <span>Guide</span>
+              </button>
+
               {/* Notifications */}
               <div className="relative">
                 <button
@@ -329,6 +351,16 @@ export function DashboardLayout({
         {isSidebarOpen && (
           <div className="fixed inset-0 bg-black/40 z-30 lg:hidden" onClick={() => setIsSidebarOpen(false)} />
         )}
+
+        <OnboardingGuideModal
+          open={isGuideOpen}
+          onClose={() => setIsGuideOpen(false)}
+          role={user?.role || userRole}
+          onNavigate={(sec) => {
+            onSectionChange(sec);
+            setIsGuideOpen(false);
+          }}
+        />
       </div>
     </div>
   );

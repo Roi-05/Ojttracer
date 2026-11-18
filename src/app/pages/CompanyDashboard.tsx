@@ -13,6 +13,7 @@ import { MoaTab } from "../components/company/MoaTab";
 import { CompanyDtrTab } from "../components/company/CompanyDtrTab";
 import { LiveTrackerTab } from "../components/company/LiveTrackerTab";
 import { CompanyDocumentsTab } from "../components/company/CompanyDocumentsTab";
+import { CompanyJourneyChecklist } from "../components/shared/OnboardingChecklist";
 
 import {
   LayoutDashboard, Building2, Users, Star, FileCheck, ShieldCheck, Clock, MapPin, FileText
@@ -134,6 +135,14 @@ export function CompanyDashboard() {
       onSectionChange={setActiveSection}
     >
       <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
+        {["dashboard", "accreditation", "tracker"].includes(activeSection) && (
+          <CompanyJourneyChecklist
+            companyInfo={companyInfo}
+            signedMoaUrl={signedMoaUrl}
+            internsCount={interns.length}
+            onNavigate={setActiveSection}
+          />
+        )}
         {sectionMap[activeSection] ? sectionMap[activeSection]() : sectionMap["dashboard"]()}
       </div>
 

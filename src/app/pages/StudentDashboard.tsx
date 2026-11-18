@@ -18,6 +18,7 @@ import { JournalTab } from "../components/student/JournalTab";
 import { DocumentsTab } from "../components/student/DocumentsTab";
 import { AnnouncementsTab } from "../components/student/AnnouncementsTab";
 import { EvaluationTab } from "../components/student/EvaluationTab";
+import { StudentJourneyChecklist } from "../components/shared/OnboardingChecklist";
 import { generateECertificatePDF } from "../lib/generateECertificatePDF";
 import { generateECertificateDOCX, ECertificateInfo } from "../lib/generateECertificate";
 
@@ -349,6 +350,17 @@ export function StudentDashboard() {
       avatarUrl={studentProfile.avatarUrl}
     >
       <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
+        {["dashboard", "deployment", "attendance", "journal"].includes(activeSection) && (
+          <StudentJourneyChecklist
+            studentProfile={studentProfile}
+            intendedCompanyId={intendedCompanyId}
+            intendedPosition={intendedPosition}
+            studentDocs={documents}
+            isDeployed={isDeployed}
+            deployedCompany={activeDeployment.company}
+            onNavigate={setActiveSection}
+          />
+        )}
         {sectionMap[activeSection] ? sectionMap[activeSection]() : <div>Section not found</div>}
       </div>
 
