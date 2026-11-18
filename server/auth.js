@@ -5,11 +5,11 @@ if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET must be set in production');
 }
 
-function generateToken(user) {
+function generateToken(user, rememberMe = false) {
   return jwt.sign(
     { id: user.id, email: user.email, role: user.role, coordinatorCourse: user.coordinator_course || null },
     JWT_SECRET,
-    { expiresIn: '24h' }
+    { expiresIn: rememberMe ? '30d' : '24h' }
   );
 }
 

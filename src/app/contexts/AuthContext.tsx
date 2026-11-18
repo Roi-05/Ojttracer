@@ -35,7 +35,7 @@ interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
   accessToken: string | null;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -64,11 +64,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       setAccessToken(null);
       localStorage.removeItem("custom_auth_token");
+      sessionStorage.removeItem("custom_auth_token");
     }
   };
 
   useEffect(() => {
-    const token = localStorage.getItem("custom_auth_token");
+    const token = localStorage.getItem("custom_auth_token") || sessionStorage.getItem("custom_auth_token");
     if (token) {
       loadProfile(token).finally(() => setLoading(false));
     } else {
@@ -76,11 +77,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, rememberMe = false) => {
     try {
-      const data = await login({ email, password });
+      const data = await login({ email, password, rememberMe });
       if (data.token) {
-        localStorage.setItem("custom_auth_token", data.token);
+        if (rememberMe) {
+          localStorage.setItem("custom_auth_token", data.token);
+          sessionStorage.removeItem("custom_auth_token");
+        } else {
+          sessionStorage.setItem("custom_auth_token", data.token);
+          localStorage.removeItem("custom_auth_token");
+        }
         await loadProfile(data.token);
       } else {
         throw new Error("Invalid response from server");
@@ -94,10 +101,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setAccessToken(null);
     localStorage.removeItem("custom_auth_token");
+    sessionStorage.removeItem("custom_auth_token");
   };
 
   const refreshProfile = async () => {
-    const token = localStorage.getItem("custom_auth_token");
+    const token = localStorage.getItem("custom_auth_token") || sessionStorage.getItem("custom_auth_token");
     if (token) {
       await loadProfile(token);
     }

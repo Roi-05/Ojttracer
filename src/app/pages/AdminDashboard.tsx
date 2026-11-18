@@ -41,7 +41,6 @@ const menuItems = [
   { icon: <Settings className="h-4 w-4" />, label: "Settings", value: "settings" },
 ];
 
-const SECTIONS = ["4A", "4B", "4C", "4D"];
 const COLORS = ["#2563EB", "#16A34A", "#EA580C", "#7C3AED", "#DC2626"];
 const monthlyPlacementData: any[] = [];
 const hoursProgressData: any[] = [];
@@ -99,7 +98,15 @@ export function AdminDashboard() {
     return evaluations.filter(e => e.schoolYear === selectedSchoolYear);
   }, [evaluations, selectedSchoolYear]);
 
-  const sectionDistribution = SECTIONS.map((name, i) => ({
+  const dynamicSections = useMemo(() => {
+    const set = new Set<string>();
+    filteredStudents.forEach(s => {
+      if (s.section && s.section !== "—") set.add(s.section);
+    });
+    return Array.from(set).sort();
+  }, [filteredStudents]);
+
+  const sectionDistribution = dynamicSections.map((name, i) => ({
     name,
     value: filteredStudents.filter(s => s.section === name).length,
     color: COLORS[i % COLORS.length],
@@ -115,7 +122,7 @@ export function AdminDashboard() {
 
   const sectionMap: Record<string, () => JSX.Element> = {
     dashboard: () => <OverviewTab students={filteredStudents} companies={companies} setActiveSection={setActiveSection} monthlyPlacementData={monthlyPlacementData} sectionDistribution={sectionDistribution} openReportsModal={() => setShowReportsModal(true)} />,
-    students: () => <StudentsTab students={filteredStudents} sections={SECTIONS} openImportModal={() => setShowImportModal(true)} onResetDevice={resetStudentDevice} onRejectDevice={rejectStudentDevice} />,
+    students: () => <StudentsTab students={filteredStudents} sections={dynamicSections} openImportModal={() => setShowImportModal(true)} onResetDevice={resetStudentDevice} onRejectDevice={rejectStudentDevice} />,
     companies: () => <CompaniesTab companies={companies} onManageMoa={(c) => setMoaModalCompany(c)} openUploadMoa={() => setShowMoaTemplateUpload(true)} onDelete={deleteCompany} />,
     deployment: () => <DeploymentTab students={filteredStudents} />,
     attendance: () => <AttendanceTab dtrLogs={filteredDtrLogs} />,

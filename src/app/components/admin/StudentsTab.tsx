@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -184,10 +184,16 @@ function StudentRow({ s, onResetDevice, onRejectDevice }: { s: AdminStudent; onR
       );
 }
 
-      export function StudentsTab({students, sections, openImportModal, onResetDevice, onRejectDevice}: StudentsTabProps) {
+export function StudentsTab({students, sections, openImportModal, onResetDevice, onRejectDevice}: StudentsTabProps) {
   const [search, setSearch] = useState("");
-      const [sectionFilter, setSectionFilter] = useState("all");
-      const [statusFilter, setStatusFilter] = useState("all");
+  const [sectionFilter, setSectionFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  useEffect(() => {
+    if (sectionFilter !== "all" && !sections.includes(sectionFilter)) {
+      setSectionFilter("all");
+    }
+  }, [sections, sectionFilter]);
 
   const filtered = students.filter(s =>
       (sectionFilter === "all" || s.section === sectionFilter) &&

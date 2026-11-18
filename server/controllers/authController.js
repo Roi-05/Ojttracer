@@ -119,7 +119,7 @@ const signup = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, rememberMe } = req.body;
     const result = await db.query(`SELECT * FROM public.profiles WHERE email = $1`, [email]);
     const user = result.rows[0];
 
@@ -128,7 +128,7 @@ const login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) return res.status(401).json({ error: 'Invalid login credentials' });
 
-    const token = generateToken(user);
+    const token = generateToken(user, !!rememberMe);
     res.json({ success: true, token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
   } catch (err) {
     res.status(500).json({ error: err.message });

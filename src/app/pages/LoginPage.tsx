@@ -43,9 +43,9 @@ export function LoginPage() {
     }
   }, [user, loading, navigate]);
 
-  const handleLogin = async (role: string, email: string, password: string) => {
+  const handleLogin = async (role: string, email: string, password: string, rememberMe: boolean) => {
     try {
-      await signIn(email, password);
+      await signIn(email, password, rememberMe);
       // Navigation handled by useEffect above after profile loads
     } catch (err: any) {
       const msg = err?.message || "";
@@ -125,11 +125,11 @@ export function LoginPage() {
                 <TabsList className="grid w-full grid-cols-2 mb-8">
                   <TabsTrigger value="student" className="flex items-center gap-2">
                     <GraduationCap className="h-4 w-4" />
-                    <span className="hidden sm:inline">Student</span>
+                    <span>Student</span>
                   </TabsTrigger>
                   <TabsTrigger value="company" className="flex items-center gap-2">
                     <Building2 className="h-4 w-4" />
-                    <span className="hidden sm:inline">Company</span>
+                    <span>Company</span>
                   </TabsTrigger>
                 </TabsList>
 
@@ -182,13 +182,14 @@ function LoginForm({
   hideRegisterLink,
 }: {
   role: string;
-  onLogin: (role: string, email: string, password: string) => Promise<void>;
+  onLogin: (role: string, email: string, password: string, rememberMe: boolean) => Promise<void>;
   onRegister: (role: string, payload: any) => Promise<void>;
   isRegistering: boolean;
   setIsRegistering: (value: boolean) => void;
   hideRegisterLink?: boolean;
 }) {
-  const [email, setEmail] = useState("");
+  const storageKey = `remembered_email_${role}`;
+  const [email, setEmail] = useState(() => localStorage.getItem(storageKey) || "");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -196,10 +197,17 @@ function LoginForm({
   const [section, setSection] = useState("4A");
   const [companyName, setCompanyName] = useState("");
   const [industry, setIndustry] = useState("");
+  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem(storageKey));
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(`remembered_email_${role}`);
+    setEmail(saved || "");
+    setRememberMe(!!saved);
+  }, [role]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -230,7 +238,12 @@ function LoginForm({
         }
         await onRegister(role, payload);
       } else {
-        await onLogin(role, email, password);
+        if (rememberMe) {
+          localStorage.setItem(storageKey, email.trim());
+        } else {
+          localStorage.removeItem(storageKey);
+        }
+        await onLogin(role, email, password, rememberMe);
       }
     } finally {
       setSubmitting(false);
@@ -369,7 +382,12 @@ function LoginForm({
       {!isRegistering && (
         <div className="flex items-center justify-between text-sm">
           <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" className="rounded border-border" />
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="rounded border-border"
+            />
             <span className="text-muted-foreground">Remember me</span>
           </label>
           <button

@@ -1,7 +1,7 @@
 const BASE = `/api`; // Vite proxies /api/* and /uploads/* to localhost:3000
 
 function getToken(): string {
-  return localStorage.getItem("custom_auth_token") || "";
+  return localStorage.getItem("custom_auth_token") || sessionStorage.getItem("custom_auth_token") || "";
 }
 
 async function apiFetch(path: string, options: RequestInit = {}, timeoutMs = 15_000) {
@@ -44,7 +44,7 @@ async function apiFetch(path: string, options: RequestInit = {}, timeoutMs = 15_
 }
 
 // ─── Auth ──────────────────────────────────────────────────────────────────
-export async function login(payload: { email: string; password: string }) {
+export async function login(payload: { email: string; password: string; rememberMe?: boolean }) {
   return apiFetch("/auth/login", { method: "POST", body: JSON.stringify(payload) });
 }
 

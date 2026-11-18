@@ -93,9 +93,40 @@ export function useStudentData() {
   
   const [loading, setLoading] = useState(true);
   const locationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const locationWatchIdRef = useRef<number | null>(null);
+  const wakeLockRef = useRef<any>(null);
+  const isTrackingRef = useRef(false);
+  const lastPingAtRef = useRef(0);
 
   // ── Location tracker helpers ───────────────────────────────────────────────
-  const sendLocationPing = async () => {
+  const requestWakeLock = async () => {
+    try {
+      if ("wakeLock" in navigator && document.visibilityState === "visible" && !wakeLockRef.current) {
+        wakeLockRef.current = await (navigator as any).wakeLock.request("screen");
+        wakeLockRef.current?.addEventListener?.("release", () => {
+          wakeLockRef.current = null;
+        });
+      }
+    } catch {
+      // Ignore if browser/OS declines wake lock
+    }
+  };
+
+  const releaseWakeLock = async () => {
+    try {
+      if (wakeLockRef.current) {
+        await wakeLockRef.current.release();
+        wakeLockRef.current = null;
+      }
+    } catch {
+      wakeLockRef.current = null;
+    }
+  };
+
+  const sendLocationPing = async (force = false) => {
+    const now = Date.now();
+    if (!force && now - lastPingAtRef.current < 5_000) return;
+    lastPingAtRef.current = now;
     try {
       const pos = await getCurrentPosition();
       await api.pingLocation(pos.latitude, pos.longitude, pos.accuracy);
@@ -105,16 +136,50 @@ export function useStudentData() {
   };
 
   const startLocationTracking = () => {
-    if (locationIntervalRef.current) return; // already running
-    sendLocationPing(); // send immediately on start
-    locationIntervalRef.current = setInterval(sendLocationPing, 30_000);
+    isTrackingRef.current = true;
+    requestWakeLock();
+    if (!locationIntervalRef.current) {
+      sendLocationPing(true); // send immediately on start
+      locationIntervalRef.current = setInterval(() => sendLocationPing(false), 30_000);
+    }
+    if (locationWatchIdRef.current === null && typeof navigator !== "undefined" && "geolocation" in navigator) {
+      try {
+        locationWatchIdRef.current = navigator.geolocation.watchPosition(
+          (position) => {
+            const now = Date.now();
+            if (now - lastPingAtRef.current >= 15_000) {
+              lastPingAtRef.current = now;
+              api.pingLocation(
+                position.coords.latitude,
+                position.coords.longitude,
+                position.coords.accuracy
+              ).catch(() => {});
+            }
+          },
+          () => {},
+          { enableHighAccuracy: true, maximumAge: 15_000, timeout: 20_000 }
+        );
+      } catch {
+        // Ignore watchPosition setup error
+      }
+    }
   };
 
   const stopLocationTracking = () => {
+    isTrackingRef.current = false;
     if (locationIntervalRef.current) {
       clearInterval(locationIntervalRef.current);
       locationIntervalRef.current = null;
     }
+    if (locationWatchIdRef.current !== null && typeof navigator !== "undefined" && "geolocation" in navigator) {
+      try {
+        navigator.geolocation.clearWatch(locationWatchIdRef.current);
+      } catch {
+        // Ignore clearWatch error
+      }
+      locationWatchIdRef.current = null;
+    }
+    releaseWakeLock();
   };
 
   useEffect(() => {
@@ -239,15 +304,29 @@ export function useStudentData() {
     const handleVisibilityOrFocus = () => {
       if (document.visibilityState === "visible") {
         loadAllData(true);
+        if (isTrackingRef.current) {
+          sendLocationPing(true);
+          requestWakeLock();
+        }
+      }
+    };
+    const handleOnline = () => {
+      loadAllData(true);
+      if (isTrackingRef.current) {
+        sendLocationPing(true);
       }
     };
     window.addEventListener("focus", handleVisibilityOrFocus);
+    window.addEventListener("pageshow", handleVisibilityOrFocus);
+    window.addEventListener("online", handleOnline);
     document.addEventListener("visibilitychange", handleVisibilityOrFocus);
 
     return () => {
       isMounted = false;
       clearInterval(pollInterval);
       window.removeEventListener("focus", handleVisibilityOrFocus);
+      window.removeEventListener("pageshow", handleVisibilityOrFocus);
+      window.removeEventListener("online", handleOnline);
       document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
       stopLocationTracking();
     };
@@ -256,8 +335,9 @@ export function useStudentData() {
   // Auto-resume tracking if already clocked in (page reload / tab switch)
   useEffect(() => {
     if (!dtrRecords.length) return;
-    const today = new Date().toISOString().slice(0, 10);
-    const todayRecord = dtrRecords.find(r => r.date === today);
+    const localToday = new Date().toLocaleDateString("en-CA");
+    const utcToday = new Date().toISOString().slice(0, 10);
+    const todayRecord = dtrRecords.find(r => r.date === localToday || r.date === utcToday);
     if (todayRecord?.timeIn && !todayRecord?.timeOut) {
       startLocationTracking();
     } else {
