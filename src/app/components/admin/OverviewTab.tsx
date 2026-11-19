@@ -117,7 +117,7 @@ export function OverviewTab({ students, companies, setActiveSection, sectionDist
           </div>
           <div className="h-3 bg-muted rounded-full overflow-hidden">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all duration-700"
+              className="h-full rounded-full bg-primary transition-all duration-700"
               style={{ width: `${deploymentRate}%` }}
             />
           </div>

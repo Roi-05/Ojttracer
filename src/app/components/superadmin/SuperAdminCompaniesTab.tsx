@@ -51,7 +51,7 @@ export function SuperAdminCompaniesTab({ companies }: SuperAdminCompaniesTabProp
                 onClick={() => setMoaFilter(m)}
                 className={`px-2.5 py-1 rounded-lg text-xs font-semibold capitalize transition-all ${
                   moaFilter === m
-                    ? "bg-indigo-600 text-white shadow-xs"
+                    ? "bg-primary text-primary-foreground shadow-xs"
                     : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >

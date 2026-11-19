@@ -46,21 +46,21 @@ export function DashboardTab({
 
       {/* Completion Banner */}
       {completed && onExportCertificatePDF && (
-        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-blue-600 text-white shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="p-4 sm:p-5 rounded-2xl bg-card border border-primary/25 text-foreground shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="h-12 w-12 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center shrink-0 border border-white/30 shadow-inner">
-              <Award className="h-6 w-6 text-white" />
+            <div className="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
+              <Award className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold leading-tight">OJT Completed! Congratulations! 🎉</h2>
-              <p className="text-xs sm:text-sm text-emerald-50/90 mt-0.5">
+              <h2 className="text-base sm:text-lg font-bold leading-tight text-foreground">OJT Completed! Congratulations!</h2>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
                 You have completed all {effectiveDeployment.requiredHours} required hours. Your official Certificate of Completion is ready.
               </p>
             </div>
           </div>
           <Button
             onClick={onExportCertificatePDF}
-            className="shrink-0 bg-white text-emerald-800 hover:bg-emerald-50 font-semibold shadow-sm gap-2"
+            className="shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-xs gap-2"
           >
             <Download className="h-4 w-4" /> Export E-Certificate (PDF)
           </Button>
@@ -105,7 +105,7 @@ export function DashboardTab({
               <span className="text-sm text-muted-foreground">{Math.max(0, effectiveDeployment.requiredHours - effectiveDeployment.completedHours)} hrs remaining</span>
             </div>
             <div className="h-3 bg-muted rounded-full overflow-hidden mb-1">
-              <div className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, pct)}%` }} />
+              <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${Math.min(100, pct)}%` }} />
             </div>
             <p className="text-xs text-muted-foreground text-right">{pct}% complete</p>
             <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-border">

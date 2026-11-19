@@ -61,17 +61,17 @@ export function DeploymentTab({
       <div className="grid gap-6">
         {/* Certificate of Completion Section */}
         {completed ? (
-          <Card className="border border-emerald-200 bg-gradient-to-br from-emerald-50/90 via-teal-50/50 to-white shadow-sm overflow-hidden">
+          <Card className="border border-primary/25 bg-card shadow-sm overflow-hidden">
             <CardHeader className="pb-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="h-11 w-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                  <div className="h-11 w-11 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-xs">
                     <Award className="h-6 w-6" />
                   </div>
                   <div>
-                    <CardTitle className="text-lg text-emerald-950 font-bold">Certificate of Completion</CardTitle>
-                    <CardDescription className="text-emerald-800 text-xs mt-0.5">
-                      🎉 Congratulations! You have successfully completed your OJT program. Your official E-Certificate is ready.
+                    <CardTitle className="text-lg text-foreground font-bold">Certificate of Completion</CardTitle>
+                    <CardDescription className="text-muted-foreground text-xs mt-0.5">
+                      Congratulations! You have successfully completed your OJT program. Your official E-Certificate is ready.
                     </CardDescription>
                   </div>
                 </div>
@@ -79,7 +79,7 @@ export function DeploymentTab({
                   {onExportCertificatePDF && (
                     <Button
                       onClick={onExportCertificatePDF}
-                      className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm font-medium"
+                      className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs font-medium"
                     >
                       <Download className="h-4 w-4" /> Export E-Certificate (PDF)
                     </Button>
@@ -89,7 +89,7 @@ export function DeploymentTab({
                       onClick={onExportCertificateDOCX}
                       variant="outline"
                       size="sm"
-                      className="gap-1.5 border-emerald-300 text-emerald-900 hover:bg-emerald-100 bg-white/80"
+                      className="gap-1.5 border-border text-foreground hover:bg-muted"
                     >
                       <FileText className="h-3.5 w-3.5" /> Word (.docx)
                     </Button>
@@ -98,8 +98,8 @@ export function DeploymentTab({
               </div>
             </CardHeader>
             <CardContent className="pt-0">
-              <p className="text-xs text-emerald-700/90">
-                Generated from your verified completion record at <span className="font-semibold">{effectiveDeployment.company || "your host training establishment"}</span>. Converted and compiled via official PDF formatting.
+              <p className="text-xs text-muted-foreground">
+                Generated from your verified completion record at <span className="font-semibold text-foreground">{effectiveDeployment.company || "your host training establishment"}</span>. Converted and compiled via official PDF formatting.
               </p>
             </CardContent>
           </Card>
@@ -174,7 +174,7 @@ export function DeploymentTab({
                 <span className="text-sm font-bold text-primary">{pct}%</span>
               </div>
               <div className="h-3 bg-muted rounded-full overflow-hidden mb-2">
-                <div className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full" style={{ width: `${Math.min(100, pct)}%` }} />
+                <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, pct)}%` }} />
               </div>
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>{effectiveDeployment.completedHours} hrs done</span>

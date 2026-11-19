@@ -135,7 +135,7 @@ export function CoordinatorsTab() {
       {/* Header bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card border border-border/70 rounded-2xl p-5 shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
             <Users className="h-5 w-5" />
           </div>
           <div>
@@ -159,7 +159,7 @@ export function CoordinatorsTab() {
           <Button
             onClick={openAdd}
             size="sm"
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5 shadow-sm"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs gap-1.5 shadow-sm"
           >
             <UserPlus className="h-4 w-4" />
             Add Coordinator
@@ -201,7 +201,7 @@ export function CoordinatorsTab() {
                     <tr key={c.id} className="hover:bg-muted/30 transition-colors">
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                          <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs shrink-0">
                             {c.name.charAt(0).toUpperCase()}
                           </div>
                           <div>
@@ -331,7 +331,7 @@ export function CoordinatorsTab() {
               </Button>
               <Button
                 type="submit"
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs"
+                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground text-xs"
                 disabled={submitting}
               >
                 {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
@@ -405,7 +405,7 @@ export function CoordinatorsTab() {
               </Button>
               <Button
                 type="submit"
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs"
+                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground text-xs"
                 disabled={submitting}
               >
                 {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}

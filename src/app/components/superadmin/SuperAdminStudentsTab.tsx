@@ -94,7 +94,7 @@ export function SuperAdminStudentsTab({ students }: SuperAdminStudentsTabProps) 
                 onClick={() => setSelectedCourse(crs)}
                 className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
                   active
-                    ? "bg-indigo-600 text-white shadow-xs"
+                    ? "bg-primary text-primary-foreground shadow-xs"
                     : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
@@ -177,7 +177,7 @@ export function SuperAdminStudentsTab({ students }: SuperAdminStudentsTabProps) 
                             <span className="text-muted-foreground">{progress}%</span>
                           </div>
                           <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
-                            <div className="bg-indigo-600 h-1.5 rounded-full" style={{ width: `${progress}%` }} />
+                            <div className="bg-primary h-1.5 rounded-full" style={{ width: `${progress}%` }} />
                           </div>
                         </div>
                       </td>

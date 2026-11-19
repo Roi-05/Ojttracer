@@ -29,24 +29,24 @@ export function OverviewTab({ students, companies, coordinators, onNavigate }: S
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900 rounded-2xl p-6 text-white shadow-md">
+      <div className="bg-card border border-border rounded-2xl p-6 text-foreground shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/15 text-indigo-100 border border-white/20 mb-2">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20 mb-2">
               <ShieldCheck className="h-3.5 w-3.5" />
               Superadmin Central Command
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">University OJT Overview</h1>
-            <p className="text-xs sm:text-sm text-indigo-200 mt-1 max-w-xl">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">University OJT Overview</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-xl">
               Cross-program supervision across all 4th year academic departments: BSIT, BEED, BSSW, and BSBA.
             </p>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => onNavigate("coordinators")}
-              className="px-4 py-2 rounded-xl text-xs font-semibold bg-white text-indigo-900 hover:bg-indigo-50 transition-colors shadow-sm flex items-center gap-1.5"
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-xs flex items-center gap-1.5"
             >
-              <Users className="h-3.5 w-3.5 text-indigo-600" />
+              <Users className="h-3.5 w-3.5" />
               Manage Coordinators
             </button>
           </div>
@@ -165,7 +165,7 @@ export function OverviewTab({ students, companies, coordinators, onNavigate }: S
                     </div>
                     <div className="bg-muted/20 border border-border/40 rounded-xl p-2.5">
                       <p className="text-[10px] font-medium text-muted-foreground">Total Hours</p>
-                      <p className="text-base font-bold text-indigo-600 mt-0.5">{courseHours}h</p>
+                      <p className="text-base font-bold text-primary mt-0.5">{courseHours}h</p>
                     </div>
                   </div>
                 </div>

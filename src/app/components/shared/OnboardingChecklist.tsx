@@ -90,22 +90,18 @@ export function StudentJourneyChecklist({
       <CardContent className="p-4 sm:p-5">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3 min-w-0">
-            <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 font-bold text-xs ${
-              isDeployed ? "bg-emerald-600 text-white" : "bg-blue-600 text-white"
-            }`}>
+            <div className="h-9 w-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shrink-0 font-bold text-xs">
               {completedCount}/4
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-sm sm:text-base font-bold text-foreground flex items-center gap-1.5">
-                  <Sparkles className="h-4 w-4 text-blue-600 shrink-0" />
+                  <Sparkles className="h-4 w-4 text-primary shrink-0" />
                   {isDeployed
                     ? `OJT Deployment Active${deployedCompany ? ` — ${deployedCompany}` : ""}`
                     : "Your OJT Pre-Deployment Checklist"}
                 </h3>
-                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                  isDeployed ? "bg-emerald-100 text-emerald-800" : "bg-blue-100 text-blue-800"
-                }`}>
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                   {isDeployed ? "Deployed & Unlocked" : `${completedCount} of 4 completed`}
                 </span>
               </div>
@@ -152,7 +148,7 @@ export function StudentJourneyChecklist({
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-1.5">
                     <span className={`text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${
-                      s.done ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"
+                      s.done ? "bg-emerald-100 text-emerald-700" : "bg-primary/10 text-primary"
                     }`}>
                       Step {s.num}
                     </span>
@@ -161,7 +157,7 @@ export function StudentJourneyChecklist({
                     ) : s.num === 4 ? (
                       <Lock className="h-4 w-4 text-muted-foreground/60 shrink-0" />
                     ) : (
-                      <Circle className="h-4 w-4 text-blue-400 shrink-0" />
+                      <Circle className="h-4 w-4 text-primary/60 shrink-0" />
                     )}
                   </div>
                   <p className="text-xs sm:text-sm font-semibold text-foreground leading-snug">
@@ -272,16 +268,16 @@ export function CompanyJourneyChecklist({
       <CardContent className="p-4 sm:p-5">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="h-9 w-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 font-bold text-xs">
+            <div className="h-9 w-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shrink-0 font-bold text-xs">
               {completedCount}/4
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-sm sm:text-base font-bold text-foreground flex items-center gap-1.5">
-                  <Sparkles className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <Sparkles className="h-4 w-4 text-primary shrink-0" />
                   Company / HTE Onboarding & Setup Guide
                 </h3>
-                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                   {completedCount} of 4 completed
                 </span>
               </div>
@@ -294,7 +290,7 @@ export function CompanyJourneyChecklist({
           <div className="flex items-center gap-2 shrink-0">
             {onOpenGuide && (
               <Button variant="outline" size="sm" onClick={onOpenGuide} className="h-8 text-xs gap-1.5 bg-white">
-                <HelpCircle className="h-3.5 w-3.5 text-emerald-700" /> How It Works
+                <HelpCircle className="h-3.5 w-3.5 text-primary" /> How It Works
               </Button>
             )}
             <Button
@@ -324,14 +320,14 @@ export function CompanyJourneyChecklist({
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-1.5">
                     <span className={`text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${
-                      s.done ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"
+                      s.done ? "bg-emerald-100 text-emerald-700" : "bg-primary/10 text-primary"
                     }`}>
                       Step {s.num}
                     </span>
                     {s.done ? (
                       <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
                     ) : (
-                      <Circle className="h-4 w-4 text-emerald-400 shrink-0" />
+                      <Circle className="h-4 w-4 text-primary/60 shrink-0" />
                     )}
                   </div>
                   <p className="text-xs sm:text-sm font-semibold text-foreground leading-snug">
@@ -347,7 +343,7 @@ export function CompanyJourneyChecklist({
                   size="sm"
                   onClick={() => onNavigate(s.section)}
                   className={`mt-3 w-full h-7 text-xs gap-1 ${
-                    s.done ? "" : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                    s.done ? "" : "bg-primary hover:bg-primary/90 text-primary-foreground"
                   }`}
                 >
                   {s.actionLabel}

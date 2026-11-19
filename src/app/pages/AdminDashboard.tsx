@@ -152,7 +152,7 @@ export function AdminDashboard() {
         {/* Academic School Year Cohort Banner */}
         <div className="flex items-center justify-between flex-wrap gap-3 mb-6 bg-card border border-border/70 rounded-xl p-3 shadow-xs">
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs shrink-0">
+            <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
               {user?.coordinatorCourse || "OJT"}
             </div>
             <div>
@@ -161,13 +161,13 @@ export function AdminDashboard() {
                   {user?.coordinatorCourse ? `${user.coordinatorCourse} Department • Academic Cohort` : "Academic Cohort Filter"}
                 </p>
                 {user?.coordinatorCourse && (
-                  <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-purple-100 text-purple-700">
+                  <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-primary/10 text-primary">
                     {user.coordinatorCourse}
                   </span>
                 )}
               </div>
               <p className="text-xs text-foreground font-medium">
-                Active View: <strong className="text-blue-700 font-semibold">{selectedSchoolYear === "all" ? "All School Years (Combined)" : `S.Y. ${selectedSchoolYear}`}</strong>
+                Active View: <strong className="text-primary font-semibold">{selectedSchoolYear === "all" ? "All School Years (Combined)" : `S.Y. ${selectedSchoolYear}`}</strong>
                 <span className="text-muted-foreground ml-2 font-normal">({filteredStudents.length} student{filteredStudents.length !== 1 ? "s" : ""})</span>
               </p>
             </div>

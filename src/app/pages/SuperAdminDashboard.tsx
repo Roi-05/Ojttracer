@@ -73,7 +73,7 @@ export function SuperAdminDashboard() {
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500">
         {dataLoading && activeSection === "overview" && coordLoading ? (
           <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3 text-muted-foreground">
-            <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="text-xs">Loading university data...</p>
           </div>
         ) : (
