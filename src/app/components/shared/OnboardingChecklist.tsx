@@ -86,7 +86,7 @@ export function StudentJourneyChecklist({
   const completedCount = steps.filter(s => s.done).length;
 
   return (
-    <Card className={`border shadow-sm mb-6 overflow-hidden ${isDeployed ? "border-emerald-200 bg-emerald-50/40" : "border-blue-200 bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-purple-50/50"}`}>
+    <Card className="border border-border bg-card shadow-sm mb-6 overflow-hidden">
       <CardContent className="p-4 sm:p-5">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3 min-w-0">
@@ -268,7 +268,7 @@ export function CompanyJourneyChecklist({
   const completedCount = steps.filter(s => s.done).length;
 
   return (
-    <Card className="border border-emerald-200 bg-gradient-to-r from-emerald-50/70 via-teal-50/40 to-blue-50/40 shadow-sm mb-6 overflow-hidden">
+    <Card className="border border-border bg-card shadow-sm mb-6 overflow-hidden">
       <CardContent className="p-4 sm:p-5">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3 min-w-0">

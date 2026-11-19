@@ -219,16 +219,16 @@ export function OnboardingGuideModal({ open, onClose, role, onNavigate }: Onboar
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-2xl p-0 overflow-hidden border-border">
-        {/* Top gradient header */}
-        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white p-5 sm:p-6">
+        {/* Top clean header */}
+        <div className="bg-muted/30 border-b border-border p-5 sm:p-6">
           <DialogHeader className="text-left">
-            <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider bg-white/20 px-2.5 py-1 rounded-full w-fit mb-2">
+            <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider bg-primary/10 text-primary px-2.5 py-1 rounded-full w-fit mb-2">
               <Sparkles className="h-3.5 w-3.5" /> System Workflow Guide
             </div>
-            <DialogTitle className="text-xl font-bold text-white">
+            <DialogTitle className="text-xl font-bold text-foreground">
               How OJT Deployment & Monitoring Works
             </DialogTitle>
-            <DialogDescription className="text-blue-100 text-xs sm:text-sm mt-1">
+            <DialogDescription className="text-muted-foreground text-xs sm:text-sm mt-1">
               OJT Tracer connects Companies, Students, and the OJT Coordinator in 4 sequential steps:
             </DialogDescription>
           </DialogHeader>
@@ -246,22 +246,22 @@ export function OnboardingGuideModal({ open, onClose, role, onNavigate }: Onboar
                 onClick={() => setStepIdx(idx)}
                 className={`rounded-xl p-2.5 cursor-pointer transition-all border text-left ${
                   stepIdx === idx
-                    ? "bg-white text-slate-900 border-white shadow-md scale-[1.02]"
-                    : "bg-white/10 text-white border-white/20 hover:bg-white/20"
+                    ? "bg-card text-foreground border-primary ring-2 ring-primary/15 shadow-xs"
+                    : "bg-card/60 text-muted-foreground border-border hover:bg-card"
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
                   <span
                     className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                      stepIdx === idx ? "bg-blue-600 text-white" : "bg-white/20 text-white"
+                      stepIdx === idx ? "bg-primary text-white" : "bg-muted text-muted-foreground"
                     }`}
                   >
                     Stage {item.num}
                   </span>
-                  {idx < 3 && <ArrowRight className="h-3 w-3 opacity-60 hidden sm:block" />}
+                  {idx < 3 && <ArrowRight className="h-3 w-3 text-muted-foreground/60 hidden sm:block" />}
                 </div>
-                <p className="text-xs font-bold leading-tight">{item.actor}</p>
-                <p className={`text-[11px] leading-snug mt-0.5 ${stepIdx === idx ? "text-slate-600" : "text-blue-100"}`}>
+                <p className="text-xs font-bold leading-tight text-foreground">{item.actor}</p>
+                <p className="text-[11px] leading-snug mt-0.5 text-muted-foreground">
                   {item.task}
                 </p>
               </div>
