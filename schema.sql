@@ -138,6 +138,7 @@
     category    text not null default 'update',
     priority    text not null default 'normal',
     date        text,
+    course      text not null default 'BSIT',
     created_at  timestamptz not null default now()
   );
 
