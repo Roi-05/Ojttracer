@@ -58,7 +58,8 @@ export function DocumentsTab({ studentDocs, templateData, activeCompanies, inten
       .catch(() => { if (!cancelled) setSignedMoaUrl(null); })
       .finally(() => { if (!cancelled) setLoadingMoa(false); });
     return () => { cancelled = true; };
-  }, [selectedCompanyId, activeCompanies]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCompanyId]);
 
   const hasUnsavedChanges =
     selectedCompanyId !== (intendedCompanyId || "") ||

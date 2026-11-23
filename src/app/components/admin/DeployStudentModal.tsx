@@ -25,15 +25,16 @@ export function DeployStudentModal({ open, studentId, companyList, intendedCompa
 
   useEffect(() => {
     if (open) {
-      // Find the intended company if it exists
-      const intended = intendedCompanyId ? companyList.find(c => c.id === intendedCompanyId) : null;
+      // Find the intended company if it exists (only initialize when modal opens for a student)
+      const intended = intendedCompanyId ? companyList.find(c => String(c.id) === String(intendedCompanyId)) : null;
       setDeployForm({
         company: intended ? intended.name : "", 
         position: intendedPosition || "", startDate: "", endDate: "",
         requiredHours: 486
       });
     }
-  }, [open, intendedCompanyId, intendedPosition, companyList]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, studentId, intendedCompanyId, intendedPosition]);
 
   const selectedCompany = companyList.find(c => c.name === deployForm.company);
 
