@@ -186,7 +186,13 @@ export function DTRTab({
   const [fitTrigger, setFitTrigger] = useState(0);
   const [isMapExpanded, setIsMapExpanded] = useState(false);
 
+  const companyPolygon = normalizePolygon(companyLocation?.geofencePolygon);
+  const hasPerimeter =
+    companyPolygon.length >= 3 ||
+    (companyLocation?.latitude != null && companyLocation?.longitude != null);
+
   const refreshLocation = useCallback(async (notify = false) => {
+    if (!hasPerimeter) return;
     setLocLoading(true);
     setLocError(null);
     try {
@@ -205,18 +211,23 @@ export function DTRTab({
     } finally {
       setLocLoading(false);
     }
-  }, []);
+  }, [hasPerimeter]);
 
   useEffect(() => {
-    refreshLocation(false);
-  }, [refreshLocation]);
+    if (hasPerimeter) {
+      refreshLocation(false);
+    } else {
+      setStudentLoc(null);
+      setLocError(null);
+      setLocLoading(false);
+    }
+  }, [hasPerimeter, refreshLocation]);
 
   const toggleMapExpanded = () => {
     setIsMapExpanded((prev) => !prev);
     setTimeout(() => setFitTrigger((c) => c + 1), 150);
   };
 
-  const companyPolygon = normalizePolygon(companyLocation?.geofencePolygon);
   const companyCentroid = getPolygonCentroid(companyPolygon);
   const companyCenter: [number, number] | null =
     companyLocation?.latitude && companyLocation?.longitude
@@ -227,7 +238,7 @@ export function DTRTab({
     companyCenter || (studentLoc ? [studentLoc.lat, studentLoc.lng] : [15.0794, 120.6200]);
 
   const geofenceResult =
-    studentLoc && companyLocation
+    hasPerimeter && studentLoc && companyLocation
       ? checkGeofence(
           studentLoc.lat,
           studentLoc.lng,
@@ -238,9 +249,6 @@ export function DTRTab({
         )
       : null;
 
-  const hasPerimeter =
-    companyPolygon.length >= 3 ||
-    (companyLocation?.latitude != null && companyLocation?.longitude != null);
   const isInside = !hasPerimeter || (geofenceResult?.allowed ?? false);
   const studentInitials =
     `${studentProfile?.firstName?.charAt(0) || ""}${studentProfile?.lastName?.charAt(0) || ""}`.toUpperCase() || "ME";
@@ -444,7 +452,8 @@ export function DTRTab({
           <CardDescription>{TODAY_LABEL} — {TODAY_DAY}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Live Geofence Tracking Map */}
+          {/* Live Geofence Tracking Map — only shown when the company has set a geofence */}
+          {hasPerimeter ? (
           <div className="rounded-xl border border-border overflow-hidden bg-card shadow-xs">
             {/* Map Top Bar */}
             <div className="flex items-center justify-between px-3.5 py-2.5 bg-muted/40 border-b border-border flex-wrap gap-2">
@@ -689,6 +698,14 @@ export function DTRTab({
               )}
             </div>
           </div>
+          ) : (
+            <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-muted/30 border border-border text-xs text-muted-foreground">
+              <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span>
+                No workplace geofence set by <strong>{companyLocation?.companyName || "your company"}</strong> — GPS location is not required to Time In or Time Out.
+              </span>
+            </div>
+          )}
 
           {/* Geofence Status Action Banner (shown when timing in/out) */}
           {geofenceStatus === "checking" && (

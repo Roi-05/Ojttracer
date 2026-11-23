@@ -332,9 +332,20 @@ export function useStudentData() {
     };
   }, [user]);
 
-  // Auto-resume tracking if already clocked in (page reload / tab switch)
+  const hasCompanyGeofence = (dep: any) => {
+    if (!dep) return false;
+    const hasLatLng = dep.companyLat != null && dep.companyLng != null;
+    const hasPoly = Array.isArray(dep.geofencePolygon) && dep.geofencePolygon.length >= 3;
+    return hasLatLng || hasPoly;
+  };
+
+  // Auto-resume tracking if already clocked in (page reload / tab switch) and company has a geofence
   useEffect(() => {
     if (!dtrRecords.length) return;
+    if (!hasCompanyGeofence(deployment)) {
+      stopLocationTracking();
+      return;
+    }
     const localToday = new Date().toLocaleDateString("en-CA");
     const utcToday = new Date().toISOString().slice(0, 10);
     const todayRecord = dtrRecords.find(r => r.date === localToday || r.date === utcToday);
@@ -343,7 +354,7 @@ export function useStudentData() {
     } else {
       stopLocationTracking();
     }
-  }, [dtrRecords]);
+  }, [dtrRecords, deployment]);
 
   const registerCurrentDevice = async () => {
     try {
@@ -392,7 +403,9 @@ export function useStudentData() {
           hours: 0, remarks: "Regular",
         }, ...records];
       });
-      startLocationTracking(); // Begin live tracking
+      if (hasCompanyGeofence(deployment)) {
+        startLocationTracking(); // Begin live tracking only if company uses geofencing
+      }
     } catch (err: any) {
       toast.error(err?.message || "Clock In failed.");
       throw err;

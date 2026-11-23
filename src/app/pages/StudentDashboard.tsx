@@ -222,6 +222,25 @@ export function StudentDashboard() {
 
   const isCompleted = effectiveDeployment.status === "completed" || hoursDone;
 
+  // Exact date the intern reached their required OJT hours based on approved DTR records
+  const actualCompletionDate = (() => {
+    const approvedSorted = [...dtrRecords]
+      .filter(r => r.status === "approved" && r.date && (r.hours || 0) > 0)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    if (approvedSorted.length === 0) {
+      return effectiveDeployment.endDate || TODAY_ISO;
+    }
+    const reqHrs = effectiveDeployment.requiredHours || 486;
+    let cumulative = 0;
+    for (const rec of approvedSorted) {
+      cumulative += rec.hours || 0;
+      if (cumulative >= reqHrs) {
+        return rec.date;
+      }
+    }
+    return approvedSorted[approvedSorted.length - 1].date;
+  })();
+
   const handleExportCertificatePDF = async () => {
     if (!isCompleted) {
       toast.error("E-Certificate is only available once your OJT is completed.");
@@ -235,7 +254,7 @@ export function StudentDashboard() {
       schoolYear: studentProfile.schoolYear || effectiveDeployment.schoolYear || "",
       startDate: effectiveDeployment.startDate || "",
       endDate: effectiveDeployment.endDate || "",
-      completionDate: effectiveDeployment.endDate || "",
+      completionDate: actualCompletionDate,
       supervisorName: effectiveDeployment.supervisor || "",
       coordinatorName: coordinatorName || "",
     };
@@ -260,7 +279,7 @@ export function StudentDashboard() {
       schoolYear: studentProfile.schoolYear || effectiveDeployment.schoolYear || "",
       startDate: effectiveDeployment.startDate || "",
       endDate: effectiveDeployment.endDate || "",
-      completionDate: effectiveDeployment.endDate || "",
+      completionDate: actualCompletionDate,
       supervisorName: effectiveDeployment.supervisor || "",
       coordinatorName: coordinatorName || "",
     };
