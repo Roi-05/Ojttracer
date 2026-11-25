@@ -12,7 +12,6 @@ import { useAuth } from "../contexts/AuthContext";
 import { signUp } from "../lib/api";
 import { ForgotPasswordModal } from "../components/auth/ForgotPasswordModal";
 
-const SECTIONS = ["4A", "4B", "4C", "4D"];
 const COURSES = ["BSIT", "BEED", "BSBA", "BSSW"];
 
 export function LoginPage() {
@@ -205,7 +204,7 @@ function LoginForm({
   const [fullName, setFullName] = useState("");
   const [studentIdField, setStudentIdField] = useState("");
   const [course, setCourse] = useState("BSIT");
-  const [section, setSection] = useState("4A");
+  const [section, setSection] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [industry, setIndustry] = useState("");
   const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem(storageKey));
@@ -235,15 +234,26 @@ function LoginForm({
           toast.error("Password must be at least 6 characters.");
           return;
         }
-        const payload: any = { email, password, name: fullName };
+        const payload: any = { email: email.trim(), password, name: fullName };
         if (role === "student") {
-          if (!studentIdField.trim()) {
-            toast.error("Please enter your Student ID / Number.");
+          const cleanSid = studentIdField.trim();
+          const cleanSec = section.trim().toUpperCase();
+          if (!/^\d{10}$/.test(cleanSid)) {
+            toast.error("Student Number must be exactly 10 digits.");
             return;
           }
-          payload.studentId = studentIdField.trim();
+          if (!cleanSec) {
+            toast.error("Please enter your Section (e.g. 4A).");
+            return;
+          }
+          const expectedEmail = `${cleanSid}@pampangastateu.edu.ph`;
+          if (email.trim().toLowerCase() !== expectedEmail) {
+            toast.error(`Student email must be your Student Number + @pampangastateu.edu.ph (${expectedEmail}).`);
+            return;
+          }
+          payload.studentId = cleanSid;
           payload.course = course;
-          payload.section = section;
+          payload.section = cleanSec;
         } else if (role === "company") {
           payload.companyName = companyName || fullName;
           payload.industry = industry;
@@ -285,13 +295,15 @@ function LoginForm({
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-2">
-              <Label htmlFor={`sid-${role}`}>Student Number</Label>
+              <Label htmlFor={`sid-${role}`}>Student Number (10 digits)</Label>
               <Input
                 id={`sid-${role}`}
                 type="text"
+                inputMode="numeric"
+                maxLength={10}
                 placeholder="e.g. 2023100001"
                 value={studentIdField}
-                onChange={(e) => setStudentIdField(e.target.value)}
+                onChange={(e) => setStudentIdField(e.target.value.replace(/\D/g, "").slice(0, 10))}
                 required
               />
             </div>
@@ -310,16 +322,14 @@ function LoginForm({
             </div>
             <div className="space-y-2">
               <Label htmlFor={`section-${role}`}>Section</Label>
-              <Select value={section} onValueChange={setSection}>
-                <SelectTrigger id={`section-${role}`}>
-                  <SelectValue placeholder="Select section" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SECTIONS.map((s) => (
-                    <SelectItem key={s} value={s}>{course} {s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                id={`section-${role}`}
+                type="text"
+                placeholder="e.g. 4A"
+                value={section}
+                onChange={(e) => setSection(e.target.value.toUpperCase())}
+                required
+              />
             </div>
           </div>
         </>
@@ -355,11 +365,20 @@ function LoginForm({
         <Input
           id={`email-${role}`}
           type="email"
-          placeholder={`Enter your ${role} email`}
+          placeholder={
+            isRegistering && role === "student"
+              ? `${studentIdField || "2023100001"}@pampangastateu.edu.ph`
+              : `Enter your ${role} email`
+          }
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
         />
+        {isRegistering && role === "student" && (
+          <p className="text-xs text-muted-foreground">
+            Must match your 10-digit Student Number: <span className="font-mono font-medium">{studentIdField || "<10-digit-student-no>"}@pampangastateu.edu.ph</span>
+          </p>
+        )}
       </div>
       <div className="space-y-2">
         <Label htmlFor={`password-${role}`}>Password</Label>

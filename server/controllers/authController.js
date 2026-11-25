@@ -111,6 +111,24 @@ const signup = async (req, res) => {
     }
 
     const cleanEmail = String(email).trim().toLowerCase();
+
+    if (role === 'student') {
+      const cleanSid = String(studentId || '').trim();
+      const cleanSec = String(section || '').trim();
+      if (!/^\d{10}$/.test(cleanSid)) {
+        return res.status(400).json({ error: 'Student Number must be exactly 10 digits.' });
+      }
+      if (!cleanSec) {
+        return res.status(400).json({ error: 'Section is required (e.g. 4A).' });
+      }
+      const expectedEmail = `${cleanSid}@pampangastateu.edu.ph`;
+      if (cleanEmail !== expectedEmail) {
+        return res.status(400).json({
+          error: `Student email must be your Student Number + @pampangastateu.edu.ph (${expectedEmail}).`,
+        });
+      }
+    }
+
     const existing = await db.query(`SELECT id FROM public.profiles WHERE LOWER(email) = $1`, [cleanEmail]);
     if (existing.rows.length > 0) {
       return res.status(400).json({ error: 'An account with this email already exists. Please sign in instead.' });
