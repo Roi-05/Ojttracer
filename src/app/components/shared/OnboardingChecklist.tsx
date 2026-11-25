@@ -107,7 +107,7 @@ export function StudentJourneyChecklist({
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {isDeployed
-                  ? "Your Daily Time Record (DTR) and Daily Accomplishment Journal are unlocked."
+                  ? "Your Daily Time Record (DTR) and Daily Accomplishment Journal are unlocked. (Note: Pre-deployment requirements were automatically completed for this Beta Test.)"
                   : "Complete steps 1–3 below so your OJT Coordinator can deploy you and unlock your DTR & Journal."}
               </p>
             </div>

@@ -50,7 +50,7 @@ export async function login(payload: { email: string; password: string; remember
 
 export async function signUp(payload: {
   email: string; password: string; name: string; role: string;
-  studentId?: string; section?: string; companyName?: string; industry?: string;
+  studentId?: string; section?: string; course?: string; companyName?: string; industry?: string;
 }) {
   return apiFetch("/auth/signup", { method: "POST", body: JSON.stringify(payload) });
 }

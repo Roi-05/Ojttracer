@@ -74,42 +74,145 @@ async function loadProfile(userId) {
   return out;
 }
 
+const COURSE_COMPANY_EMAILS = {
+  BSIT: 'itcompany@gmail.com',
+  BEED: 'edcompany@gmail.com',
+  BSBA: 'bacompany@gmail.com',
+  BSSW: 'swcompany@gmail.com',
+};
+
+const DEFAULT_POSITIONS = {
+  BSIT: 'IT Intern',
+  BEED: 'Student Teacher Intern',
+  BSBA: 'Business Administration Intern',
+  BSSW: 'Social Work Intern',
+};
+
+const REQUIRED_DOC_NAMES = [
+  'Parent Guardian Consent Form',
+  'Certificate of Enrollment',
+  'Certification Form',
+  'Internship Endorsement Form',
+  '1st Endorsement Form',
+  'Internship Agreement Form',
+  'Memorandum of Agreement',
+];
+
 const signup = async (req, res) => {
   try {
-    const { email, password, name, role, studentId, section, companyName, industry } = req.body;
+    const { email, password, name, role, studentId, section, course, companyName, industry } = req.body;
     if (!email || !password || !name || !role) return res.status(400).json({ error: 'Missing required fields' });
 
-    // Prevent coordinator/superadmin/student self-registration
-    // Students are created by coordinator via Excel import
-    // Coordinators are created by superadmin
-    if (role === 'coordinator' || role === 'superadmin' || role === 'admin' || role === 'student') {
-      return res.status(403).json({ error:
-        role === 'student' ? 'Student accounts are created by the OJT Coordinator. Please contact them if you cannot log in.' :
-        'This account type cannot self-register. Contact your system administrator.'
+    // Prevent coordinator/superadmin self-registration
+    if (role === 'coordinator' || role === 'superadmin' || role === 'admin') {
+      return res.status(403).json({
+        error: 'This account type cannot self-register. Contact your system administrator.',
       });
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+    const existing = await db.query(`SELECT id FROM public.profiles WHERE LOWER(email) = $1`, [cleanEmail]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'An account with this email already exists. Please sign in instead.' });
     }
 
     const password_hash = await bcrypt.hash(password, 10);
 
     const result = await db.query(
       `INSERT INTO public.profiles (email, password_hash, name, role) VALUES ($1, $2, $3, $4) RETURNING id`,
-      [email, password_hash, name, role]
+      [cleanEmail, password_hash, name.trim(), role]
     );
     const userId = result.rows[0].id;
 
     if (role === 'student') {
+      const normalizedCourse = ['BSIT', 'BEED', 'BSBA', 'BSSW'].includes(String(course || '').toUpperCase())
+        ? String(course).toUpperCase()
+        : 'BSIT';
+      const cleanSection = String(section || '4A').trim() || '4A';
+
+      // Split full name into first_name and last_name for coordinator directory & reports
+      const nameParts = String(name || '').trim().split(/\s+/);
+      const firstName = nameParts.length > 1 ? nameParts.slice(0, -1).join(' ') : (nameParts[0] || '');
+      const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
+
+      // Lookup the partner company for the student's course
+      const targetCompanyEmail = COURSE_COMPANY_EMAILS[normalizedCourse] || 'itcompany@gmail.com';
+      const defaultPosition = DEFAULT_POSITIONS[normalizedCourse] || 'OJT Intern';
+
+      const compRes = await db.query(
+        `SELECT p.id, p.name, p.email, c.company_name, c.company_address, c.hr_contact, c.hr_email, c.moa_status
+         FROM public.profiles p
+         LEFT JOIN public.companies c ON c.user_id = p.id
+         WHERE LOWER(p.email) = LOWER($1)
+         LIMIT 1`,
+        [targetCompanyEmail]
+      );
+      const comp = compRes.rows[0] || null;
+
+      if (comp && comp.moa_status !== 'active') {
+        await db.query(`UPDATE public.companies SET moa_status = 'active' WHERE user_id = $1`, [comp.id]);
+      }
+
+      // 1. Insert student record assigned to their course (which links them to the course's Coordinator)
       await db.query(
-        `INSERT INTO public.students (user_id, student_id, section) VALUES ($1, $2, $3)`,
-        [userId, studentId || '', section || '']
+        `INSERT INTO public.students
+          (user_id, student_id, first_name, last_name, section, course, year_level, school_year, intended_company_id, intended_position)
+         VALUES ($1, $2, $3, $4, $5, $6, '4th Year', '2025-2026', $7, $8)`,
+        [
+          userId,
+          String(studentId || '').trim(),
+          firstName,
+          lastName,
+          cleanSection,
+          normalizedCourse,
+          comp ? comp.id : null,
+          defaultPosition,
+        ]
+      );
+
+      // 2. Auto-approve all 7 required documents so student skips manual upload
+      const todayLabel = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      for (const docName of REQUIRED_DOC_NAMES) {
+        await db.query(
+          `INSERT INTO public.documents (student_id, name, status, uploaded_date)
+           VALUES ($1, $2, 'approved', $3)
+           ON CONFLICT (student_id, name) DO UPDATE SET status = 'approved', uploaded_date = $3`,
+          [userId, docName, todayLabel]
+        );
+      }
+
+      // 3. Auto-deploy the student to their course's partner company
+      const startDate = new Date().toISOString().slice(0, 10);
+      const endObj = new Date();
+      endObj.setMonth(endObj.getMonth() + 4);
+      const endDate = endObj.toISOString().slice(0, 10);
+
+      await db.query(
+        `INSERT INTO public.deployments
+          (student_id, company_id, company_name, position, start_date, end_date, required_hours, supervisor, supervisor_email, address, status)
+         VALUES ($1, $2, $3, $4, $5, $6, 486, $7, $8, $9, 'ongoing')
+         ON CONFLICT (student_id) DO UPDATE SET
+          company_id = $2, company_name = $3, position = $4, status = 'ongoing'`,
+        [
+          userId,
+          comp ? comp.id : null,
+          comp?.company_name || comp?.name || `${normalizedCourse} Partner Company`,
+          defaultPosition,
+          startDate,
+          endDate,
+          comp?.hr_contact || comp?.name || 'Company Supervisor',
+          comp?.hr_email || comp?.email || targetCompanyEmail,
+          comp?.company_address || 'Pampanga',
+        ]
       );
     } else if (role === 'company') {
       await db.query(
         `INSERT INTO public.companies (user_id, company_name, industry, hr_contact, hr_email) VALUES ($1, $2, $3, $4, $5)`,
-        [userId, companyName || name, industry || '', name, email]
+        [userId, companyName || name, industry || '', name, cleanEmail]
       );
     }
 
-    const token = generateToken({ id: userId, email, role });
+    const token = generateToken({ id: userId, email: cleanEmail, role });
     res.json({ success: true, userId, token });
   } catch (err) {
     console.error(err);

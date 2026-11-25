@@ -13,6 +13,7 @@ import { signUp } from "../lib/api";
 import { ForgotPasswordModal } from "../components/auth/ForgotPasswordModal";
 
 const SECTIONS = ["4A", "4B", "4C", "4D"];
+const COURSES = ["BSIT", "BEED", "BSBA", "BSSW"];
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -60,8 +61,13 @@ export function LoginPage() {
   const handleRegister = async (role: string, payload: any) => {
     try {
       await signUp({ ...payload, role });
-      toast.success("Account created! Please sign in.");
-      setIsRegistering(false);
+      if (role === "student") {
+        toast.success("Account created & automatically deployed! Signing you in...");
+        await signIn(payload.email, payload.password, true);
+      } else {
+        toast.success("Account created! Please sign in.");
+        setIsRegistering(false);
+      }
     } catch (err: any) {
       toast.error(`Registration failed: ${err?.message || "Unknown error"}`);
     }
@@ -136,17 +142,21 @@ export function LoginPage() {
                 <TabsContent value="student">
                   <div className="mb-4 flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-xl p-3.5">
                     <GraduationCap className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                    <p className="text-sm text-blue-700">
-                      Student accounts are created by the OJT Coordinator. Your login credentials will be sent to your PSU email. Contact the coordinator if you need help.
-                    </p>
+                    <div className="text-sm text-blue-800 space-y-1">
+                      <p className="font-semibold">Beta Testing Mode — Instant Deployment</p>
+                      <p className="text-xs text-blue-700 leading-relaxed">
+                        {isRegistering
+                          ? "Note: The pre-deployment process (uploading the 7 required documents and waiting for Coordinator deployment) is automatically skipped for this Beta Test. Registering will automatically assign you to your course Coordinator and deploy you to your course's partner company."
+                          : "Note: For this Beta Test, the pre-deployment process is automatically skipped upon registration so you can immediately test Attendance (DTR) and the Daily Journal. Click 'Register here' below to create your student account."}
+                      </p>
+                    </div>
                   </div>
                   <LoginForm
                     role="student"
                     onLogin={handleLogin}
                     onRegister={handleRegister}
-                    isRegistering={false}
-                    setIsRegistering={() => {}}
-                    hideRegisterLink
+                    isRegistering={isRegistering}
+                    setIsRegistering={setIsRegistering}
                   />
                 </TabsContent>
                 <TabsContent value="company">
@@ -194,6 +204,7 @@ function LoginForm({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [studentIdField, setStudentIdField] = useState("");
+  const [course, setCourse] = useState("BSIT");
   const [section, setSection] = useState("4A");
   const [companyName, setCompanyName] = useState("");
   const [industry, setIndustry] = useState("");
@@ -224,13 +235,14 @@ function LoginForm({
           toast.error("Password must be at least 6 characters.");
           return;
         }
-        if (role === "student" && !email.toLowerCase().endsWith("@pampangastateu.edu.ph")) {
-          toast.error("Students must register with a @pampangastateu.edu.ph email address.");
-          return;
-        }
         const payload: any = { email, password, name: fullName };
         if (role === "student") {
-          payload.studentId = studentIdField;
+          if (!studentIdField.trim()) {
+            toast.error("Please enter your Student ID / Number.");
+            return;
+          }
+          payload.studentId = studentIdField.trim();
+          payload.course = course;
           payload.section = section;
         } else if (role === "company") {
           payload.companyName = companyName || fullName;
@@ -271,26 +283,40 @@ function LoginForm({
 
       {isRegistering && role === "student" && (
         <>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-2">
-              <Label htmlFor={`sid-${role}`}>Student ID</Label>
+              <Label htmlFor={`sid-${role}`}>Student Number</Label>
               <Input
                 id={`sid-${role}`}
                 type="text"
-                placeholder="e.g. 2022-IT-0042"
+                placeholder="e.g. 2023100001"
                 value={studentIdField}
                 onChange={(e) => setStudentIdField(e.target.value)}
+                required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor={`section-${role}`}>Section (BSIT)</Label>
+              <Label htmlFor={`course-${role}`}>Course / Program</Label>
+              <Select value={course} onValueChange={setCourse}>
+                <SelectTrigger id={`course-${role}`}>
+                  <SelectValue placeholder="Select course" />
+                </SelectTrigger>
+                <SelectContent>
+                  {COURSES.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`section-${role}`}>Section</Label>
               <Select value={section} onValueChange={setSection}>
                 <SelectTrigger id={`section-${role}`}>
                   <SelectValue placeholder="Select section" />
                 </SelectTrigger>
                 <SelectContent>
                   {SECTIONS.map((s) => (
-                    <SelectItem key={s} value={s}>BSIT {s}</SelectItem>
+                    <SelectItem key={s} value={s}>{course} {s}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -426,13 +452,13 @@ function LoginForm({
               Login here
             </button>
           </>
-        ) : !isRegistering && role !== "admin" && role !== "student" && !hideRegisterLink && (
+        ) : !isRegistering && role !== "admin" && !hideRegisterLink && (
           <>
             Don't have an account?{" "}
             <button
               type="button"
               onClick={() => setIsRegistering(true)}
-              className="text-primary hover:underline"
+              className="text-primary hover:underline font-medium"
             >
               Register here
             </button>
