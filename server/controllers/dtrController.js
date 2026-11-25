@@ -83,7 +83,7 @@ const clockDtr = async (req, res) => {
       if (photo) photoUrl = await saveBase64Image(photo, 'dtr', `${req.user.id}-${date}-in.jpg`);
 
       const insert = await db.query(
-        `INSERT INTO public.dtr_records (student_id, date, day, time_in, time_in_photo_url) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        `INSERT INTO public.dtr_records (student_id, date, day, time_in, time_in_photo_url, status) VALUES ($1, $2, $3, $4, $5, 'approved') RETURNING *`,
         [req.user.id, date, day || '', time, photoUrl]
       );
       res.json({ success: true, record: insert.rows[0] });
@@ -111,7 +111,7 @@ const clockDtr = async (req, res) => {
       const remarks = hours < 8 ? 'Undertime' : 'Completed';
 
       const upd = await db.query(
-        `UPDATE public.dtr_records SET time_out = $1, time_out_photo_url = $2, hours = $3, remarks = $4 WHERE id = $5 RETURNING *`,
+        `UPDATE public.dtr_records SET time_out = $1, time_out_photo_url = $2, hours = $3, remarks = $4, status = 'approved' WHERE id = $5 RETURNING *`,
         [time, photoUrl, hours, remarks, existing.id]
       );
       res.json({ success: true, record: upd.rows[0] });

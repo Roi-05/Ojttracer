@@ -131,7 +131,7 @@ export function DashboardTab({
           </CardHeader>
           <CardContent className="space-y-2">
             {[
-              ...(completed && onExportCertificatePDF
+              ...(onExportCertificatePDF
                 ? [
                     {
                       label: "Export E-Certificate (PDF)",

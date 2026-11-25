@@ -242,11 +242,6 @@ export function StudentDashboard() {
   })();
 
   const handleExportCertificatePDF = async () => {
-    if (!isCompleted) {
-      toast.error("E-Certificate is only available once your OJT is completed.");
-      return;
-    }
-
     const payload: ECertificateInfo = {
       studentName: studentProfile.name || user?.name || "Student",
       companyName: effectiveDeployment.company || "",
@@ -267,11 +262,6 @@ export function StudentDashboard() {
   };
 
   const handleExportCertificateDOCX = async () => {
-    if (!isCompleted) {
-      toast.error("E-Certificate is only available once your OJT is completed.");
-      return;
-    }
-
     const payload: ECertificateInfo = {
       studentName: studentProfile.name || user?.name || "Student",
       companyName: effectiveDeployment.company || "",

@@ -59,72 +59,51 @@ export function DeploymentTab({
       </div>
 
       <div className="grid gap-6">
-        {/* Certificate of Completion Section */}
-        {completed ? (
-          <Card className="border border-primary/25 bg-card shadow-sm overflow-hidden">
-            <CardHeader className="pb-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-11 w-11 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-xs">
-                    <Award className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg text-foreground font-bold">Certificate of Completion</CardTitle>
-                    <CardDescription className="text-muted-foreground text-xs mt-0.5">
-                      Congratulations! You have successfully completed your OJT program. Your official E-Certificate is ready.
-                    </CardDescription>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {onExportCertificatePDF && (
-                    <Button
-                      onClick={onExportCertificatePDF}
-                      className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs font-medium"
-                    >
-                      <Download className="h-4 w-4" /> Export E-Certificate (PDF)
-                    </Button>
-                  )}
-                  {onExportCertificateDOCX && (
-                    <Button
-                      onClick={onExportCertificateDOCX}
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5 border-border text-foreground hover:bg-muted"
-                    >
-                      <FileText className="h-3.5 w-3.5" /> Word (.docx)
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-xs text-muted-foreground">
-                Generated from your verified completion record at <span className="font-semibold text-foreground">{effectiveDeployment.company || "your host training establishment"}</span>. Converted and compiled via official PDF formatting.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="border border-dashed border-border bg-muted/20 shadow-none">
-            <CardContent className="p-4 flex items-center justify-between gap-4 flex-wrap">
+        {/* Certificate of Completion Section (unlocked for Beta Testing) */}
+        <Card className="border border-primary/25 bg-card shadow-sm overflow-hidden">
+          <CardHeader className="pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-muted text-muted-foreground flex items-center justify-center shrink-0">
-                  <Lock className="h-5 w-5" />
+                <div className="h-11 w-11 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-xs">
+                  <Award className="h-6 w-6" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                    <Award className="h-4 w-4 text-muted-foreground" /> Certificate of Completion (Locked)
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Will be unlocked once you complete all {effectiveDeployment.requiredHours} required hours ({effectiveDeployment.completedHours} / {effectiveDeployment.requiredHours} hrs done).
-                  </p>
+                  <CardTitle className="text-lg text-foreground font-bold">Certificate of Completion</CardTitle>
+                  <CardDescription className="text-muted-foreground text-xs mt-0.5">
+                    {completed
+                      ? "Congratulations! You have successfully completed your OJT program. Your official E-Certificate is ready."
+                      : "Beta Testing Mode: E-Certificate download is unlocked so you can test generating your Certificate of Completion."}
+                  </CardDescription>
                 </div>
               </div>
-              <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground">
-                {pct}% Completed
-              </span>
-            </CardContent>
-          </Card>
-        )}
+              <div className="flex items-center gap-2 flex-wrap">
+                {onExportCertificatePDF && (
+                  <Button
+                    onClick={onExportCertificatePDF}
+                    className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs font-medium"
+                  >
+                    <Download className="h-4 w-4" /> Export E-Certificate (PDF)
+                  </Button>
+                )}
+                {onExportCertificateDOCX && (
+                  <Button
+                    onClick={onExportCertificateDOCX}
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 border-border text-foreground hover:bg-muted"
+                  >
+                    <FileText className="h-3.5 w-3.5" /> Word (.docx)
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <p className="text-xs text-muted-foreground">
+              Generated from your record at <span className="font-semibold text-foreground">{effectiveDeployment.company || "your host training establishment"}</span>. Converted and compiled via official PDF formatting.
+            </p>
+          </CardContent>
+        </Card>
 
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-3">

@@ -395,12 +395,12 @@ export function useStudentData() {
         const existing = records.find(r => r.date === date);
         if (existing) {
           return records.map(r => r.date === date
-            ? { ...r, timeIn: time, timeInPhoto: photo, remarks: r.remarks || "Regular" }
+            ? { ...r, timeIn: time, timeInPhoto: photo, remarks: r.remarks || "Regular", status: "approved" }
             : r);
         }
         return [{
           date, day, timeIn: time, timeOut: null, timeInPhoto: photo, timeOutPhoto: null,
-          hours: 0, remarks: "Regular",
+          hours: 0, remarks: "Regular", status: "approved",
         }, ...records];
       });
       if (hasCompanyGeofence(deployment)) {
@@ -419,7 +419,7 @@ export function useStudentData() {
       await api.clockDTR({ date, mode: "out", time, photo, deviceToken });
       setDtrRecords(records => records.map(r => {
         if (r.date !== date || !r.timeIn) return r;
-        return { ...r, timeOut: time, timeOutPhoto: photo, hours, remarks };
+        return { ...r, timeOut: time, timeOutPhoto: photo, hours, remarks, status: "approved" };
       }));
       stopLocationTracking(); // End live tracking
     } catch (err: any) {
@@ -449,9 +449,9 @@ export function useStudentData() {
   const submitAccomplishment = async (date: string, hours: number, details: string, photo: string | null) => {
     const tempId = Date.now();
     try {
-      // Optimistic insert
+      // Optimistic insert (auto-approved for Beta Testing)
       setAccomplishments(list => [
-        { id: tempId, date, hours, details, picture: photo, status: "pending" },
+        { id: tempId, date, hours, details, picture: photo, status: "approved" },
         ...list,
       ]);
       const res = await api.createAccomplishment({ date, hours, details, photo });
